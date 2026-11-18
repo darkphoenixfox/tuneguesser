@@ -309,7 +309,15 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
   const R = 90, C = 2 * Math.PI * R;
   return (
     <div className="playing">
-      <p className="muted">{roundLabel(state)}</p>
+      <div className="roundbar">
+        <p className="muted">{roundLabel(state)}</p>
+      <div className="controls">
+        <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
+          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<Key>Alt+S</Key><PadHint button="select" />
+        </button>
+        {!guessing && <button className="btn ghost" onClick={onPause}>{state.paused ? "▶ Continue" : "⏸ Pause"}<Key>Alt+P</Key><PadHint button="start" /></button>}
+      </div>
+      </div>
       <div className="top">
       <div className="top-main">
       <div className={"timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
@@ -341,12 +349,6 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
             <ScoreBanner state={state} />
           </div>
         )}
-      </div>
-      <div className="controls">
-        <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
-          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<Key>Alt+S</Key><PadHint button="select" />
-        </button>
-        {!guessing && <button className="btn ghost" onClick={onPause}>{state.paused ? "▶ Continue" : "⏸ Pause"}<Key>Alt+P</Key><PadHint button="start" /></button>}
       </div>
     </div>
   );
