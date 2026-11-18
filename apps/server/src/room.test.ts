@@ -38,6 +38,41 @@ describe("Room", () => {
     expect(sb).toBe(900); // 10s in: title 600 + artist 300
   });
 
+  it("pause freezes the timer and music, excludes paused time, then resumes where it stopped", async () => {
+    const { room, music } = make();
+    const a = room.addPlayer("A")!;
+    const b = room.addPlayer("B")!;
+    await room.start();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(room.pause(a)).toBe(true);
+    expect(room.pause(b)).toBe(false); // already paused
+    expect(room.state().paused).toBe(true);
+    expect(room.state().remainingMs).toBe(15_000);
+    await vi.advanceTimersByTimeAsync(60_000); // a long pause: round must not end
+    expect(room.state().phase).toBe("playing");
+    expect(room.state().remainingMs).toBe(15_000);
+    room.answer(b, { title: "Billie Jean" }); // typing during the pause still counts, at 5s elapsed
+    expect(await room.resume(b)).toBe(false); // only pauser or host
+    expect(await room.resume(a)).toBe(true);
+    expect(music.played.length).toBe(2); // started, then replayed at the saved position
+    await vi.advanceTimersByTimeAsync(14_999);
+    expect(room.state().phase).toBe("playing");
+    await vi.advanceTimersByTimeAsync(2);
+    expect(room.state().phase).toBe("reveal");
+  });
+
+  it("gives each player one pause per round, the host unlimited", async () => {
+    const { room } = make();
+    const a = room.addPlayer("A")!;
+    await room.start();
+    expect(room.pause(a)).toBe(true);
+    expect(await room.resume(a)).toBe(true);
+    expect(room.pause(a)).toBe(false);
+    expect(room.pause("host")).toBe(true);
+    expect(await room.resume("host")).toBe(true);
+    expect(room.pause("host")).toBe(true);
+  });
+
   it("ends the round on timeout, reveals, then advances and finishes", async () => {
     const { room } = make();
     room.addPlayer("A");

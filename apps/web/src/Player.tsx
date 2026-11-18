@@ -52,7 +52,7 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
       });
     }
   });
-  const left = useCountdown(endsAt);
+  const left = useCountdown(endsAt, state?.paused ? state.remainingMs : undefined);
   const round = state?.round;
   useEffect(() => { setRes({ title: false, artist: false }); setTitle(""); setArtist(""); }, [round]);
 
@@ -79,7 +79,13 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
           <div className="bar-time"><i style={{ width: `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
           <label>Song title {res.title && <span className="ok">✓</span>}<input ref={titleRef} value={res.title ? "✓" : title} disabled={res.title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" autoCorrect="off" /></label>
           <label>Artist {res.artist && <span className="ok">✓</span>}<input value={res.artist ? "✓" : artist} disabled={res.artist} onChange={(e) => setArtist(e.target.value)} autoComplete="off" autoCorrect="off" /></label>
+          {state.paused && <p className="paused-banner">⏸ Paused{state.pausedBy ? ` by ${state.pausedBy}` : ""}</p>}
           <button className="btn big" disabled={(res.title || !title.trim()) && (res.artist || !artist.trim())}>Send</button>
+          {!embedded && (state.paused ? (
+            state.pausedById === me && <button type="button" className="btn" onClick={() => send({ t: "resume" })}>▶ Resume</button>
+          ) : (
+            <button type="button" className="btn ghost" disabled={!!mine.pauseUsed} onClick={() => send({ t: "pause" })}>{mine.pauseUsed ? "Pause used" : "⏸ Pause (once per round)"}</button>
+          ))}
         </form>
       )}
       {state.phase === "reveal" && state.reveal && (

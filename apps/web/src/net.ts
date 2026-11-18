@@ -41,12 +41,13 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
 }
 
 /** Remaining seconds (fractional), re-rendering ~10x/s while a round is running */
-export function useCountdown(endsAt: number): number {
+export function useCountdown(endsAt: number, frozenMs?: number): number {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (!endsAt) return;
     const i = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(i);
   }, [endsAt]);
+  if (frozenMs !== undefined) return frozenMs / 1000; // paused: show the frozen value
   return endsAt ? Math.max(0, (endsAt - now) / 1000) : 0;
 }

@@ -9,6 +9,8 @@ export interface PlayerPublic {
   connected: boolean;
   /** has submitted an answer this round */
   answered: boolean;
+  /** this player already used their one pause this round */
+  pauseUsed?: boolean;
 }
 
 export interface RevealInfo {
@@ -31,6 +33,10 @@ export interface RoomState {
   roundStartedAt?: number;
   /** ms left in the round at the moment this state was sent (use this, not roundStartedAt, to avoid clock skew) */
   remainingMs?: number;
+  /** round is frozen (music and timer stopped); remainingMs is the frozen value */
+  paused?: boolean;
+  pausedBy?: string;
+  pausedById?: string;
   reveal?: RevealInfo;
   hostConnected: boolean;
 }
@@ -40,6 +46,8 @@ export type ClientMessage =
   | { t: "host"; code: string; token: string }
   | { t: "answer"; title?: string; artist?: string }
   | { t: "start" }
+  | { t: "pause" }
+  | { t: "resume" }
   | { t: "skip" }
   | { t: "next" };
 

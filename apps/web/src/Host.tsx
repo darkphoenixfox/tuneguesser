@@ -141,7 +141,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
     <main className="screen game">
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
-      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} onSkip={() => send({ t: "skip" })} />}
+      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} onResume={() => send({ t: "resume" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={onLeave} />}
       {me && <Play embedded saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
@@ -200,8 +200,8 @@ function Scoreboard({ state, reveal }: { state: RoomState; reveal?: RevealInfo }
   );
 }
 
-function Playing({ state, endsAt, onSkip }: { state: RoomState; endsAt: number; onSkip: () => void }) {
-  const left = useCountdown(endsAt);
+function Playing({ state, endsAt, onSkip, onPause, onResume }: { state: RoomState; endsAt: number; onSkip: () => void; onPause: () => void; onResume: () => void }) {
+  const left = useCountdown(endsAt, state.paused ? state.remainingMs : undefined);
   const frac = Math.min(1, left / (state.roundMs / 1000));
   const lastTick = useRef(-1);
   useEffect(() => {
@@ -212,14 +212,18 @@ function Playing({ state, endsAt, onSkip }: { state: RoomState; endsAt: number; 
   return (
     <div className="playing">
       <p className="muted">Round {state.round} / {state.totalRounds}</p>
-      <div className={"timer" + (left <= 5 ? " hot" : "")}>
+      <div className={"timer" + (left <= 5 && !state.paused ? " hot" : "") + (state.paused ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
         <b>{Math.ceil(left)}</b>
       </div>
-      <div className="eq" aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
+      {state.paused && <p className="paused-banner">⏸ Paused{state.pausedBy ? ` by ${state.pausedBy}` : ""}</p>}
+      <div className={"eq" + (state.paused ? " still" : "")} aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
       <h2 className="prompt">Name that tune!</h2>
       <Scoreboard state={state} />
-      <button className="btn ghost" onClick={onSkip}>Skip</button>
+      <div className="controls">
+        {state.paused ? <button className="btn big" onClick={onResume}>▶ Resume</button> : <button className="btn" onClick={onPause}>⏸ Pause</button>}
+        <button className="btn ghost" onClick={onSkip}>Skip</button>
+      </div>
     </div>
   );
 }

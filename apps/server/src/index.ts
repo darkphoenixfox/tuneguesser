@@ -162,8 +162,14 @@ wss.on("connection", (ws) => {
       if (role === "player" && m.t === "answer" && playerId) {
         const r = room.answer(playerId, { title: String(m.title ?? "").slice(0, 120), artist: String(m.artist ?? "").slice(0, 120) });
         if (r) send(ws, { t: "result", ...r });
+      } else if (role === "player" && playerId && m.t === "pause") {
+        room.pause(playerId);
+      } else if (role === "player" && playerId && m.t === "resume") {
+        await room.resume(playerId);
       } else if (role === "host") {
         if (m.t === "start") await room.start();
+        else if (m.t === "pause") room.pause("host");
+        else if (m.t === "resume") await room.resume("host");
         else if (m.t === "skip" || m.t === "next") room.state().phase === "playing" ? await room.endRound() : await room.nextRound();
       }
     } catch (e) {

@@ -129,3 +129,10 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .hostplay { display: flex; gap: 8px; }
 .hostplay input { font-size: 1rem; }
 .embedded { width: min(480px, 100%); margin: 0 auto; }
+
+/* pause */
+.controls { display: flex; gap: 12px; align-items: center; }
+.paused-banner { margin: 0; text-align: center; font-weight: 800; color: var(--amber); background: rgba(255,197,61,.12); border: 1px solid rgba(255,197,61,.35); border-radius: 12px; padding: 8px 14px; animation: pop .3s both; }
+.timer.frozen .bar { stroke: var(--amber); filter: drop-shadow(0 0 8px var(--amber)); }
+.timer.frozen b { color: var(--amber); }
+.eq.still i { animation-play-state: paused; opacity: .35; }
