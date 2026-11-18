@@ -309,10 +309,6 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
   const R = 90, C = 2 * Math.PI * R;
   return (
     <div className="p2">
-      <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
-      <div className="p2-head">
-        <span className="rl">{roundLabel(state)}</span>
-        <ScoreLine state={state} />
         <div className="p2-ctrl">
           {!guessing && (
             <div className="ctl">
@@ -325,6 +321,10 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
             <small>{state.skip ? `(${state.skip.votes}/${state.skip.voters})` : ""}<PadHint button="select" /></small>
           </div>
         </div>
+      <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
+      <div className="p2-head">
+        <span className="rl">{roundLabel(state)}</span>
+        <ScoreLine state={state} />
       </div>
       <div className={"timer p2-timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>

@@ -386,3 +386,9 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .guess-form.with-kb { display: flex; flex-direction: column; gap: 14px; }
 @media (max-width: 700px) { .padkb { grid-template-columns: minmax(0, 1fr); } .pk-actions { flex-direction: row; flex-wrap: wrap; } .pk-key.act { min-width: 40%; } }
 .pk-left .pk-row:last-child .pk-key:nth-child(n) { flex: 1 1 0; }
+
+/* pause/skip in the top-left corner above the timer; the header keeps clear of the fixed corner buttons */
+.p2 { grid-template-areas: "ctrl head" "eq hint" "timer hint" "bar bar"; grid-template-rows: auto auto auto auto; }
+.p2-ctrl { grid-area: ctrl; margin-left: 0; justify-content: center; }
+.p2-head { padding-right: 240px; min-height: 52px; }
+@media (max-width: 899px) { .p2 { grid-template-areas: "ctrl" "head" "timer" "hint" "bar" "eq"; } .p2-head { padding-right: 0; } }
