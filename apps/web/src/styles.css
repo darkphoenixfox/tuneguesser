@@ -198,3 +198,23 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .seg button { flex: 1; border: 0; border-radius: 9px; padding: 8px 12px; background: transparent; color: var(--muted); font-weight: 700; cursor: pointer; }
 .seg button.on { background: var(--grad); color: #fff; }
 .waiting { margin: 0; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--amber); color: var(--amber); background: rgba(255,197,61,.12); font-weight: 800; animation: pop .3s both; }
+
+/* game types */
+.opts { gap: 16px; }
+.opt { display: flex; flex-direction: column; gap: 8px; }
+.opt > span { font-weight: 800; }
+.opt small { min-height: 0; }
+.hint { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.hint small { color: var(--muted); display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: .1em; }
+.hint code { font: 800 clamp(1.3rem, 5vmin, 2.4rem)/1.2 ui-monospace, monospace; letter-spacing: .12em; white-space: pre-wrap; word-break: break-word; text-align: center; }
+.trivia { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
+.trivia li { background: var(--soft); border-radius: 12px; padding: 8px 14px; animation: pop .3s both; }
+.score-banner { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; align-items: center; padding: 8px 14px; border-radius: 14px; background: var(--soft); }
+.score-banner b { font-size: 1.6rem; color: var(--cyan); }
+.score-banner em { font-style: normal; font-weight: 800; color: var(--amber); }
+.turn { margin: 0; font-weight: 800; color: var(--cyan); font-size: 1.2rem; }
+.choices { display: flex; flex-direction: column; gap: 10px; }
+.choice { text-align: left; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--field); color: var(--text); font-size: 1rem; cursor: pointer; }
+.choice:active { border-color: var(--cyan); }
+.theme-btn { background: transparent; border: 0; font-size: 1.3rem; cursor: pointer; }
+main.phone > .theme-btn { align-self: flex-end; }

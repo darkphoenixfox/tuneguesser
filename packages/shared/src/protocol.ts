@@ -1,3 +1,6 @@
+import type { GameConfig } from "./config";
+import type { Multiplier } from "./scoring";
+
 /** Messages between server, host screen and phone controllers (JSON over WebSocket). */
 
 export type Phase = "lobby" | "playing" | "reveal" | "finished";
@@ -11,12 +14,26 @@ export interface PlayerPublic {
   attemptsLeft: number;
   /** wants to skip this song (the song is skipped when every connected player does) */
   skipVote: boolean;
+  /** consecutive rounds in which this player scored */
+  streak: number;
 }
 
 /** Parts of the song found so far this round, shown to everyone while the music continues. */
 export interface Found {
   title?: { text: string; by: string };
   artist?: { text: string; by: string };
+}
+
+/** Last scoring answer, with the multipliers that applied (shown to everyone). */
+export interface LastScore {
+  name: string;
+  points: number;
+  multipliers: Multiplier[];
+}
+
+export interface ChoiceOption {
+  id: string;
+  label: string;
 }
 
 export interface RevealInfo {
@@ -33,8 +50,11 @@ export interface RoomState {
   phase: Phase;
   players: PlayerPublic[];
   round: number;
-  totalRounds: number;
-  roundMs: number;
+  /** undefined when playing to a target score */
+  totalRounds?: number;
+  config: GameConfig;
+  /** unlimited timer: null */
+  roundMs: number | null;
   guessMs: number;
   maxAttempts: number;
   /** ms left in the round. While someone is guessing the clock is frozen at this value. */
@@ -46,8 +66,16 @@ export interface RoomState {
   found?: Found;
   reveal?: RevealInfo;
   hostConnected: boolean;
-  settings: { autoAdvance: boolean };
-  /** the reveal is waiting for the host to press Next (auto-advance is off and time ran out) */
+  /** round robin: whose song this is */
+  activePlayerId?: string;
+  /** "Reveal" hint: the title and artist with unrevealed letters as _ */
+  hint?: { title: string; artist: string };
+  /** "Trivia" hint: facts shown so far this round */
+  trivia?: string[];
+  /** multiple choice: the options for the guesser only (others never receive them) */
+  options?: ChoiceOption[];
+  lastScore?: LastScore;
+  /** the reveal is held until the host presses Next or the song ends (auto-advance is off) */
   awaitingNext?: boolean;
   /** skip votes this round. Voters = connected players, plus the host if the host is not also playing. */
   skip?: { votes: number; voters: number; host: boolean };
@@ -61,6 +89,8 @@ export type ClientMessage =
   | { t: "buzz" }
   /** the buzzed player's answer */
   | { t: "answer"; text: string }
+  /** multiple choice: pick an option */
+  | { t: "choose"; optionId: string }
   /** a player exits to the main screen */
   | { t: "leave" }
   /** host: change a game setting */
@@ -73,5 +103,5 @@ export type ClientMessage =
 export type ServerMessage =
   | { t: "joined"; playerId: string }
   | { t: "state"; state: RoomState }
-  | { t: "result"; title: boolean; artist: boolean }
+  | { t: "result"; title: boolean; artist: boolean; points: number; multipliers: Multiplier[] }
   | { t: "error"; message: string };

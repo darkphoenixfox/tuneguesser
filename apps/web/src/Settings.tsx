@@ -12,7 +12,7 @@ export function HostSettings({ autoAdvance, onAutoAdvance }: { autoAdvance: bool
         <div className="settings card" role="dialog" aria-label="Host settings">
           <h2>Settings</h2>
           <div className="setting">
-            <span>Skip to the next song automatically when time runs out</span>
+            <span>Go to the next song automatically after each round (No: hold the answer until the song ends or the host continues)</span>
             <div className="seg">
               <button className={autoAdvance ? "on" : ""} onClick={() => onAutoAdvance(true)}>Yes</button>
               <button className={!autoAdvance ? "on" : ""} onClick={() => onAutoAdvance(false)}>No</button>
@@ -30,4 +30,10 @@ export function HostSettings({ autoAdvance, onAutoAdvance }: { autoAdvance: bool
       )}
     </>
   );
+}
+
+/** Small per-device theme toggle (phones and the join screen). */
+export function ThemeButton() {
+  const [theme, setTheme] = useTheme();
+  return <button className="theme-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Toggle theme">{theme === "dark" ? "☀️" : "🌙"}</button>;
 }

@@ -103,21 +103,25 @@ export class SpotifyClient {
 
 /** Plays a Spotify playlist on one of the host's devices. */
 export class SpotifyProvider implements MusicProvider {
-  constructor(private client: SpotifyClient, private playlistId: string, private deviceId?: string) {}
+  constructor(private client: SpotifyClient, private playlistIds: string[], private deviceId?: string) {}
 
   async loadTracks(): Promise<Track[]> {
+    const seen = new Set<string>();
     const out: Track[] = [];
-    for (let offset = 0; offset < 500; offset += 100) {
-      const j = await this.client.api("GET", `/playlists/${this.playlistId}/items?limit=100&offset=${offset}`);
-      for (const it of j?.items ?? []) {
-        const t = it?.item ?? it?.track; // 'item' since the Feb 2026 API change
-        if (!t || t.is_local || t.type !== "track" || !t.id) continue; // skips podcast episodes and local files
-        out.push({
-          id: t.id, uri: t.uri, title: t.name, artists: t.artists.map((a: any) => a.name),
-          durationMs: t.duration_ms, albumArt: t.album?.images?.[0]?.url, year: t.album?.release_date?.slice(0, 4),
-        });
+    for (const playlistId of this.playlistIds) {
+      for (let offset = 0; offset < 500; offset += 100) {
+        const j = await this.client.api("GET", `/playlists/${playlistId}/items?limit=100&offset=${offset}`);
+        for (const it of j?.items ?? []) {
+          const t = it?.item ?? it?.track; // 'item' since the Feb 2026 API change
+          if (!t || t.is_local || t.type !== "track" || !t.id || seen.has(t.id)) continue; // skips episodes, local files, duplicates
+          seen.add(t.id);
+          out.push({
+            id: t.id, uri: t.uri, title: t.name, artists: t.artists.map((a: any) => a.name),
+            durationMs: t.duration_ms, albumArt: t.album?.images?.[0]?.url, year: t.album?.release_date?.slice(0, 4),
+          });
+        }
+        if (!j?.next) break;
       }
-      if (!j?.next) break;
     }
     return out;
   }

@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { ClientMessage, ServerMessage } from "@tuneguesser/shared";
+import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tuneguesser/shared";
 import { DemoProvider, type MusicProvider } from "./music";
 import { Room } from "./room";
+import { TriviaCache } from "./trivia";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -15,9 +16,10 @@ const APP_URL = new URL(REDIRECT_URI).origin;
 interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce> }
 const sessions = new Map<string, Session>();
 
-interface RoomEntry { room: Room; hostToken: string; sockets: Set<WebSocket>; createdAt: number }
+interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number }
 const rooms = new Map<string, RoomEntry>();
 const hostSockets = new WeakSet<WebSocket>();
+const trivia = new TriviaCache();
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid confusion with 1/0
 function newCode(): string {
@@ -58,8 +60,7 @@ async function readJson(req: IncomingMessage): Promise<any> {
 const send = (ws: WebSocket, m: ServerMessage) => ws.readyState === ws.OPEN && ws.send(JSON.stringify(m));
 
 function broadcast(entry: RoomEntry) {
-  const state = entry.room.state();
-  for (const ws of entry.sockets) send(ws, { t: "state", state });
+  for (const [ws, pid] of entry.sockets) send(ws, { t: "state", state: entry.room.state(pid) });
 }
 
 const http = createServer(async (req, res) => {
@@ -108,22 +109,15 @@ const http = createServer(async (req, res) => {
       if (body.demo) music = new DemoProvider();
       else {
         if (!s.client) return json(res, 401, { error: "not logged in" });
-        if (typeof body.playlistId !== "string") return json(res, 400, { error: "playlistId required" });
-        music = new SpotifyProvider(s.client, body.playlistId, typeof body.deviceId === "string" ? body.deviceId : undefined);
+        const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : [body.playlistId]).filter((x: unknown): x is string => typeof x === "string" && /^[\w]+$/.test(x)).slice(0, 10);
+        if (!ids.length) return json(res, 400, { error: "pick at least one playlist" });
+        music = new SpotifyProvider(s.client, ids, typeof body.deviceId === "string" ? body.deviceId : undefined);
       }
-      const clamp = (n: unknown, lo: number, hi: number, d: number) => Math.min(hi, Math.max(lo, Number.isFinite(Number(n)) ? Number(n) : d));
       const code = newCode();
-      const room = new Room(code, music, {
-        rounds: clamp(body.rounds, 1, 50, 10),
-        roundMs: clamp(body.roundSeconds, 10, 120, 40) * 1000,
-        guessMs: 25_000,
-        maxAttempts: 3,
-        revealMs: 5000, // the song keeps playing while the answer is shown
-        autoAdvance: body.autoAdvance !== false,
-      });
-      const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Set(), createdAt: Date.now() };
+      const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, revealMs: 5000 }, trivia);
+      const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Map(), createdAt: Date.now() };
       room.onChange = () => broadcast(entry);
-      room.onError = (message) => { for (const ws of entry.sockets) if (hostSockets.has(ws)) send(ws, { t: "error", message }); };
+      room.onError = (message) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws)) send(ws, { t: "error", message }); };
       rooms.set(code, entry);
       return json(res, 200, { code, hostToken: entry.hostToken });
     }
@@ -159,8 +153,8 @@ wss.on("connection", (ws) => {
           if (m.hostToken && m.hostToken === e.hostToken) e.room.markHostPlayer(id); // the host plays too
           send(ws, { t: "joined", playerId: id });
         } else return;
-        entry.sockets.add(ws);
-        send(ws, { t: "state", state: entry.room.state() });
+        entry.sockets.set(ws, playerId);
+        send(ws, { t: "state", state: entry.room.state(playerId) });
         broadcast(entry);
         return;
       }
@@ -172,8 +166,12 @@ wss.on("connection", (ws) => {
       } else if (role === "player" && playerId && m.t === "leave") {
         room.leave(playerId);
         playerId = undefined;
+        entry.sockets.set(ws, undefined);
       } else if (role === "player" && playerId && m.t === "answer") {
         const r = await room.answer(playerId, String(m.text ?? "").slice(0, 160));
+        if (r) send(ws, { t: "result", ...r });
+      } else if (role === "player" && playerId && m.t === "choose") {
+        const r = await room.choose(playerId, String(m.optionId ?? ""));
         if (r) send(ws, { t: "result", ...r });
       } else if (role === "host") {
         if (m.t === "start") await room.start();

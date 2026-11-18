@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import type { RevealInfo, RoomState } from "@tuneguesser/shared";
-import { FoundChips, GuessBar } from "./Found";
+import { DEFAULT_CONFIG, type GameConfig, type RoomState } from "@tuneguesser/shared";
+import { FoundChips, GuessBar, Hints, ScoreBanner } from "./Found";
 import { Scoreboard } from "./Scoreboard";
 import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
@@ -26,15 +26,26 @@ export function Host({ onInGame }: { onInGame?: (v: boolean) => void }) {
   );
 }
 
+function Seg<T extends string | number | boolean>({ value, options, onChange }: { value: T; options: Array<[T, string]>; onChange: (v: T) => void }) {
+  return (
+    <div className="seg">
+      {options.map(([v, label]) => <button type="button" key={String(v)} className={v === value ? "on" : ""} onClick={() => onChange(v)}>{label}</button>)}
+    </div>
+  );
+}
+
+const LAST_PLAYLISTS = "tg_playlists";
+const LAST_CONFIG = "tg_config";
+const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
+
 function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const [me, setMe] = useState<{ spotify: boolean; spotifyConfigured: boolean }>();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [playlistId, setPlaylistId] = useState("");
+  const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
   const [deviceId, setDeviceId] = useState("");
-  const [rounds, setRounds] = useState(10);
-  const [seconds, setSeconds] = useState(40);
-  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [cfg, setCfg] = useState<GameConfig>(() => ({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
+  const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
   const [busy, setBusy] = useState(false);
 
@@ -49,16 +60,22 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
 
   useEffect(() => {
     if (!me?.spotify) return;
-    fetch("/api/playlists").then((r) => r.json()).then((p: Playlist[]) => setPlaylists(p)).catch(() => setErr("Could not load playlists"));
+    fetch("/api/playlists").then((r) => r.json()).then((p: Playlist[]) => {
+      setPlaylists(p);
+      setPicked((cur) => cur.filter((id) => p.some((x) => x.id === id))); // forget playlists that are gone
+    }).catch(() => setErr("Could not load playlists"));
     void loadDevices();
   }, [me?.spotify]);
+
+  const toggle = (id: string) => setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
   const create = async (demo: boolean) => {
     setBusy(true); setErr("");
     sfx.start(); // unlocks audio on this screen
+    try { localStorage.setItem(LAST_PLAYLISTS, JSON.stringify(picked)); localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ }
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ demo, playlistId, deviceId: deviceId || undefined, rounds, roundSeconds: seconds, autoAdvance }),
+      body: JSON.stringify({ demo, playlistIds: picked, deviceId: deviceId || undefined, config: cfg }),
     });
     const j = await r.json();
     setBusy(false);
@@ -66,9 +83,10 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
     onCreated({ code: j.code, token: j.hostToken });
   };
 
+  const timed = cfg.roundSeconds !== null;
   return (
     <main className="screen setup">
-      <HostSettings autoAdvance={autoAdvance} onAutoAdvance={setAutoAdvance} />
+      <HostSettings autoAdvance={cfg.autoAdvance} onAutoAdvance={(v) => set({ autoAdvance: v })} />
       <h1 className="logo">Tune<span>Guesser</span></h1>
       {err && <p className="error">{err}</p>}
       {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
@@ -80,28 +98,56 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
       ) : (
         <>
           <section className="card">
-            <h2>1. Pick a playlist</h2>
-            <p className="muted">Only playlists you own or collaborate on can be used (a Spotify rule). To use someone else's or an editorial playlist, copy its songs into one of your own.</p>
+            <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
+            <p className="muted">Pick one or more. Only playlists you own or collaborate on can be used (a Spotify rule). To use someone else's or an editorial playlist, copy its songs into one of your own.</p>
             <div className="grid">
               {playlists.map((p) => (
-                <button key={p.id} className={"pl" + (p.id === playlistId ? " sel" : "")} onClick={() => setPlaylistId(p.id)}>
+                <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>
                   {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
                   <b>{p.name}</b><small>{p.tracks} tracks</small>
                 </button>
               ))}
             </div>
           </section>
-          <section className="card row">
+          <section className="card opts">
             <label>Play on
               <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} onFocus={loadDevices}>
                 {devices.length === 0 && <option value="">No device found – open Spotify somewhere</option>}
                 {devices.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type}){d.active ? " ●" : ""}</option>)}
               </select>
             </label>
-            <label>Rounds <input type="number" min={1} max={50} value={rounds} onChange={(e) => setRounds(+e.target.value)} /></label>
-            <label>Seconds per song <input type="number" min={10} max={120} value={seconds} onChange={(e) => setSeconds(+e.target.value)} /></label>
+            <div className="opt"><span>Play to</span>
+              <Seg value={cfg.playTo.kind} options={[["rounds", "Rounds"], ["score", "Score"]]} onChange={(k) => set({ playTo: k === "rounds" ? { kind: "rounds", rounds: 10 } : { kind: "score", target: 5000 } })} />
+              {cfg.playTo.kind === "rounds"
+                ? <label>Rounds <input type="number" min={1} max={100} value={cfg.playTo.rounds} onChange={(e) => set({ playTo: { kind: "rounds", rounds: +e.target.value } })} /></label>
+                : <label>Target score <input type="number" min={500} max={100000} step={500} value={cfg.playTo.target} onChange={(e) => set({ playTo: { kind: "score", target: +e.target.value } })} /></label>}
+            </div>
+            <div className="opt"><span>Play order</span>
+              <Seg value={cfg.order} options={[["buzzer", "Buzzer"], ["roundRobin", "Round robin"]]} onChange={(order) => set({ order })} />
+              <small className="muted">{cfg.order === "buzzer" ? "Everyone can buzz in; the first to press ANSWER guesses." : "Players take turns: each player gets one song to guess, or skip."}</small>
+            </div>
+            <div className="opt"><span>Answers</span>
+              <Seg value={cfg.answers} options={[["type", "Type"], ["choice", "Multiple choice"]]} onChange={(answers) => set({ answers })} />
+              {cfg.answers === "choice" && <small className="muted">4 options, the wrong ones are other songs from the playlist(s).</small>}
+            </div>
+            <div className="opt"><span>Hints</span>
+              <Seg value={cfg.hints} options={[["none", "None"], ["reveal", "Reveal"], ["trivia", "Trivia"]]} onChange={(hints) => set({ hints })} />
+              <small className="muted">{cfg.hints === "reveal" ? "Underscores for each letter, slowly revealed as the timer runs." : cfg.hints === "trivia" ? "Facts about the artist and song appear over time (from MusicBrainz and Wikipedia)." : ""}</small>
+            </div>
+            <div className="opt"><span>Timer</span>
+              <Seg value={timed} options={[[true, "Seconds per song"], [false, "Unlimited"]]} onChange={(t) => set({ roundSeconds: t ? 40 : null })} />
+              {timed && <label>Seconds <input type="number" min={10} max={120} value={cfg.roundSeconds ?? 40} onChange={(e) => set({ roundSeconds: +e.target.value })} /></label>}
+              {!timed && <small className="muted">The round lasts until the song ends.</small>}
+            </div>
+            <div className="opt"><span>Attempts per round</span>
+              <Seg value={cfg.attempts} options={[1, 2, 3, 4, 5].map((n) => [n, String(n)] as [number, string])} onChange={(attempts) => set({ attempts })} />
+            </div>
+            <div className="opt"><span>Score multipliers</span>
+              <Seg value={cfg.multipliers} options={[[true, "Yes"], [false, "No"]]} onChange={(multipliers) => set({ multipliers })} />
+              <small className="muted">Extra points for song + artist at once, and for streaks.</small>
+            </div>
           </section>
-          <button className="btn big" disabled={!playlistId || !deviceId || busy} onClick={() => create(false)}>Create room</button>
+          <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>Create room</button>
         </>
       )}
     </main>
@@ -145,7 +191,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   return (
     <main className="screen game">
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
-      <HostSettings autoAdvance={state.settings.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
+      <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
@@ -189,11 +235,12 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
 function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void }) {
   const guessing = !!state.guesser;
   const left = useCountdown(endsAt, guessing ? state.remainingMs : undefined);
-  const frac = Math.min(1, left / (state.roundMs / 1000));
+  const unlimited = state.roundMs === null;
+  const frac = unlimited ? 1 : Math.min(1, left / (state.roundMs! / 1000));
   const lastTick = useRef(-1);
   useEffect(() => {
     const s = Math.ceil(left);
-    if (!guessing && s <= 5 && s > 0 && s !== lastTick.current) { lastTick.current = s; sfx.tick(); }
+    if (!unlimited && !guessing && s <= 5 && s > 0 && s !== lastTick.current) { lastTick.current = s; sfx.tick(); }
   }, [left, guessing]);
   const gid = state.guesser?.id;
   useEffect(() => { if (gid) sfx.buzz(); }, [gid]);
@@ -203,10 +250,10 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
   const R = 90, C = 2 * Math.PI * R;
   return (
     <div className="playing">
-      <p className="muted">Round {state.round} / {state.totalRounds}</p>
-      <div className={"timer" + (left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
+      <p className="muted">{roundLabel(state)}</p>
+      <div className={"timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
-        <b>{Math.ceil(left)}</b>
+        <b>{unlimited ? "∞" : Math.ceil(left)}</b>
       </div>
       {guessing ? (
         <div className="guessing-banner">
@@ -216,7 +263,10 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
       ) : (
         <div className="eq" aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
       )}
+      {state.config.order === "roundRobin" && state.activePlayerId && <p className="turn">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name}'s song</p>}
+      <Hints state={state} />
       <FoundChips found={state.found} />
+      <ScoreBanner state={state} />
       <Scoreboard state={state} />
       <div className="controls">
         <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
@@ -227,6 +277,12 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
   );
 }
 
+function roundLabel(state: RoomState) {
+  return state.config.playTo.kind === "score"
+    ? `Round ${state.round} · first to ${state.config.playTo.target}`
+    : `Round ${state.round} / ${state.totalRounds ?? state.config.playTo.rounds}`;
+}
+
 function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
   const r = state.reveal!;
   return (
@@ -234,9 +290,10 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
       {r.albumArt && <img className="art spin-in" src={r.albumArt} alt="" />}
       <h1 className="rv-title">{r.title}</h1>
       <h2 className="rv-artist">{r.artists.join(", ")}{r.year ? ` · ${r.year}` : ""}</h2>
+      <ScoreBanner state={state} />
       <Scoreboard state={state} reveal={r} />
-      {state.awaitingNext && <p className="waiting">Time ran out. The song keeps playing until you continue.</p>}
-      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.round >= state.totalRounds ? "Final results" : "Next song"}</button>
+      {state.awaitingNext && <p className="waiting">The song keeps playing. The next round starts when it ends, or when you continue.</p>}
+      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}</button>
     </div>
   );
 }

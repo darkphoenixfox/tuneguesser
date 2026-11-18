@@ -94,11 +94,34 @@ A ⚙ panel on the host screen (also available on the setup screen before the ro
 - **Dark/Light theme:** stored per device in `localStorage`; the host's choice does not propagate to phones (phones stay dark; a phone toggle can be added).
 Open: should "No" also apply to every other kind of round ending?
 
+### DEC-023 · Game types (GameConfig) · 2026-11-18 · Active
+The Host page now sets a `GameConfig` (shared package, validated server-side by `sanitizeConfig`): playlists (multi, remembered on the host device), play-to rounds or score target, order (buzzer / round robin), answers (type / multiple choice), hints (none / reveal / trivia), timer (seconds or unlimited), attempts 1-5, multipliers, auto-advance. Unknown or out-of-range values are clamped to defaults.
+
+### DEC-024 · Auto-advance holds every round end · 2026-11-18 · Active · supersedes DEC-022 (auto-advance part) and DEC-017 (the 5 s applies when auto-advance is on)
+User: the screen must hold at **all** round ends so a good song can be heard in full. With auto-advance off every reveal waits; the song keeps playing and the next round starts when the song ends (computed from track length and where it started, plus a small buffer) or when the host presses Next. Default stays on (5 s reveal).
+
+### DEC-025 · Theme per device · 2026-11-18 · Active · answers an open question of DEC-022
+Dark/light is stored per device; phones got their own toggle (join screen and in-game header).
+
+### DEC-026 · Round robin semantics · 2026-11-18 · Active (details Open)
+Each song is assigned to the next connected player in turn. Only that player can buzz or vote to skip; the round ends when they have used their attempts. Others watch. The host's skip is not counted. Open: should other players be able to steal after a failure?
+
+### DEC-027 · Multiple choice semantics · 2026-11-18 · Active (details Open)
+4 options "Title - first artist": the correct one plus 3 other songs from the selected playlists (fewer if the playlists are tiny; with no alternatives the round falls back to typing is NOT implemented, the round just has no options). Only the guesser receives the options (per-recipient state). A wrong pick uses an attempt and removes that option for that player; the right one scores title and artist (no "at once" bonus).
+
+### DEC-028 · Hints · 2026-11-18 · Active
+*Reveal:* letters appear in a random order as `elapsed / window` grows (cap 60 % of letters, spaces and punctuation shown), frozen while a player is answering. With an unlimited timer the window is 60 s. *Trivia:* facts are fetched in the background (prefetch of the current and next song) from **MusicBrainz** (tags, area, begin year) and **Wikipedia** (first sentence of the artist's page, with the artist's name hidden) plus the release year, and are revealed one by one over the timer. Free public APIs, no keys; failures just mean fewer facts. Open: trivia quality for lesser-known artists, and song-specific trivia is not covered.
+
+### DEC-029 · Multipliers · 2026-11-18 · Active
+Title + artist in one answer ×1.5; streak ×(1 + 0.25 × rounds in a row, max 4). Applied per scored part, shown in a banner on host and phones (and kept visible at the reveal). Values are our choice and can be tuned.
+
+### DEC-030 · Unlimited timer · 2026-11-18 · Active
+No countdown (∞). The round ends when the song ends. Score decay uses a 40 s window and hints a 60 s window so speed still matters.
+
 ---
 
 ## Open questions
-- Should the auto-advance setting also cover rounds that end for other reasons (answer found, out of attempts, skip)? (see DEC-022)
-- Should the theme choice reach the phones, or should phones have their own toggle?
 - Should the 5-second playing reveal apply to every round end (current) or only when everyone is out of attempts?
 - Should a player be allowed more than 3 tries when playing solo?
-- Game modes still to build: multiple choice, hints (year, artist trivia), video-clip mode (needs YouTube).
+- Video-clip mode (needs YouTube).
+- Round robin: should others be able to steal after a failure? Multiple choice points: should they differ from typed answers?

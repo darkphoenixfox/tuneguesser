@@ -24,7 +24,7 @@ describe("Spotify playback commands", () => {
 
   it("resume uses Spotify's own resume (no body, no seek) and does not restart the track", async () => {
     const calls = mockFetch("DY9zc8HpAE");
-    const p = new SpotifyProvider(new SpotifyClient("id", tokens), "pl", "dev1");
+    const p = new SpotifyProvider(new SpotifyClient("id", tokens), ["pl"], "dev1");
     await p.resume(track, 50_000);
     expect(calls.length).toBe(1);
     expect(calls[0]).toMatchObject({ method: "PUT" });
@@ -39,7 +39,7 @@ describe("Spotify playback commands", () => {
       calls.push({ body: init.body as string | undefined });
       return n++ === 0 ? new Response("no active device", { status: 404 }) : new Response(null, { status: 204 });
     });
-    const p = new SpotifyProvider(new SpotifyClient("id", tokens), "pl");
+    const p = new SpotifyProvider(new SpotifyClient("id", tokens), ["pl"]);
     await p.resume(track, 50_000);
     expect(calls.length).toBe(2);
     expect(JSON.parse(calls[1]!.body!)).toEqual({ uris: ["spotify:track:1"], position_ms: 50_000 });

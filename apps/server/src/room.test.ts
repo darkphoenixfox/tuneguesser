@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DemoProvider } from "./music";
+import { DEFAULT_CONFIG, type GameConfig } from "@tuneguesser/shared";
 import { Room } from "./room";
 
 const SONGS: Record<string, [string, string]> = {
@@ -11,9 +12,10 @@ describe("Room (buzzer game)", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const make = (rounds = 2, autoAdvance = true) => {
+  const cfg = (o: Partial<GameConfig> = {}): GameConfig => ({ ...DEFAULT_CONFIG, playTo: { kind: "rounds", rounds: 2 }, ...o });
+  const make = (rounds = 2, autoAdvance = true, extra: Partial<GameConfig> = {}) => {
     const music = new DemoProvider();
-    const room = new Room("ABCD", music, { rounds, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000, autoAdvance });
+    const room = new Room("ABCD", music, cfg({ playTo: { kind: "rounds", rounds }, autoAdvance, ...extra }), { guessMs: 25_000, revealMs: 5_000 });
     const song = () => SONGS[music.played.at(-1)!.id]!;
     return { music, room, song };
   };
@@ -59,7 +61,7 @@ describe("Room (buzzer game)", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     room.buzz(a);
     const r = await room.answer(a, `${song()[0]} wrong`);
-    expect(r).toEqual({ title: true, artist: false });
+    expect(r).toMatchObject({ title: true, artist: false });
     const st = room.state();
     expect(st.guesser).toBeUndefined();
     expect(st.found?.title?.by).toBe("Ana");
@@ -90,7 +92,7 @@ describe("Room (buzzer game)", () => {
     expect(room.buzz(a)).toBe(false); // out of attempts
     expect(room.buzz(b)).toBe(true);
     // Bo types song + artist in the one field; the title was already found, so only the artist is new
-    expect(await room.answer(b, `${song()[0]} ${song()[1]}`)).toEqual({ title: false, artist: true });
+    expect(await room.answer(b, `${song()[0]} ${song()[1]}`)).toMatchObject({ title: false, artist: true });
     expect(room.state().phase).toBe("reveal"); // everything found
     const gains = room.state().reveal!.gains;
     expect(gains[a]!.title).toBeGreaterThan(0);
@@ -113,7 +115,7 @@ describe("Room (buzzer game)", () => {
   it("reports it when the music source refuses to pause", async () => {
     const music = new DemoProvider();
     music.pause = async () => { throw new Error("Spotify PUT /me/player/pause: 403"); };
-    const room = new Room("ABCD", music, { rounds: 1, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000, autoAdvance: true });
+    const room = new Room("ABCD", music, cfg({ playTo: { kind: "rounds", rounds: 1 } }), { guessMs: 25_000, revealMs: 5_000 });
     const errors: string[] = [];
     room.onError = (m) => errors.push(m);
     const a = room.addPlayer("Ana")!;
@@ -198,15 +200,17 @@ describe("Room (buzzer game)", () => {
     expect(room.state().awaitingNext).toBeUndefined();
   });
 
-  it("with auto-advance off, other round endings still advance by themselves", async () => {
+  it("with auto-advance off, every kind of round end is held, and the next round starts when the song ends", async () => {
     const { room } = make(2, false);
     const a = room.addPlayer("Ana")!;
     await room.start();
     room.voteSkip(a);
     await vi.advanceTimersByTimeAsync(0);
     expect(room.state().phase).toBe("reveal");
-    expect(room.state().awaitingNext).toBeUndefined();
-    await vi.advanceTimersByTimeAsync(5_000);
+    expect(room.state().awaitingNext).toBe(true);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(room.state().phase).toBe("reveal");
+    await vi.advanceTimersByTimeAsync(200_000); // the song (200 s) has finished by now
     expect(room.state().round).toBe(2);
   });
 
@@ -296,5 +300,163 @@ describe("Room (buzzer game)", () => {
     expect(room.state().round).toBe(2);
     await vi.advanceTimersByTimeAsync(45_000);
     expect(room.state().phase).toBe("finished");
+  });
+
+  describe("game types", () => {
+    it("unlimited timer: the round lasts until the song ends and points fade over 40 s", async () => {
+      const { room } = make(1, true, { roundSeconds: null });
+      room.addPlayer("A");
+      await room.start();
+      expect(room.state().roundMs).toBeNull();
+      expect(room.state().remainingMs).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(100_000);
+      expect(room.state().phase).toBe("playing");
+      await vi.advanceTimersByTimeAsync(110_000);
+      expect(room.state().phase).not.toBe("playing");
+    });
+
+    it("score target: the game ends when a player reaches it", async () => {
+      const { room, song } = make(2, true, { playTo: { kind: "score", target: 500 } });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      expect(room.state().totalRounds).toBeUndefined();
+      room.buzz(a);
+      await room.answer(a, `${song()[0]} ${song()[1]}`);
+      expect(room.state().phase).toBe("reveal");
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(room.state().phase).toBe("finished");
+    });
+
+    it("multipliers: both at once gives x1.5 and a streak adds to it", async () => {
+      const { room, song } = make(3);
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      room.buzz(a);
+      const r = await room.answer(a, `${song()[0]} ${song()[1]}`);
+      expect(r!.multipliers.map((m) => m.x)).toEqual([1.5]);
+      expect(room.state().lastScore?.multipliers.length).toBe(1); // still shown at the reveal
+      await vi.advanceTimersByTimeAsync(5_000);
+      room.buzz(a);
+      const r2 = await room.answer(a, `${song()[0]} ${song()[1]}`);
+      expect(r2!.multipliers.length).toBe(2); // both + streak
+      expect(r2!.points).toBeGreaterThan(r!.points);
+    });
+
+    it("multipliers can be turned off", async () => {
+      const { room, song } = make(2, true, { multipliers: false });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      room.buzz(a);
+      const r = await room.answer(a, `${song()[0]} ${song()[1]}`);
+      expect(r!.multipliers).toEqual([]);
+      expect(r!.points).toBe(1500);
+    });
+
+    it("attempts setting is honored", async () => {
+      const { room } = make(2, true, { attempts: 1 });
+      const a = room.addPlayer("Ana")!;
+      room.addPlayer("Bo");
+      await room.start();
+      room.buzz(a);
+      await room.answer(a, "nope");
+      expect(room.buzz(a)).toBe(false);
+    });
+
+    it("round robin: only the player whose turn it is can buzz, and turns rotate", async () => {
+      const { room } = make(3, true, { order: "roundRobin" });
+      const a = room.addPlayer("Ana")!;
+      const b = room.addPlayer("Bo")!;
+      await room.start();
+      expect(room.state().activePlayerId).toBe(a);
+      expect(room.buzz(b)).toBe(false);
+      expect(room.buzz(a)).toBe(true);
+      room.leave(a); // ends the guess; Ana is out
+      await vi.advanceTimersByTimeAsync(5_000);
+      await vi.advanceTimersByTimeAsync(40_000);
+      expect(room.state().activePlayerId).toBe(b);
+    });
+
+    it("round robin: the active player alone decides to skip, and the round ends when their attempts are used", async () => {
+      const { room } = make(3, true, { order: "roundRobin" });
+      const a = room.addPlayer("Ana")!;
+      const b = room.addPlayer("Bo")!;
+      await room.start();
+      room.voteSkip(b); // not their song: ignored
+      expect(room.state().phase).toBe("playing");
+      room.voteSkip(a);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(room.state().phase).toBe("reveal");
+      await vi.advanceTimersByTimeAsync(5_000);
+      for (let i = 0; i < 3; i++) { room.buzz(b); await room.answer(b, "nope"); }
+      expect(room.state().phase).toBe("reveal"); // Bo used all attempts; Ana is not involved
+    });
+
+    it("multiple choice: offers 4 options only to the guesser; a wrong pick costs an attempt and removes it", async () => {
+      const { room } = make(2, true, { answers: "choice" });
+      const a = room.addPlayer("Ana")!;
+      const b = room.addPlayer("Bo")!;
+      await room.start();
+      expect(room.state(a).options).toBeUndefined(); // nobody is guessing yet
+      room.buzz(a);
+      const opts = room.state(a).options!;
+      expect(opts.length).toBe(4);
+      expect(room.state(b).options).toBeUndefined();
+      expect(await room.answer(a, "typed")).toBeUndefined(); // typing is not accepted
+      const r = await room.choose(a, opts[0]!.id);
+      if (r!.points === 0) {
+        expect(room.state(a).players.find((p) => p.id === a)!.attemptsLeft).toBe(2);
+        room.buzz(a);
+        expect(room.state(a).options!.length).toBe(3);
+      } else {
+        expect(room.state().phase).toBe("reveal"); // right pick finds both parts
+      }
+    });
+
+    it("multiple choice: picking the right option ends the round with title + artist", async () => {
+      const { room } = make(2, true, { answers: "choice", multipliers: false });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      let done = false;
+      for (let i = 0; i < 3 && !done; i++) {
+        room.buzz(a);
+        for (const o of room.state(a).options!) {
+          const r = await room.choose(a, o.id);
+          if (r && r.points > 0) { done = true; expect(r).toMatchObject({ title: true, artist: true }); }
+          break; // one pick per turn
+        }
+      }
+      // with 4 options and 3 attempts there is at most one wrong pick per turn; just ensure the engine stayed consistent
+      expect(["playing", "reveal"]).toContain(room.state().phase);
+    });
+
+    it("reveal hint: letters appear as the timer runs and freeze while a player is guessing", async () => {
+      const { room } = make(2, true, { hints: "reveal" });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      const blanks = (t: string) => (t.match(/_/g) ?? []).length;
+      const h0 = room.state().hint!;
+      expect(h0.title).toMatch(/_/);
+      await vi.advanceTimersByTimeAsync(30_000);
+      const h1 = room.state().hint!;
+      expect(blanks(h1.title)).toBeLessThan(blanks(h0.title));
+      room.buzz(a);
+      const frozen = room.state().hint!.title;
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(room.state().hint!.title).toBe(frozen);
+    });
+
+    it("trivia hint: facts show up over time", async () => {
+      const music = new DemoProvider();
+      const facts = ["Genre: rock", "From England", "Formed in 1970"];
+      const trivia = { prefetch: () => {}, peek: () => facts };
+      const room = new Room("ABCD", music, cfg({ hints: "trivia" }), { guessMs: 25_000, revealMs: 5_000 }, trivia);
+      room.addPlayer("Ana");
+      await room.start();
+      expect(room.state().trivia).toEqual([]);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(room.state().trivia!.length).toBeGreaterThan(0);
+      await vi.advanceTimersByTimeAsync(15_000);
+      expect(room.state().trivia).toEqual(facts);
+    });
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FoundChips, GuessBar } from "./Found";
+import { FoundChips, GuessBar, Hints, ScoreBanner } from "./Found";
+import { ThemeButton } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Scoreboard } from "./Scoreboard";
 import { sfx } from "./sfx";
@@ -26,6 +27,7 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
   const ok = code.length === 4 && name.trim().length > 0;
   return (
     <main className="screen phone">
+      <ThemeButton />
       <h1 className="logo">Tune<span>Guesser</span></h1>
       <form className="card" onSubmit={(e) => { e.preventDefault(); if (ok) { sfx.join(); onJoin({ code, name: name.trim() }); } }}>
         <label>Room code<input className="codein" value={code} maxLength={4} autoCapitalize="characters" autoComplete="off" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} /></label>
@@ -82,16 +84,25 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
       {!embedded && (
         <header className="phone-head">
           <button className="exit" onClick={exit} aria-label="Exit to main screen">✕ Exit</button>
-          <b>{mine.name}</b><span className="score">{mine.score}</span>
+          <b>{mine.name}</b><ThemeButton /><span className="score">{mine.score}</span>
         </header>
       )}
       {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul></div>}
 
       {state.phase === "playing" && (
         <div className="card answer">
-          <div className="bar-time"><i style={{ width: `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
+          <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
+          <Hints state={state} />
           <FoundChips found={found} />
-          {iAmGuesser ? (
+          <ScoreBanner state={state} />
+          {iAmGuesser && state.options ? (
+            <div className="guess-form">
+              <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
+              <div className="choices">
+                {state.options.map((o) => <button key={o.id} className="choice" disabled={sent} onClick={() => { setSent(true); send({ t: "choose", optionId: o.id }); }}>{o.label}</button>)}
+              </div>
+            </div>
+          ) : iAmGuesser ? (
             <form className="guess-form" onSubmit={submit}>
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
               <label>{found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
@@ -101,12 +112,14 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
             </form>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
+          ) : state.config.order === "roundRobin" && state.activePlayerId !== mine.id ? (
+            <p className="guessing-msg">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name ?? "Someone"}'s song</p>
           ) : (
             <button className="answer-btn" disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
-              {mine.attemptsLeft === 0 ? "Out of tries" : "ANSWER"}
+              {mine.attemptsLeft === 0 ? "Out of tries" : state.config.order === "roundRobin" ? "YOUR SONG: ANSWER" : "ANSWER"}
             </button>
           )}
-          {!embedded && !iAmGuesser && (() => {
+          {!embedded && !iAmGuesser && (state.config.order !== "roundRobin" || state.activePlayerId === mine.id) && (() => {
             const sk = state.skip ?? { votes: 0, voters: state.players.length };
             return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters})</button>;
           })()}
@@ -119,8 +132,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <h2>{state.reveal.title}</h2>
           <p className="muted">{state.reveal.artists.join(", ")}</p>
           {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
+          <ScoreBanner state={state} />
           <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
-          {state.awaitingNext && <p className="muted">Waiting for the host to continue…</p>}
+          {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end or when the host continues.</p>}
         </div>
       )}
       {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}
