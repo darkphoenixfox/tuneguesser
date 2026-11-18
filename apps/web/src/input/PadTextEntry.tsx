@@ -38,7 +38,7 @@ export function PadTextEntry() {
       <div className="card">
         <h2>{label}</h2>
         <div className="padtext-value">{text || <span className="muted">…</span>}<i /></div>
-        <PadKeyboard text={text} words={[]} onText={(t) => setText(t.slice(0, max))} onSend={apply} onCancel={close} sendLabel="Done" />
+        <PadKeyboard text={text} words={[]} onText={(t) => setText(t.slice(0, max))} onSend={apply} onCancel={close} sendLabel="DONE" />
         <button className="btn ghost" onClick={close}>Cancel <Glyph button="start" /></button>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { DEFAULT_CONFIG, type GameConfig, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
-import { Scoreboard } from "./Scoreboard";
+import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
@@ -308,48 +308,37 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
   useEffect(() => { if (foundCount > prevFound.current) sfx.correct(); prevFound.current = foundCount; }, [foundCount]);
   const R = 90, C = 2 * Math.PI * R;
   return (
-    <div className="playing">
-      <div className="roundbar">
-        <p className="muted">{roundLabel(state)}</p>
-      <div className="controls">
-        <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
-          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<PadHint button="select" />
-        </button>
-        {!guessing && <button className="btn ghost" onClick={onPause}>{state.paused ? "▶ Continue" : "⏸ Pause"}<PadHint button="start" /></button>}
+    <div className="p2">
+      <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
+      <div className="p2-head">
+        <span className="rl">{roundLabel(state)}</span>
+        <ScoreLine state={state} />
+        <div className="p2-ctrl">
+          {!guessing && (
+            <div className="ctl">
+              <button className="icon-btn" onClick={onPause} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>
+              <small><PadHint button="start" /></small>
+            </div>
+          )}
+          <div className="ctl">
+            <button className={"icon-btn" + (state.skip?.host ? " voted" : "")} onClick={onSkip} aria-label="Skip song" title="Skip song">⏭</button>
+            <small>{state.skip ? `(${state.skip.votes}/${state.skip.voters})` : ""}<PadHint button="select" /></small>
+          </div>
+        </div>
       </div>
-      </div>
-      <div className="top">
-      <div className="top-main">
-      <div className={"timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
+      <div className={"timer p2-timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
         <b>{unlimited ? "∞" : Math.ceil(left)}</b>
       </div>
-      {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
-      {guessing ? (
-        <div className="guessing-banner">
-          <h2>🎤 {state.guesser!.name} is guessing…</h2>
-          <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
-        </div>
-      ) : (
-        <div className="eq" aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
-      )}
+      <div className="p2-hint">
+        {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
+        {guessing && <p className="guessing-line">🎤 {state.guesser!.name} is guessing…</p>}
+        {state.config.order === "roundRobin" && state.activePlayerId && !guessing && <p className="turn">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name}'s song</p>}
+        <FoundChips found={state.found} guess={state.config.guess} hint={state.hint} />
+        <Hints state={state} />
+        <ScoreBanner state={state} />
       </div>
-      <div className="top-side">
-      {state.config.order === "roundRobin" && state.activePlayerId && <p className="turn">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name}'s song</p>}
-      <Scoreboard state={state} />
-      </div>
-      </div>
-      <div className="top">
-        <div className="top-main">
-          <FoundChips found={state.found} guess={state.config.guess} hint={state.hint} />
-        </div>
-        {(state.config.hints === "trivia" || state.lastScore) && (
-          <div className="top-side">
-            <Hints state={state} />
-            <ScoreBanner state={state} />
-          </div>
-        )}
-      </div>
+      {guessing && <div className="p2-bar"><GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} /></div>}
     </div>
   );
 }

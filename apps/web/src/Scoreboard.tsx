@@ -20,3 +20,16 @@ export function Scoreboard({ state, reveal, meId }: { state: RoomState; reveal?:
     </ol>
   );
 }
+
+/** Compact one-line scores (host gameplay screen): "Ana 1200 · Bo 800". */
+export function ScoreLine({ state }: { state: RoomState }) {
+  return (
+    <div className="scoreline">
+      {state.players.map((p) => (
+        <span key={p.id} className={(state.guesser?.id === p.id ? "guessing " : "") + (state.activePlayerId === p.id ? "active " : "") + (p.connected ? "" : "gone")}>
+          {p.name} <b>{p.score}</b>
+        </span>
+      ))}
+    </div>
+  );
+}

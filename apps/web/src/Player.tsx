@@ -169,15 +169,22 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
             </div>
           ) : iAmGuesser ? (
             <form className={"guess-form" + (pad.connected ? " with-kb" : "")} onSubmit={submit}>
-              <div className="gf-main">
-              <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
-              <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
+              {!embedded && <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />}
+              {pad.connected ? (
+                <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} onCancel={() => send({ t: "cancel" })}>
+                  <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
                 <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
-              <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
-              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel</button>
-              </div>
-              {pad.connected && <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} onCancel={() => send({ t: "cancel" })} />}
+                </PadKeyboard>
+              ) : (
+                <div className="gf-main">
+                  <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
+                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
+              </label>
+                  <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
+                  <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel</button>
+                </div>
+              )}
             </form>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
