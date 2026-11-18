@@ -136,3 +136,28 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .timer.frozen .bar { stroke: var(--amber); filter: drop-shadow(0 0 8px var(--amber)); }
 .timer.frozen b { color: var(--amber); }
 .eq.still i { animation-play-state: paused; opacity: .35; }
+
+/* buzzer gameplay */
+.answer-btn { width: 100%; min-height: 38vh; border: 0; border-radius: 28px; cursor: pointer; font-size: clamp(2.2rem, 11vw, 3.4rem); font-weight: 900; letter-spacing: .04em; color: #fff; background: radial-gradient(circle at 30% 25%, #ff7ac0, var(--pink) 55%, #b01e6a); box-shadow: 0 10px 0 #7d1049, 0 24px 50px rgba(255,61,154,.45); transition: transform .08s, box-shadow .08s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.answer-btn:active:not(:disabled) { transform: translateY(8px); box-shadow: 0 2px 0 #7d1049, 0 8px 20px rgba(255,61,154,.4); }
+.answer-btn:disabled { background: rgba(255,255,255,.08); color: var(--muted); box-shadow: none; min-height: 14vh; font-size: 1.3rem; cursor: not-allowed; }
+.embedded .answer-btn { min-height: 120px; }
+.guess-form { display: flex; flex-direction: column; gap: 14px; animation: rise .25s both; }
+.guessing-msg { text-align: center; font-size: 1.4rem; font-weight: 800; color: var(--amber); margin: 18px 0; animation: beat 1s ease-in-out infinite alternate; }
+.guessing-banner { text-align: center; width: min(560px, 100%); }
+.guessing-banner h2 { margin: 0 0 10px; font-size: clamp(1.5rem, 4vw, 2.4rem); color: var(--amber); animation: beat .8s ease-in-out infinite alternate; }
+.found { display: flex; flex-direction: column; gap: 8px; width: min(560px, 100%); }
+.chip { display: grid; grid-template-columns: 4.5rem 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px dashed var(--line); color: var(--muted); }
+.chip small { text-transform: uppercase; letter-spacing: .08em; font-size: .7rem; }
+.chip b { font-size: 1.1rem; letter-spacing: .1em; }
+.chip em { font-style: normal; font-size: .8rem; color: var(--lime); }
+.chip.got { border-style: solid; border-color: var(--lime); background: rgba(182,255,61,.1); color: var(--text); animation: pop .5s both; }
+.chip.got b { letter-spacing: 0; }
+.board li.guessing { border-color: var(--amber); box-shadow: 0 0 20px rgba(255,197,61,.35); }
+.board li.tried { opacity: .7; }
+.board .tick { color: var(--muted); font-size: .8rem; }
+
+.phone-head { gap: 12px; }
+.phone-head b { flex: 1; }
+.exit { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
+.exit:active { transform: scale(.95); }

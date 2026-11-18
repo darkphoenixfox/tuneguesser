@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import type { RevealInfo, RoomState } from "@tuneguesser/shared";
+import { FoundChips, GuessBar } from "./Found";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
@@ -30,7 +31,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const [playlistId, setPlaylistId] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [rounds, setRounds] = useState(10);
-  const [seconds, setSeconds] = useState(20);
+  const [seconds, setSeconds] = useState(40);
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
   const [busy, setBusy] = useState(false);
 
@@ -94,7 +95,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               </select>
             </label>
             <label>Rounds <input type="number" min={1} max={50} value={rounds} onChange={(e) => setRounds(+e.target.value)} /></label>
-            <label>Seconds <input type="number" min={5} max={60} value={seconds} onChange={(e) => setSeconds(+e.target.value)} /></label>
+            <label>Seconds per song <input type="number" min={10} max={120} value={seconds} onChange={(e) => setSeconds(+e.target.value)} /></label>
           </section>
           <button className="btn big" disabled={!playlistId || !deviceId || busy} onClick={() => create(false)}>Create room</button>
         </>
@@ -105,7 +106,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
 
 function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   const first = useMemo(() => ({ t: "host" as const, code: saved.code, token: saved.token }), [saved]);
-  const { state, error, send, endsAt } = useRoom(first);
+  const { state, error, send, endsAt, guessEndsAt } = useRoom(first);
   const [mute, setMute] = useState(false);
   const prev = useRef<RoomState["phase"]>();
   const joinUrl = `${location.origin}/?code=${saved.code}`;
@@ -141,7 +142,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
     <main className="screen game">
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
-      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} onResume={() => send({ t: "resume" })} />}
+      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={onLeave} />}
       {me && <Play embedded saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
@@ -188,11 +189,11 @@ function Scoreboard({ state, reveal }: { state: RoomState; reveal?: RevealInfo }
         const g = reveal?.gains[p.id];
         const add = g ? g.title + g.artist : 0;
         return (
-          <li key={p.id} className={p.answered ? "done" : ""}>
+          <li key={p.id} className={(p.attempted && state.phase === "playing" ? "tried " : "") + (state.guesser?.id === p.id ? "guessing" : "")}>
             <span className="name">{p.name}</span>
             <span className="score">{p.score}</span>
             {add > 0 && <span className="gain">+{add}</span>}
-            {state.phase === "playing" && p.answered && <span className="tick">✓</span>}
+            {state.phase === "playing" && p.attempted && <span className="tick">tried</span>}
           </li>
         );
       })}
@@ -200,30 +201,39 @@ function Scoreboard({ state, reveal }: { state: RoomState; reveal?: RevealInfo }
   );
 }
 
-function Playing({ state, endsAt, onSkip, onPause, onResume }: { state: RoomState; endsAt: number; onSkip: () => void; onPause: () => void; onResume: () => void }) {
-  const left = useCountdown(endsAt, state.paused ? state.remainingMs : undefined);
+function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void }) {
+  const guessing = !!state.guesser;
+  const left = useCountdown(endsAt, guessing ? state.remainingMs : undefined);
   const frac = Math.min(1, left / (state.roundMs / 1000));
   const lastTick = useRef(-1);
   useEffect(() => {
     const s = Math.ceil(left);
-    if (s <= 5 && s > 0 && s !== lastTick.current) { lastTick.current = s; sfx.tick(); }
-  }, [left]);
+    if (!guessing && s <= 5 && s > 0 && s !== lastTick.current) { lastTick.current = s; sfx.tick(); }
+  }, [left, guessing]);
+  const gid = state.guesser?.id;
+  useEffect(() => { if (gid) sfx.buzz(); }, [gid]);
+  const foundCount = (state.found?.title ? 1 : 0) + (state.found?.artist ? 1 : 0);
+  const prevFound = useRef(0);
+  useEffect(() => { if (foundCount > prevFound.current) sfx.correct(); prevFound.current = foundCount; }, [foundCount]);
   const R = 90, C = 2 * Math.PI * R;
   return (
     <div className="playing">
       <p className="muted">Round {state.round} / {state.totalRounds}</p>
-      <div className={"timer" + (left <= 5 && !state.paused ? " hot" : "") + (state.paused ? " frozen" : "")}>
+      <div className={"timer" + (left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
         <b>{Math.ceil(left)}</b>
       </div>
-      {state.paused && <p className="paused-banner">⏸ Paused{state.pausedBy ? ` by ${state.pausedBy}` : ""}</p>}
-      <div className={"eq" + (state.paused ? " still" : "")} aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
-      <h2 className="prompt">Name that tune!</h2>
+      {guessing ? (
+        <div className="guessing-banner">
+          <h2>🎤 {state.guesser!.name} is guessing…</h2>
+          <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
+        </div>
+      ) : (
+        <div className="eq" aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
+      )}
+      <FoundChips found={state.found} />
       <Scoreboard state={state} />
-      <div className="controls">
-        {state.paused ? <button className="btn big" onClick={onResume}>▶ Resume</button> : <button className="btn" onClick={onPause}>⏸ Pause</button>}
-        <button className="btn ghost" onClick={onSkip}>Skip</button>
-      </div>
+      <div className="controls"><button className="btn ghost" onClick={onSkip}>Skip song</button></div>
     </div>
   );
 }

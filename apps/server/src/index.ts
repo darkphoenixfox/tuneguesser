@@ -114,7 +114,8 @@ const http = createServer(async (req, res) => {
       const code = newCode();
       const room = new Room(code, music, {
         rounds: clamp(body.rounds, 1, 50, 10),
-        roundMs: clamp(body.roundSeconds, 5, 60, 20) * 1000,
+        roundMs: clamp(body.roundSeconds, 10, 120, 40) * 1000,
+        guessMs: 25_000,
         revealMs: 8000,
       });
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Set(), createdAt: Date.now() };
@@ -159,17 +160,16 @@ wss.on("connection", (ws) => {
         return;
       }
       const room = entry.room;
-      if (role === "player" && m.t === "answer" && playerId) {
-        const r = room.answer(playerId, { title: String(m.title ?? "").slice(0, 120), artist: String(m.artist ?? "").slice(0, 120) });
+      if (role === "player" && playerId && m.t === "buzz") {
+        room.buzz(playerId);
+      } else if (role === "player" && playerId && m.t === "leave") {
+        room.leave(playerId);
+        playerId = undefined;
+      } else if (role === "player" && playerId && m.t === "answer") {
+        const r = await room.answer(playerId, { title: String(m.title ?? "").slice(0, 120), artist: String(m.artist ?? "").slice(0, 120) });
         if (r) send(ws, { t: "result", ...r });
-      } else if (role === "player" && playerId && m.t === "pause") {
-        room.pause(playerId);
-      } else if (role === "player" && playerId && m.t === "resume") {
-        await room.resume(playerId);
       } else if (role === "host") {
         if (m.t === "start") await room.start();
-        else if (m.t === "pause") room.pause("host");
-        else if (m.t === "resume") await room.resume("host");
         else if (m.t === "skip" || m.t === "next") room.state().phase === "playing" ? await room.endRound() : await room.nextRound();
       }
     } catch (e) {

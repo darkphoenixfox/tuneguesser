@@ -25,6 +25,7 @@ const seq = (notes: number[], step = 0.09, type: OscillatorType = "triangle", du
 export const sfx = {
   join: () => !muted && seq([523, 784], 0.08),
   start: () => !muted && seq([392, 523, 659, 784], 0.1, "square"),
+  buzz: () => !muted && seq([440, 330], 0.06, "square", 0.12),
   tick: () => !muted && tone(880, 0, 0.05, "square", 0.05),
   correct: () => !muted && seq([659, 880, 1175], 0.07),
   wrong: () => !muted && seq([220, 165], 0.12, "sawtooth"),

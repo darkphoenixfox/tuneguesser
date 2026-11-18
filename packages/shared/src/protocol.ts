@@ -7,10 +7,14 @@ export interface PlayerPublic {
   name: string;
   score: number;
   connected: boolean;
-  /** has submitted an answer this round */
-  answered: boolean;
-  /** this player already used their one pause this round */
-  pauseUsed?: boolean;
+  /** already used their one attempt this round */
+  attempted: boolean;
+}
+
+/** Parts of the song found so far this round, shown to everyone while the music continues. */
+export interface Found {
+  title?: { text: string; by: string };
+  artist?: { text: string; by: string };
 }
 
 export interface RevealInfo {
@@ -29,14 +33,14 @@ export interface RoomState {
   round: number;
   totalRounds: number;
   roundMs: number;
-  /** server epoch ms when the current round started; clients compute remaining time from it */
-  roundStartedAt?: number;
-  /** ms left in the round at the moment this state was sent (use this, not roundStartedAt, to avoid clock skew) */
+  guessMs: number;
+  /** ms left in the round. While someone is guessing the clock is frozen at this value. */
   remainingMs?: number;
-  /** round is frozen (music and timer stopped); remainingMs is the frozen value */
-  paused?: boolean;
-  pausedBy?: string;
-  pausedById?: string;
+  /** the player who pressed ANSWER: music and round clock are stopped while they type */
+  guesser?: { id: string; name: string };
+  /** ms the guesser has left to send an answer */
+  guessRemainingMs?: number;
+  found?: Found;
   reveal?: RevealInfo;
   hostConnected: boolean;
 }
@@ -44,10 +48,13 @@ export interface RoomState {
 export type ClientMessage =
   | { t: "join"; code: string; name: string; playerId?: string }
   | { t: "host"; code: string; token: string }
+  /** press the ANSWER button */
+  | { t: "buzz" }
+  /** the buzzed player's answer */
   | { t: "answer"; title?: string; artist?: string }
+  /** a player exits to the main screen */
+  | { t: "leave" }
   | { t: "start" }
-  | { t: "pause" }
-  | { t: "resume" }
   | { t: "skip" }
   | { t: "next" };
 

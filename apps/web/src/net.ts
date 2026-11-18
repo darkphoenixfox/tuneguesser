@@ -8,6 +8,8 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
   const [connected, setConnected] = useState(false);
   /** wall-clock time (this device) when the current round ends */
   const [endsAt, setEndsAt] = useState(0);
+  /** wall-clock time when the current guesser runs out of time to answer */
+  const [guessEndsAt, setGuessEndsAt] = useState(0);
   const ws = useRef<WebSocket>();
   const cb = useRef(onMessage);
   cb.current = onMessage;
@@ -25,7 +27,8 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
         const m: ServerMessage = JSON.parse(e.data);
         if (m.t === "state") {
           setState(m.state);
-          setEndsAt(m.state.remainingMs !== undefined ? Date.now() + m.state.remainingMs : 0);
+          setEndsAt(m.state.remainingMs !== undefined && !m.state.guesser ? Date.now() + m.state.remainingMs : 0);
+          setGuessEndsAt(m.state.guessRemainingMs !== undefined ? Date.now() + m.state.guessRemainingMs : 0);
         } else if (m.t === "error") setError(m.message);
         cb.current?.(m);
       };
@@ -37,7 +40,7 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
   }, [firstKey]);
 
   const send = useCallback((m: ClientMessage) => ws.current?.readyState === 1 && ws.current.send(JSON.stringify(m)), []);
-  return { state, error, connected, endsAt, send };
+  return { state, error, connected, endsAt, guessEndsAt, send };
 }
 
 /** Remaining seconds (fractional), re-rendering ~10x/s while a round is running */

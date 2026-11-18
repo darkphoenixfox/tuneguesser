@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { FoundChips, GuessBar } from "./Found";
 import { useCountdown, useRoom } from "./net";
 import { sfx } from "./sfx";
 
@@ -38,56 +39,75 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
 export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean }) {
   const first = useMemo(() => ({ t: "join" as const, code: saved.code, name: saved.name, playerId: saved.playerId }), [saved.code, saved.name]);
   const [me, setMe] = useState(saved.playerId);
-  const [res, setRes] = useState({ title: false, artist: false });
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
-  const [shake, setShake] = useState(0);
-  const { state, error, send, endsAt } = useRoom(first, (m) => {
+  const [sent, setSent] = useState(false);
+  const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => {
     if (m.t === "joined") { setMe(m.playerId); onId(m.playerId); }
     if (m.t === "result") {
-      setRes((prev) => {
-        if ((m.title && !prev.title) || (m.artist && !prev.artist)) { sfx.correct(); navigator.vibrate?.(60); }
-        else if (!m.title && !m.artist) { sfx.wrong(); navigator.vibrate?.([40, 40, 40]); setShake((s) => s + 1); }
-        return { title: m.title, artist: m.artist };
-      });
+      if (m.title || m.artist) { sfx.correct(); navigator.vibrate?.(80); } else { sfx.wrong(); navigator.vibrate?.([40, 40, 40]); }
     }
   });
-  const left = useCountdown(endsAt, state?.paused ? state.remainingMs : undefined);
-  const round = state?.round;
-  useEffect(() => { setRes({ title: false, artist: false }); setTitle(""); setArtist(""); }, [round]);
-
+  const guessing = !!state?.guesser;
+  const left = useCountdown(endsAt, guessing ? state?.remainingMs : undefined);
   const mine = state?.players.find((p) => p.id === me);
+  const iAmGuesser = !!mine && state?.guesser?.id === mine.id;
   const titleRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (state?.phase === "playing") titleRef.current?.focus(); }, [state?.phase, round]);
+
+  // a fresh form every time I get to answer
+  useEffect(() => {
+    if (iAmGuesser) { setTitle(""); setArtist(""); setSent(false); sfx.buzz(); navigator.vibrate?.(30); setTimeout(() => titleRef.current?.focus(), 50); }
+  }, [iAmGuesser]);
 
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
   if (error && !state) return <main className="screen phone center"><p className="error">{error}</p><button className="btn" onClick={onLeave}>Back</button></main>;
   if (!state || !mine) return <main className="screen phone center"><p className="muted">Joining…</p></main>;
 
   const Wrap = embedded ? "div" : "main";
+  const exit = () => {
+    if (state.phase !== "lobby" && state.phase !== "finished" && !window.confirm("Leave the game?")) return;
+    send({ t: "leave" });
+    onLeave();
+  };
+  const found = state.found;
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    send({ t: "answer", title: res.title ? undefined : title, artist: res.artist ? undefined : artist });
+    if (sent) return;
+    setSent(true);
+    send({ t: "answer", title: found?.title ? undefined : title, artist: found?.artist ? undefined : artist });
   };
 
   return (
     <Wrap className={embedded ? "embedded" : "screen phone"}>
-      {!embedded && <header className="phone-head"><b>{mine.name}</b><span className="score">{mine.score}</span></header>}
-      {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul></div>}
-      {state.phase === "playing" && (
-        <form key={shake} className={"card answer" + (shake ? " shake" : "")} onSubmit={submit}>
-          <div className="bar-time"><i style={{ width: `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
-          <label>Song title {res.title && <span className="ok">✓</span>}<input ref={titleRef} value={res.title ? "✓" : title} disabled={res.title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" autoCorrect="off" /></label>
-          <label>Artist {res.artist && <span className="ok">✓</span>}<input value={res.artist ? "✓" : artist} disabled={res.artist} onChange={(e) => setArtist(e.target.value)} autoComplete="off" autoCorrect="off" /></label>
-          {state.paused && <p className="paused-banner">⏸ Paused{state.pausedBy ? ` by ${state.pausedBy}` : ""}</p>}
-          <button className="btn big" disabled={(res.title || !title.trim()) && (res.artist || !artist.trim())}>Send</button>
-          {!embedded && (state.paused ? (
-            state.pausedById === me && <button type="button" className="btn" onClick={() => send({ t: "resume" })}>▶ Resume</button>
-          ) : (
-            <button type="button" className="btn ghost" disabled={!!mine.pauseUsed} onClick={() => send({ t: "pause" })}>{mine.pauseUsed ? "Pause used" : "⏸ Pause (once per round)"}</button>
-          ))}
-        </form>
+      {!embedded && (
+        <header className="phone-head">
+          <button className="exit" onClick={exit} aria-label="Exit to main screen">✕ Exit</button>
+          <b>{mine.name}</b><span className="score">{mine.score}</span>
+        </header>
       )}
+      {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul></div>}
+
+      {state.phase === "playing" && (
+        <div className="card answer">
+          <div className="bar-time"><i style={{ width: `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
+          <FoundChips found={found} />
+          {iAmGuesser ? (
+            <form className="guess-form" onSubmit={submit}>
+              <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
+              {!found?.title && <label>Song title<input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" autoCorrect="off" /></label>}
+              {!found?.artist && <label>Artist<input ref={found?.title ? titleRef : undefined} value={artist} onChange={(e) => setArtist(e.target.value)} autoComplete="off" autoCorrect="off" /></label>}
+              <button className="btn big" disabled={sent}>{sent ? "Sent…" : "Send answer"}</button>
+            </form>
+          ) : guessing ? (
+            <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
+          ) : (
+            <button className="answer-btn" disabled={mine.attempted} onClick={() => send({ t: "buzz" })}>
+              {mine.attempted ? "You already tried" : "ANSWER"}
+            </button>
+          )}
+        </div>
+      )}
+
       {state.phase === "reveal" && state.reveal && (
         <div className="card center">
           {state.reveal.albumArt && <img className="art small" src={state.reveal.albumArt} alt="" />}
@@ -96,7 +116,7 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
           {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
         </div>
       )}
-      {state.phase === "finished" && <div className="card center"><h2>Game over</h2><p className="gain-big">{mine.score}</p><button className="btn" onClick={onLeave}>Leave</button></div>}
+      {state.phase === "finished" && <div className="card center"><h2>Game over</h2><p className="gain-big">{mine.score}</p><button className="btn" onClick={exit}>Back to main screen</button></div>}
     </Wrap>
   );
 }
