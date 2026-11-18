@@ -341,3 +341,4 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 /* the ANSWER button has a maximum size and is centred, however wide the browser */
 .answer-btn { width: min(100%, 560px); max-width: 560px; margin-inline: auto; display: block; }
 .card.answer > .answer-btn { align-self: center; }
+.pk-row:last-child .pk-key:nth-child(1) { flex: 3 1 0; } .pk-row:last-child .pk-key:nth-child(2), .pk-row:last-child .pk-key:nth-child(3) { flex: 2 1 0; } .pk-row:last-child .pk-key:nth-child(4) { flex: 3 1 0; }

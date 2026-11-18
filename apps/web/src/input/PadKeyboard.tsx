@@ -4,18 +4,18 @@ import { Glyph } from "./Glyph";
 import { onPadButton } from "./pad";
 
 const ROWS = ["1234567890", "qwertyuiop", "asdfghjkl'", "zxcvbnm-.&"];
-const SPECIAL = ["space", "back", "send"] as const;
+const SPECIAL = ["space", "cancel", "back", "send"] as const;
 
 /**
  * On-screen keyboard for gamepads, with auto-completion: the top row offers whole titles/artists and words from the
- * playlist. D-pad moves (up from the letters reaches the suggestions), A types / picks, B deletes, X adds a space, Y sends.
+ * playlist. D-pad moves (up from the letters reaches the suggestions), A presses the key, B cancels, X deletes (backspace), Y sends.
  */
-export function PadKeyboard({ text, words, onText, onSend, disabled, sendLabel = "send" }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; disabled?: boolean; sendLabel?: string }) {
+export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, sendLabel = "Send" }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; onCancel: () => void; disabled?: boolean; sendLabel?: string }) {
   const sugg = useMemo(() => suggest(text, words), [text, words]);
   // r = -1 is the suggestion row, 0..ROWS.length-1 the letter rows, ROWS.length the space/back/send row
   const [pos, setPos] = useState({ r: 1, c: 0 });
-  const live = useRef({ text, sugg, disabled, pos, onText, onSend });
-  live.current = { text, sugg, disabled, pos, onText, onSend };
+  const live = useRef({ text, sugg, disabled, pos, onText, onSend, onCancel });
+  live.current = { text, sugg, disabled, pos, onText, onSend, onCancel };
 
   const width = (r: number) => (r === -1 ? live.current.sugg.length : r < ROWS.length ? ROWS[r]!.length : SPECIAL.length);
   const clamp = (r: number, c: number) => {
@@ -33,7 +33,7 @@ export function PadKeyboard({ text, words, onText, onSend, disabled, sendLabel =
     } else if (r < ROWS.length) h.onText((h.text + ROWS[r]![c]!).slice(0, 160));
     else {
       const k = SPECIAL[c]!;
-      if (k === "space") h.onText(h.text + " "); else if (k === "back") h.onText(h.text.slice(0, -1)); else h.onSend();
+      if (k === "space") h.onText(h.text + " "); else if (k === "back") h.onText(h.text.slice(0, -1)); else if (k === "cancel") h.onCancel(); else h.onSend();
     }
   };
 
@@ -48,8 +48,8 @@ export function PadKeyboard({ text, words, onText, onSend, disabled, sendLabel =
     else if (b === "left") setPos({ r, c: (c + width(r) - 1) % width(r) });
     else if (b === "right") setPos({ r, c: (c + 1) % width(r) });
     else if (b === "a") press(r, c);
-    else if (b === "b" && !h.disabled) h.onText(h.text.slice(0, -1));
-    else if (b === "x" && !h.disabled) h.onText(h.text + " ");
+    else if (b === "b") h.onCancel();
+    else if (b === "x" && !h.disabled) h.onText(h.text.slice(0, -1));
     else if (b === "y" && !h.disabled) h.onSend();
   }), []);
 
@@ -67,9 +67,10 @@ export function PadKeyboard({ text, words, onText, onSend, disabled, sendLabel =
         </div>
       ))}
       <div className="pk-row">
-        <button type="button" className={cls(ROWS.length, 0) + " wide"} onClick={() => press(ROWS.length, 0)}><Glyph button="x" /> space</button>
-        <button type="button" className={cls(ROWS.length, 1) + " wide"} onClick={() => press(ROWS.length, 1)}><Glyph button="b" /> ⌫</button>
-        <button type="button" className={cls(ROWS.length, 2) + " wide send"} onClick={() => press(ROWS.length, 2)}><Glyph button="y" /> {sendLabel}</button>
+        <button type="button" className={cls(ROWS.length, 0) + " wide"} onClick={() => press(ROWS.length, 0)}>space</button>
+        <button type="button" className={cls(ROWS.length, 1) + " wide"} onClick={() => press(ROWS.length, 1)}><Glyph button="b" /> Cancel</button>
+        <button type="button" className={cls(ROWS.length, 2) + " wide"} onClick={() => press(ROWS.length, 2)}><Glyph button="x" /> Backspace</button>
+        <button type="button" className={cls(ROWS.length, 3) + " wide send"} onClick={() => press(ROWS.length, 3)}><Glyph button="y" /> {sendLabel}</button>
       </div>
     </div>
   );

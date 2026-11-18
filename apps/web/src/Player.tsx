@@ -175,9 +175,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
                 <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
               <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
-              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel <Key>Esc</Key><PadHint button="start" /></button>
+              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel</button>
               </div>
-              {pad.connected && <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} />}
+              {pad.connected && <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} onCancel={() => send({ t: "cancel" })} />}
             </form>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
