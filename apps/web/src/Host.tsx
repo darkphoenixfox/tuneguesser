@@ -74,6 +74,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
         <>
           <section className="card">
             <h2>1. Pick a playlist</h2>
+            <p className="muted">Only playlists you own or collaborate on can be used (a Spotify rule). To use someone else's or an editorial playlist, copy its songs into one of your own.</p>
             <div className="grid">
               {playlists.map((p) => (
                 <button key={p.id} className={"pl" + (p.id === playlistId ? " sel" : "")} onClick={() => setPlaylistId(p.id)}>

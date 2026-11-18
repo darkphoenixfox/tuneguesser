@@ -75,11 +75,18 @@ export class SpotifyClient {
     return text ? JSON.parse(text) : null;
   }
 
+  /**
+   * Playlists whose items this app may read. Since Feb 2026 Spotify only returns playlist items
+   * for playlists the user owns or collaborates on, so anything else is left out.
+   */
   async playlists(): Promise<Array<{ id: string; name: string; tracks: number; image?: string }>> {
+    const me = await this.api("GET", "/me");
     const j = await this.api("GET", "/me/playlists?limit=50");
-    return (j?.items ?? []).filter(Boolean).map((p: any) => ({
-      id: p.id, name: p.name, tracks: p.tracks?.total ?? 0, image: p.images?.[0]?.url,
-    }));
+    return (j?.items ?? [])
+      .filter((p: any) => p && (p.owner?.id === me?.id || p.collaborative))
+      .map((p: any) => ({
+        id: p.id, name: p.name, tracks: p.items?.total ?? p.tracks?.total ?? 0, image: p.images?.[0]?.url,
+      }));
   }
 
   async devices(): Promise<Array<{ id: string; name: string; type: string; active: boolean }>> {
@@ -95,10 +102,10 @@ export class SpotifyProvider implements MusicProvider {
   async loadTracks(): Promise<Track[]> {
     const out: Track[] = [];
     for (let offset = 0; offset < 500; offset += 100) {
-      const j = await this.client.api("GET", `/playlists/${this.playlistId}/tracks?limit=100&offset=${offset}&fields=items(track(id,uri,name,duration_ms,is_local,type,artists(name),album(release_date,images))),next`);
+      const j = await this.client.api("GET", `/playlists/${this.playlistId}/items?limit=100&offset=${offset}`);
       for (const it of j?.items ?? []) {
-        const t = it?.track;
-        if (!t || t.is_local || t.type !== "track" || !t.id) continue;
+        const t = it?.item ?? it?.track; // 'item' since the Feb 2026 API change
+        if (!t || t.is_local || t.type !== "track" || !t.id) continue; // skips podcast episodes and local files
         out.push({
           id: t.id, uri: t.uri, title: t.name, artists: t.artists.map((a: any) => a.name),
           durationMs: t.duration_ms, albumArt: t.album?.images?.[0]?.url, year: t.album?.release_date?.slice(0, 4),
