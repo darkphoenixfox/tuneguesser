@@ -125,4 +125,14 @@ export class SpotifyProvider implements MusicProvider {
   async pause() {
     await this.client.api("PUT", `/me/player/pause${this.dev()}`);
   }
+
+  /** Spotify's own resume (no body) continues from the paused position, with no seeking. */
+  async resume(track: Track, positionMs: number) {
+    try {
+      await this.client.api("PUT", `/me/player/play${this.dev()}`);
+    } catch {
+      // nothing to resume (e.g. the player went idle): start the track again at the saved position
+      await this.play(track, positionMs);
+    }
+  }
 }

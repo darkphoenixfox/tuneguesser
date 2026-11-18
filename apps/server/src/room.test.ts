@@ -66,8 +66,8 @@ describe("Room (buzzer game)", () => {
     expect(st.found?.artist).toBeUndefined();
     expect(st.players.find((p) => p.id === a)!.attemptsLeft).toBe(3); // a partly correct guess is free
     expect(st.players.find((p) => p.id === a)!.score).toBe(Math.round(1000 * (0.2 + 0.8 * 0.75))); // buzzed 10s of 40s
-    expect(music.played.length).toBe(2);
-    expect(music.played[1]!.startMs - music.played[0]!.startMs).toBe(10_000);
+    expect(music.played.length).toBe(1); // started once; after the guess it is resumed, not restarted
+    expect(music.resumed).toEqual([{ id: music.played[0]!.id, positionMs: music.played[0]!.startMs + 10_000 }]);
     expect(st.remainingMs).toBe(30_000);
   });
 
@@ -106,7 +106,8 @@ describe("Room (buzzer game)", () => {
     await vi.advanceTimersByTimeAsync(25_000);
     expect(room.state().guesser).toBeUndefined();
     expect(room.state().players.find((p) => p.id === a)!.attemptsLeft).toBe(2); // a timeout costs an attempt
-    expect(music.played.length).toBe(2);
+    expect(music.played.length).toBe(1);
+    expect(music.resumed.length).toBe(1); // resumed, not restarted
   });
 
   it("leaving frees a lobby slot; leaving mid-guess ends the guess and the music continues", async () => {
@@ -119,9 +120,10 @@ describe("Room (buzzer game)", () => {
     await room.start();
     room.buzz(c);
     room.leave(c);
+    await vi.advanceTimersByTimeAsync(0);
     expect(room.state().guesser).toBeUndefined();
     expect(room.state().players.find((p) => p.id === c)).toMatchObject({ connected: false, attemptsLeft: 0 });
-    expect(music.played.length).toBe(2); // resumed for Ana
+    expect(music.resumed.length).toBe(1); // resumed (not restarted) for Ana
     expect(a).toBeTruthy();
   });
 

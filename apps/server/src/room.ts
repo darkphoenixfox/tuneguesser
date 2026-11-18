@@ -52,6 +52,8 @@ export class Room {
   private reveal?: RevealInfo;
   private timer?: NodeJS.Timeout;
   private guessTimer?: NodeJS.Timeout;
+  /** the pause request sent when someone buzzed; a resume must wait for it so they can't arrive out of order */
+  private pausing: Promise<void> = Promise.resolve();
   hostConnected = false;
   onChange: () => void = () => {};
 
@@ -136,7 +138,7 @@ export class Room {
     this.guessStartedAt = this.now();
     this.frozenElapsed = this.guessStartedAt - this.roundStartedAt;
     clearTimeout(this.timer);
-    void this.music.pause().catch(() => {});
+    this.pausing = this.music.pause().catch(() => {});
     this.guessTimer = setTimeout(() => void this.finishGuess(), this.opts.guessMs);
     this.onChange();
     return true;
@@ -177,7 +179,8 @@ export class Room {
     this.roundStartedAt = this.now() - this.frozenElapsed;
     this.timer = setTimeout(() => void this.endRound(), Math.max(0, this.opts.roundMs - this.frozenElapsed));
     this.onChange();
-    await this.music.play(this.current, this.startMs + this.frozenElapsed).catch(() => {});
+    await this.pausing;
+    await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(() => {});
   }
 
   async endRound(): Promise<void> {

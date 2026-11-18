@@ -13,11 +13,14 @@ export interface MusicProvider {
   loadTracks(): Promise<Track[]>;
   play(track: Track, startMs: number): Promise<void>;
   pause(): Promise<void>;
+  /** Continue a paused track exactly where it stopped. `positionMs` is only a fallback if the source can't resume. */
+  resume(track: Track, positionMs: number): Promise<void>;
 }
 
 /** Silent provider for development and tests. */
 export class DemoProvider implements MusicProvider {
   readonly played: Array<{ id: string; startMs: number }> = [];
+  readonly resumed: Array<{ id: string; positionMs: number }> = [];
   async loadTracks(): Promise<Track[]> {
     const t = (n: number, title: string, artists: string[], year: string): Track => ({
       id: `demo${n}`, uri: `demo:${n}`, title, artists, durationMs: 200_000, year,
@@ -33,4 +36,5 @@ export class DemoProvider implements MusicProvider {
   }
   async play(track: Track, startMs: number) { this.played.push({ id: track.id, startMs }); }
   async pause() {}
+  async resume(track: Track, positionMs: number) { this.resumed.push({ id: track.id, positionMs }); }
 }
