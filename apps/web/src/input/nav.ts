@@ -21,7 +21,12 @@ const centre = (el: HTMLElement) => { const r = el.getBoundingClientRect(); retu
 function move(dir: "up" | "down" | "left" | "right") {
   const all = candidates();
   const cur = document.activeElement instanceof HTMLElement && all.includes(document.activeElement) ? document.activeElement : undefined;
-  if (!cur) { focus(document.querySelector<HTMLElement>("[data-pad-first]") ?? all[0]); return; }
+  if (!cur) {
+    // the main action first (Quickstart, Start game, ANSWER), never the corner buttons (mute, settings, quit, device, theme)
+    const main = all.find((e) => !e.matches(".mute, .gear, .quit, .devbtn, .theme-btn, .tabs button"));
+    focus(document.querySelector<HTMLElement>("[data-pad-first]") ?? main ?? all[0]);
+    return;
+  }
   const c = centre(cur);
   let best: HTMLElement | undefined;
   let bestScore = Infinity;

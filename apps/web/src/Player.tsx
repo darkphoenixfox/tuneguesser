@@ -175,7 +175,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           ) : state.config.order === "roundRobin" && state.activePlayerId !== mine.id ? (
             <p className="guessing-msg">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name ?? "Someone"}'s song</p>
           ) : (
-            <button className="answer-btn" disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
+            <button className="answer-btn" data-pad-first disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
               {mine.attemptsLeft === 0 ? "Out of tries" : state.config.order === "roundRobin" ? "YOUR SONG: ANSWER" : "ANSWER"}
               {mine.attemptsLeft > 0 && <PadHint button="a" />}
             </button>

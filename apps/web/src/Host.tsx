@@ -284,7 +284,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
             <button className="btn" disabled={!name.trim() || state.players.length >= 4}>Join</button>
           </form>
         )}
-        <button className="btn big" disabled={state.players.length === 0} onClick={onStart}>Start game</button>
+        <button className="btn big" data-pad-first disabled={state.players.length === 0} onClick={onStart}>Start game</button>
         <button className="btn ghost" onClick={onLeave}>Cancel</button>
       </div>
     </div>
