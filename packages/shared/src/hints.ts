@@ -18,9 +18,9 @@ export function letterPositions(text: string): number[] {
   return out;
 }
 
-/** How many letters to show after `progress` (0..1) of the time: gradually up to `cap` of all letters, never all of them. */
-export function revealCount(progress: number, letters: number, cap = 0.6): number {
-  return Math.floor(Math.min(1, Math.max(0, progress)) * cap * letters);
+/** How many letters to show after `progress` (0..1) of the time: spread evenly, every letter is visible just before the time is up. */
+export function revealCount(progress: number, letters: number, doneAt = 0.95): number {
+  return Math.floor(Math.min(1, Math.max(0, progress) / doneAt) * letters);
 }
 
 /** Replaces letters with "_" except the first `count` positions of `order` (a shuffled list of letter positions). */

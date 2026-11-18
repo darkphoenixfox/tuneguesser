@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { DEFAULT_CONFIG, type GameConfig, type RoomState } from "@tuneguesser/shared";
-import { FoundChips, GuessBar, Hints, ScoreBanner } from "./Found";
+import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
 import { Scoreboard } from "./Scoreboard";
 import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
@@ -219,6 +219,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
           {state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)} style={{ opacity: p.connected ? 1 : 0.4 }}>{p.name}</li>)}
           {state.players.length === 0 && <li className="muted">Waiting for players…</li>}
         </ul>
+        <GameSummary state={state} />
         {me ? <p className="muted">You're playing as <b>{me.name}</b> on this screen.</p> : (
           <form className="hostplay" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { sfx.join(); onPlay(name.trim()); } }}>
             <input placeholder="Play on this screen too? Your name" maxLength={16} value={name} onChange={(e) => setName(e.target.value)} />

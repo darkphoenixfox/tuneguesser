@@ -36,11 +36,12 @@ describe("reveal hint", () => {
     expect(maskText(text, order, 2)).toBe("He_ ____!");
     expect(maskText(text, [...order].reverse(), 2)).toBe("___ __de!");
   });
-  it("reveals gradually, never more than 60% of the letters", () => {
+  it("reveals evenly and shows every letter by the end of the timer", () => {
     expect(revealCount(0, 10)).toBe(0);
-    expect(revealCount(0.5, 10)).toBe(3);
-    expect(revealCount(1, 10)).toBe(6);
-    expect(revealCount(5, 10)).toBe(6);
+    expect(revealCount(0.475, 10)).toBe(5);
+    expect(revealCount(0.95, 10)).toBe(10);
+    expect(revealCount(1, 10)).toBe(10);
+    expect(revealCount(5, 10)).toBe(10);
   });
 });
 

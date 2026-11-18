@@ -58,3 +58,23 @@ export function ScoreBanner({ state }: { state: RoomState }) {
     </div>
   );
 }
+
+/** The game settings, as a list of chips (shown in the lobby). */
+export function GameSummary({ state }: { state: RoomState }) {
+  const c = state.config;
+  const items: Array<[string, string]> = [
+    ["Play to", c.playTo.kind === "rounds" ? `${c.playTo.rounds} rounds` : `${c.playTo.target} points`],
+    ["Order", c.order === "buzzer" ? "Buzzer" : "Round robin"],
+    ["Answers", c.answers === "type" ? "Type" : "Multiple choice"],
+    ["Hints", c.hints === "none" ? "None" : c.hints === "reveal" ? "Reveal letters" : "Trivia"],
+    ["Timer", c.roundSeconds === null ? "Unlimited" : `${c.roundSeconds} s per song`],
+    ["Attempts", String(c.attempts)],
+    ["Multipliers", c.multipliers ? "Yes" : "No"],
+    ["Next song", c.autoAdvance ? "Automatic" : "Host / song end"],
+  ];
+  return (
+    <dl className="summary">
+      {items.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+    </dl>
+  );
+}

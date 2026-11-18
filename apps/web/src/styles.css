@@ -218,3 +218,7 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .choice:active { border-color: var(--cyan); }
 .theme-btn { background: transparent; border: 0; font-size: 1.3rem; cursor: pointer; }
 main.phone > .theme-btn { align-self: flex-end; }
+.summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin: 0; width: 100%; text-align: left; }
+.summary div { background: var(--soft); border-radius: 12px; padding: 8px 12px; }
+.summary dt { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+.summary dd { margin: 2px 0 0; font-weight: 800; }

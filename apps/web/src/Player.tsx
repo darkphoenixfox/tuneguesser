@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FoundChips, GuessBar, Hints, ScoreBanner } from "./Found";
+import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
 import { ThemeButton } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Scoreboard } from "./Scoreboard";
@@ -87,7 +87,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <b>{mine.name}</b><ThemeButton /><span className="score">{mine.score}</span>
         </header>
       )}
-      {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul></div>}
+      {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
 
       {state.phase === "playing" && (
         <div className="card answer">
