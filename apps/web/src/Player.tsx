@@ -101,12 +101,9 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
           ) : (
-            <>
-              <button className="answer-btn" disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
-                {mine.attemptsLeft === 0 ? "No attempts left" : "ANSWER"}
-              </button>
-              <p className="lives big" title="attempts left">{Array.from({ length: state.maxAttempts }, (_, i) => <i key={i} className={i < mine.attemptsLeft ? "on" : ""} />)}<span>attempts left</span></p>
-            </>
+            <button className="answer-btn" disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
+              {mine.attemptsLeft === 0 ? "Out of tries" : "ANSWER"}
+            </button>
           )}
         </div>
       )}

@@ -193,7 +193,6 @@ function Scoreboard({ state, reveal }: { state: RoomState; reveal?: RevealInfo }
             <span className="name">{p.name}</span>
             <span className="score">{p.score}</span>
             {add > 0 && <span className="gain">+{add}</span>}
-            {state.phase === "playing" && <span className="lives" title="attempts left">{Array.from({ length: state.maxAttempts }, (_, i) => <i key={i} className={i < p.attemptsLeft ? "on" : ""} />)}</span>}
           </li>
         );
       })}
