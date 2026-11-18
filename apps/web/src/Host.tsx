@@ -253,6 +253,8 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
   return (
     <div className="playing">
       <p className="muted">{roundLabel(state)}</p>
+      <div className="top">
+      <div className="top-main">
       <div className={"timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
         <b>{unlimited ? "∞" : Math.ceil(left)}</b>
@@ -265,11 +267,15 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
       ) : (
         <div className="eq" aria-hidden>{Array.from({ length: 24 }, (_, i) => <i key={i} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
       )}
+      </div>
+      <div className="top-side">
       {state.config.order === "roundRobin" && state.activePlayerId && <p className="turn">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name}'s song</p>}
+      <Scoreboard state={state} />
+      </div>
+      </div>
       <Hints state={state} />
       <FoundChips found={state.found} />
       <ScoreBanner state={state} />
-      <Scoreboard state={state} />
       <div className="controls">
         <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
           {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}
