@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 /** Gamepad input: polls the Gamepad API while a pad is connected and emits one event per button press. Standard mapping. */
-export type PadButtonName = "a" | "b" | "x" | "y" | "start" | "select" | "up" | "down" | "left" | "right";
-const NAMES: Record<number, PadButtonName> = { 0: "a", 1: "b", 2: "x", 3: "y", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right" };
+export type PadButtonName = "a" | "b" | "x" | "y" | "lb" | "rb" | "start" | "select" | "up" | "down" | "left" | "right";
+const NAMES: Record<number, PadButtonName> = { 0: "a", 1: "b", 2: "x", 3: "y", 4: "lb", 5: "rb", 8: "select", 9: "start", 12: "up", 13: "down", 14: "left", 15: "right" };
 
 export type PadLayout = "xbox" | "ps";
 export const layoutOf = (id: string): PadLayout => (/playstation|dualshock|dualsense|054c|sony/i.test(id) ? "ps" : "xbox");

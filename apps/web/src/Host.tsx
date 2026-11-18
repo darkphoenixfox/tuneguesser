@@ -100,7 +100,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
       ) : (
         <>
           <div className="quick">
-            <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>⚡ Quickstart</button>
+            <button className="btn big" data-pad-first disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>⚡ Quickstart</button>
             <small className="muted">{picked.length === 0 ? "Choose playlists below once; Quickstart then reuses your last playlists and settings." : `Starts a game with your last settings (${picked.length} playlist${picked.length > 1 ? "s" : ""}) and creates the room.`}</small>
           </div>
           <section className="card">
@@ -219,7 +219,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   if (!state) return <main className="screen center"><p className="muted">Connecting…</p></main>;
 
   return (
-    <main className="screen game">
+    <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
       <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished" || window.confirm("Quit the game for everyone?")) quit(); }} aria-label="Quit game" title="Quit game">✕</button>
       <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />

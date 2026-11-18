@@ -136,7 +136,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   };
 
   return (
-    <Wrap className={embedded ? "embedded" : "screen phone"}>
+    <Wrap className={embedded ? "embedded" : "screen phone"} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       {!embedded && (
         <header className="phone-head">
           <button className="exit" onClick={exit} aria-label="Exit to main screen">✕ Exit</button>

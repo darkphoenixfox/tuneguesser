@@ -1,7 +1,10 @@
 import { createRoot } from "react-dom/client";
 import { Home } from "./Home";
 import { applyTheme, getTheme } from "./theme";
+import { startPadNav } from "./input/nav";
 import "./styles.css";
+
+startPadNav();
 
 applyTheme(getTheme());
 

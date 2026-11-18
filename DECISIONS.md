@@ -133,6 +133,9 @@ From 900 px wide, screens use two columns: host playing = timer | scores, then a
 ### DEC-035 · Keyboard auto-completion and Quickstart · 2026-11-18 · Active
 The gamepad on-screen keyboard has a suggestion row (up from the letters): up to 2 whole titles/artists starting with what was typed, plus words completing the word being typed (accents and case ignored; a picked word is followed by a space). The list (titles/artists of the selected playlists, only the part being guessed) is sent once per connection to a player who buzzes in type mode; it contains the answer among all the others, like a search box. **Quickstart** button at the top of the host setup creates a room at once with the last playlists, device and settings (remembered on the host's device).
 
+### DEC-036 · Gamepad navigation of menus · 2026-11-18 · Active
+A small spatial focus navigator (`input/nav.ts`): d-pad moves to the nearest control in that direction, A clicks, left/right adjust number boxes and drop-downs, LB/RB switch tabs; a yellow focus ring shows while a pad is used (hidden again on mouse/touch). It is off while a screen marked `data-pad-game` is up (a running round or reveal, the on-screen keyboard) because those use the buttons for game actions. Open: text fields (room code, name) cannot be typed with a pad yet.
+
 ---
 
 ## Open questions
