@@ -135,3 +135,33 @@ export function matchAnswer(
     artist: guess.artist ? matchArtist(guess.artist, track.artists) : false,
   };
 }
+
+/**
+ * One free-text answer: the player may type the title, the artist, or both (any order, optionally
+ * separated by "-", "by", "," or "|"). We try the whole text as each, then every way of splitting it in two.
+ */
+export function matchFreeText(guess: string, track: TrackInfo): MatchResult {
+  const raw = guess.trim();
+  const result: MatchResult = { title: false, artist: false };
+  if (!raw) return result;
+  const test = (t: string, a: string) => {
+    if (t && !result.title && matchTitle(t, track.title)) result.title = true;
+    if (a && !result.artist && matchArtist(a, track.artists)) result.artist = true;
+  };
+  test(raw, raw);
+  // explicit separators: "Queen - Bohemian Rhapsody", "Bohemian Rhapsody by Queen", "a | b"
+  const parts = raw.split(/\s+(?:-|–|—|by)\s+|\s*[|;]\s*/i).map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 2) {
+    test(parts[0]!, parts[1]!);
+    test(parts[1]!, parts[0]!);
+  }
+  // no separator: try every word boundary, both orders ("billie jean michael jackson")
+  const words = raw.split(/\s+/).slice(0, 14);
+  for (let i = 1; i < words.length; i++) {
+    const left = words.slice(0, i).join(" ");
+    const right = words.slice(i).join(" ");
+    test(left, right);
+    test(right, left);
+  }
+  return result;
+}

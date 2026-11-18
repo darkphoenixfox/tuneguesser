@@ -167,7 +167,7 @@ wss.on("connection", (ws) => {
         room.leave(playerId);
         playerId = undefined;
       } else if (role === "player" && playerId && m.t === "answer") {
-        const r = await room.answer(playerId, { title: String(m.title ?? "").slice(0, 120), artist: String(m.artist ?? "").slice(0, 120) });
+        const r = await room.answer(playerId, String(m.text ?? "").slice(0, 160));
         if (r) send(ws, { t: "result", ...r });
       } else if (role === "host") {
         if (m.t === "start") await room.start();

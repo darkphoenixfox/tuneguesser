@@ -1,4 +1,4 @@
-import { DEFAULT_SCORE, matchAnswer, pointsFor, type Found, type PlayerPublic, type RoomState, type RevealInfo } from "@tuneguesser/shared";
+import { DEFAULT_SCORE, matchFreeText, pointsFor, type Found, type PlayerPublic, type RoomState, type RevealInfo } from "@tuneguesser/shared";
 import type { MusicProvider, Track } from "./music";
 
 export interface RoomOptions {
@@ -143,13 +143,12 @@ export class Room {
   }
 
   /** The buzzed player sends their answer. Only parts not yet found are considered. */
-  async answer(playerId: string, guess: { title?: string; artist?: string }): Promise<{ title: boolean; artist: boolean } | undefined> {
+  async answer(playerId: string, text: string): Promise<{ title: boolean; artist: boolean } | undefined> {
     const p = this.players.get(playerId);
     if (!p || this.guesser !== playerId || !this.current) return;
-    const m = matchAnswer(
-      { title: this.found.title ? undefined : guess.title, artist: this.found.artist ? undefined : guess.artist },
-      { title: this.current.title, artists: this.current.artists },
-    );
+    // one free-text field: the title, the artist, or both. Parts that were already found don't count again.
+    const hit = matchFreeText(text, { title: this.current.title, artists: this.current.artists });
+    const m = { title: hit.title && !this.found.title, artist: hit.artist && !this.found.artist };
     if (m.title) {
       p.gain.title = pointsFor(DEFAULT_SCORE.titleMax, this.frozenElapsed, this.opts.roundMs);
       p.score += p.gain.title;

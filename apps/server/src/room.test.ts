@@ -47,7 +47,7 @@ describe("Room (buzzer game)", () => {
     const b = room.addPlayer("Bo")!;
     await room.start();
     room.buzz(a);
-    expect(await room.answer(b, { title: song()[0] })).toBeUndefined();
+    expect(await room.answer(b, song()[0])).toBeUndefined();
     expect(room.state().players.find((p) => p.id === b)!.score).toBe(0);
   });
 
@@ -58,7 +58,7 @@ describe("Room (buzzer game)", () => {
     await room.start();
     await vi.advanceTimersByTimeAsync(10_000);
     room.buzz(a);
-    const r = await room.answer(a, { title: song()[0], artist: "wrong" });
+    const r = await room.answer(a, `${song()[0]} wrong`);
     expect(r).toEqual({ title: true, artist: false });
     const st = room.state();
     expect(st.guesser).toBeUndefined();
@@ -78,19 +78,19 @@ describe("Room (buzzer game)", () => {
     await room.start();
     const left = () => room.state().players.find((p) => p.id === a)!.attemptsLeft;
     room.buzz(a);
-    await room.answer(a, { title: song()[0] });
+    await room.answer(a, song()[0]);
     expect(left()).toBe(3); // free
     expect(room.buzz(a)).toBe(true); // may buzz again right away
-    await room.answer(a, { artist: "wrong" });
+    await room.answer(a, "wrong");
     expect(left()).toBe(2);
-    room.buzz(a); await room.answer(a, { artist: "wrong" });
+    room.buzz(a); await room.answer(a, "wrong");
     expect(left()).toBe(1);
-    room.buzz(a); await room.answer(a, { artist: "wrong" });
+    room.buzz(a); await room.answer(a, "wrong");
     expect(left()).toBe(0);
     expect(room.buzz(a)).toBe(false); // out of attempts
     expect(room.buzz(b)).toBe(true);
-    // Bo only needs the artist; sending the title again is ignored
-    expect(await room.answer(b, { title: "x", artist: song()[1] })).toEqual({ title: false, artist: true });
+    // Bo types song + artist in the one field; the title was already found, so only the artist is new
+    expect(await room.answer(b, `${song()[0]} ${song()[1]}`)).toEqual({ title: false, artist: true });
     expect(room.state().phase).toBe("reveal"); // everything found
     const gains = room.state().reveal!.gains;
     expect(gains[a]!.title).toBeGreaterThan(0);
@@ -129,9 +129,9 @@ describe("Room (buzzer game)", () => {
     const { room } = make();
     const a = room.addPlayer("Ana")!;
     await room.start();
-    for (let i = 0; i < 2; i++) { room.buzz(a); await room.answer(a, { title: "nope", artist: "nope" }); }
+    for (let i = 0; i < 2; i++) { room.buzz(a); await room.answer(a, "nope nope"); }
     expect(room.state().phase).toBe("playing");
-    room.buzz(a); await room.answer(a, { title: "nope", artist: "nope" });
+    room.buzz(a); await room.answer(a, "nope nope");
     expect(room.state().phase).toBe("reveal");
   });
 

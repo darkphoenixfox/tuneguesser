@@ -52,7 +52,7 @@ export type ClientMessage =
   /** press the ANSWER button */
   | { t: "buzz" }
   /** the buzzed player's answer */
-  | { t: "answer"; title?: string; artist?: string }
+  | { t: "answer"; text: string }
   /** a player exits to the main screen */
   | { t: "leave" }
   | { t: "start" }

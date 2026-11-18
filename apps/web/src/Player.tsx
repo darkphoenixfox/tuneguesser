@@ -39,8 +39,7 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
 export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean }) {
   const first = useMemo(() => ({ t: "join" as const, code: saved.code, name: saved.name, playerId: saved.playerId }), [saved.code, saved.name]);
   const [me, setMe] = useState(saved.playerId);
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
+  const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => {
     if (m.t === "joined") { setMe(m.playerId); onId(m.playerId); }
@@ -56,7 +55,7 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
 
   // a fresh form every time I get to answer
   useEffect(() => {
-    if (iAmGuesser) { setTitle(""); setArtist(""); setSent(false); sfx.buzz(); navigator.vibrate?.(30); setTimeout(() => titleRef.current?.focus(), 50); }
+    if (iAmGuesser) { setText(""); setSent(false); sfx.buzz(); navigator.vibrate?.(30); setTimeout(() => titleRef.current?.focus(), 50); }
   }, [iAmGuesser]);
 
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
@@ -72,9 +71,9 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
   const found = state.found;
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (sent) return;
+    if (sent || !text.trim()) return;
     setSent(true);
-    send({ t: "answer", title: found?.title ? undefined : title, artist: found?.artist ? undefined : artist });
+    send({ t: "answer", text });
   };
 
   return (
@@ -94,9 +93,10 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
           {iAmGuesser ? (
             <form className="guess-form" onSubmit={submit}>
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
-              {!found?.title && <label>Song title<input ref={titleRef} value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" autoCorrect="off" /></label>}
-              {!found?.artist && <label>Artist<input ref={found?.title ? titleRef : undefined} value={artist} onChange={(e) => setArtist(e.target.value)} autoComplete="off" autoCorrect="off" /></label>}
-              <button className="btn big" disabled={sent}>{sent ? "Sent…" : "Send answer"}</button>
+              <label>{found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
+                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
+              </label>
+              <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
             </form>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
