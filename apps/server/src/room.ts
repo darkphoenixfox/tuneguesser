@@ -423,6 +423,11 @@ export class Room {
     return { points, multipliers };
   }
 
+  /** The guesser gives up this turn without answering: no attempt is used and the music resumes. */
+  async cancelGuess(playerId: string) {
+    if (this.guesser === playerId) await this.finishGuess(false);
+  }
+
   /** Typed answer: the song, the artist, or both. Parts that were already found don't count again. */
   async answer(playerId: string, text: string): Promise<AnswerResult | undefined> {
     const p = this.players.get(playerId);

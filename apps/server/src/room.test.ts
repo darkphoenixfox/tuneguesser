@@ -527,4 +527,16 @@ describe("Room (buzzer game)", () => {
       expect(new Set(labels).size).toBe(4);
     });
   });
+
+  it("cancelling a guess costs no attempt and resumes the music", async () => {
+    const { room, music } = make(2);
+    const a = room.addPlayer("Ana")!;
+    room.addPlayer("Bo");
+    await room.start();
+    room.buzz(a);
+    await room.cancelGuess(a);
+    expect(room.state().guesser).toBeUndefined();
+    expect(room.state().players.find((p) => p.id === a)!.attemptsLeft).toBe(3);
+    expect(music.resumed.length).toBe(1);
+  });
 });

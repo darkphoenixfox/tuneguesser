@@ -164,6 +164,8 @@ wss.on("connection", (ws) => {
         if (room.buzz(playerId) && !wordsSent && room.state().config.answers === "type") { wordsSent = true; send(ws, { t: "words", list: room.suggestions() }); }
       } else if (role === "player" && playerId && m.t === "skip") {
         room.voteSkip(playerId);
+      } else if (role === "player" && playerId && m.t === "cancel") {
+        await room.cancelGuess(playerId);
       } else if (role === "player" && m.t === "next") {
         if (room.state().phase === "reveal") await room.nextRound(); // the accept key/button moves on after a round
       } else if (role === "player" && m.t === "pause") {

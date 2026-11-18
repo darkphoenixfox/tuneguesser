@@ -67,6 +67,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 | Multiple choice option 1-4 | 1 2 3 4 | A B X Y / ✕ ○ □ △ |
 | Skip vote | Alt+S | Select / Share |
 | Pause / continue | Alt+P | Start / Options |
+| Cancel answering (no attempt used) | Esc | Start / Options |
 
 - **Menus with a gamepad** (main screen, host setup, lobby): the d-pad moves the highlight, A presses, left/right change a number or drop-down, LB/RB switch between the *Join* and *Host* tabs, **Y = Quickstart** from anywhere on the host setup page. A glyph on a menu button only shows while that button is highlighted. Pressing A on a text box (room code, name) opens the **on-screen keyboard** (Y = done, Start = cancel).
 - **Pause** stops the music and the round clock for everybody (host or any player can press it; not while someone is answering). Buzzing is blocked until it continues.

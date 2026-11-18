@@ -99,6 +99,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
         else if (e.code === "KeyP") { e.preventDefault(); send({ t: "pause" }); }
         return;
       }
+      if (e.key === "Escape" && live.current.iAmGuesser) { e.preventDefault(); send({ t: "cancel" }); return; }
       if (typing || e.ctrlKey || e.metaKey) return;
       if (e.key === "Enter" && t?.tagName !== "BUTTON") accept();
       else if (/^[1-4]$/.test(e.key)) doChoose(+e.key - 1);
@@ -107,6 +108,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
     const off = onPadButton((b) => {
       const l = live.current;
       const choice = ({ a: 0, b: 1, x: 2, y: 3 } as Record<string, number>)[b];
+      if (l.iAmGuesser && b === "start") return void send({ t: "cancel" }); // give up this turn
       if (l.iAmGuesser && l.state?.options) { if (choice !== undefined) doChoose(choice); return; }
       if (l.iAmGuesser) return; // the on-screen keyboard has the buttons
       if (b === "a") accept();
@@ -157,6 +159,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           {iAmGuesser && state.options ? (
             <div className="guess-form">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
+              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel <Key>Esc</Key><PadHint button="start" /></button>
               <div className="choices">
                 {state.options.map((o, i) => <button key={o.id} className="choice" disabled={sent} onClick={() => doChoose(i)}><span className="num">{i + 1}</span>{o.label}{(["a", "b", "x", "y"] as const)[i] && <PadHint button={(["a", "b", "x", "y"] as const)[i]!} />}</button>)}
               </div>
@@ -169,6 +172,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
                 <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
               <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
+              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel <Key>Esc</Key><PadHint button="start" /></button>
               </div>
               {pad.connected && <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} />}
             </form>

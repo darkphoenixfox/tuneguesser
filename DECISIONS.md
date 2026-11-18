@@ -139,6 +139,9 @@ A small spatial focus navigator (`input/nav.ts`): d-pad moves to the nearest con
 ### DEC-037 · Change device during a game · 2026-11-18 · Active
 Host-only 🔈 button lists the Spotify devices and transfers playback (`PUT /me/player` with `play` true if the music was playing, false if paused by a buzz or pause). The Enter keycap was removed from the ANSWER button at the user's request (the gamepad glyph stays).
 
+### DEC-038 · Cancel an answer · 2026-11-18 · Active
+The player who pressed ANSWER can cancel (Esc, Start, or a Cancel button): no attempt is used and the music resumes. The round clock was frozen while they were answering, so nothing is lost or gained; they can buzz again at once.
+
 ---
 
 ## Open questions

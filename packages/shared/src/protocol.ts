@@ -101,6 +101,8 @@ export type ClientMessage =
   /** toggle a skip vote (host and players alike; the song is skipped when every voter has voted) */
   | { t: "skip" }
   | { t: "pause" }
+  /** the player who pressed ANSWER gives up this turn (no attempt used; the music continues) */
+  | { t: "cancel" }
   | { t: "quit" }
   /** host: play the music on another device */
   | { t: "device"; deviceId: string }
