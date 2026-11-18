@@ -1,0 +1,43 @@
+# TuneGuesser stack for Portainer (own stack, separate from another project).
+# NAS folder: /volume1/docker/tuneguesser
+# tuneguesser-web    : NGINX. Serves the built client from ./www, proxies /api and /ws. LAN: http://nas.local:8087
+# tuneguesser-server : Node game server (a single bundled file, no node_modules needed).
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    container_name: tuneguesser-web
+    restart: unless-stopped
+    ports:
+      - "8087:80"
+    volumes:
+      - /volume1/docker/tuneguesser/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /volume1/docker/tuneguesser/www:/usr/share/nginx/html:ro
+    networks:
+      - tuneguesser
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  server:
+    image: node:22-slim
+    container_name: tuneguesser-server
+    restart: unless-stopped
+    working_dir: /app
+    command: node server.mjs
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Set these in Portainer (Stack > Environment variables), never in the repo
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI:-}
+    volumes:
+      - /volume1/docker/tuneguesser/server:/app:ro
+    networks:
+      - tuneguesser
+
+networks:
+  tuneguesser:
+    name: tuneguesser
