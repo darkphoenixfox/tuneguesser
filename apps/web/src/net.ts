@@ -29,7 +29,7 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
           setState(m.state);
           setEndsAt(m.state.remainingMs !== undefined && !m.state.guesser ? Date.now() + m.state.remainingMs : 0);
           setGuessEndsAt(m.state.guessRemainingMs !== undefined ? Date.now() + m.state.guessRemainingMs : 0);
-        } else if (m.t === "error") setError(m.message);
+        } else if (m.t === "error") { setError(m.message); setTimeout(() => setError((cur) => (cur === m.message ? undefined : cur)), 7000); }
         cb.current?.(m);
       };
       s.onclose = () => { setConnected(false); if (!closed) retry = setTimeout(open, 1500); };

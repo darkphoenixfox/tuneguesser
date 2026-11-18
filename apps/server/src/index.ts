@@ -17,6 +17,7 @@ const sessions = new Map<string, Session>();
 
 interface RoomEntry { room: Room; hostToken: string; sockets: Set<WebSocket>; createdAt: number }
 const rooms = new Map<string, RoomEntry>();
+const hostSockets = new WeakSet<WebSocket>();
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid confusion with 1/0
 function newCode(): string {
@@ -121,6 +122,7 @@ const http = createServer(async (req, res) => {
       });
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Set(), createdAt: Date.now() };
       room.onChange = () => broadcast(entry);
+      room.onError = (message) => { for (const ws of entry.sockets) if (hostSockets.has(ws)) send(ws, { t: "error", message }); };
       rooms.set(code, entry);
       return json(res, 200, { code, hostToken: entry.hostToken });
     }
@@ -148,7 +150,7 @@ wss.on("connection", (ws) => {
         if (!e) return send(ws, { t: "error", message: "Room not found" });
         if (m.t === "host") {
           if (m.token !== e.hostToken) return send(ws, { t: "error", message: "Bad host token" });
-          entry = e; role = "host"; e.room.hostConnected = true;
+          entry = e; role = "host"; e.room.hostConnected = true; hostSockets.add(ws);
         } else if (m.t === "join") {
           const id = e.room.addPlayer(String(m.name ?? ""), m.playerId);
           if (!id) return send(ws, { t: "error", message: "Room is full or already started" });

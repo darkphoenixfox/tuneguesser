@@ -56,6 +56,13 @@ export class Room {
   private pausing: Promise<void> = Promise.resolve();
   hostConnected = false;
   onChange: () => void = () => {};
+  /** music problems (e.g. Spotify refused to pause) are reported here so the host can see them */
+  onError: (message: string) => void = () => {};
+
+  private musicError = (what: string) => (e: unknown) => {
+    console.error(`music ${what} failed:`, e);
+    this.onError(`Music ${what} failed: ${e instanceof Error ? e.message.slice(0, 160) : "unknown error"}`);
+  };
 
   constructor(
     readonly code: string,
@@ -138,7 +145,7 @@ export class Room {
     this.guessStartedAt = this.now();
     this.frozenElapsed = this.guessStartedAt - this.roundStartedAt;
     clearTimeout(this.timer);
-    this.pausing = this.music.pause().catch(() => {});
+    this.pausing = this.music.pause().catch(this.musicError("pause"));
     this.guessTimer = setTimeout(() => void this.finishGuess(), this.opts.guessMs);
     this.onChange();
     return true;
@@ -180,7 +187,7 @@ export class Room {
     this.timer = setTimeout(() => void this.endRound(), Math.max(0, this.opts.roundMs - this.frozenElapsed));
     this.onChange();
     await this.pausing;
-    await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(() => {});
+    await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
   }
 
   async endRound(): Promise<void> {
@@ -189,7 +196,7 @@ export class Room {
     clearTimeout(this.guessTimer);
     this.guesser = undefined;
     this.phase = "reveal";
-    await this.music.pause().catch(() => {});
+    await this.music.pause().catch(this.musicError("pause"));
     const gains: RevealInfo["gains"] = {};
     for (const p of this.players.values()) gains[p.id] = { ...p.gain };
     this.reveal = { title: this.current.title, artists: this.current.artists, albumArt: this.current.albumArt, year: this.current.year, gains };

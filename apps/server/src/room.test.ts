@@ -110,6 +110,21 @@ describe("Room (buzzer game)", () => {
     expect(music.resumed.length).toBe(1); // resumed, not restarted
   });
 
+  it("reports it when the music source refuses to pause", async () => {
+    const music = new DemoProvider();
+    music.pause = async () => { throw new Error("Spotify PUT /me/player/pause: 403"); };
+    const room = new Room("ABCD", music, { rounds: 1, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000 });
+    const errors: string[] = [];
+    room.onError = (m) => errors.push(m);
+    const a = room.addPlayer("Ana")!;
+    await room.start();
+    room.buzz(a);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(errors[0]).toContain("Music pause failed");
+    expect(room.state().guesser?.id).toBe(a); // the clock is still frozen
+    expect(room.state().remainingMs).toBe(40_000);
+  });
+
   it("leaving frees a lobby slot; leaving mid-guess ends the guess and the music continues", async () => {
     const { room, music } = make();
     const a = room.addPlayer("Ana")!;
