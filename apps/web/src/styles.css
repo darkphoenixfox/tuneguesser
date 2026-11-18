@@ -170,3 +170,10 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .board li.me { border-color: var(--cyan); box-shadow: 0 0 16px rgba(41,224,255,.25); }
 .card .board { width: 100%; }
 .card .board li { font-size: 1.05rem; padding: 10px 14px; }
+
+/* scoreboard rows: fixed columns so names and numbers line up on every row */
+.board li { display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto 4.6em; align-items: center; column-gap: 10px; text-align: left; }
+.board .rank { color: var(--muted); font-weight: 800; text-align: center; }
+.board .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.board .score { text-align: right; min-width: 3.2em; }
+.board .gain { text-align: right; min-height: 1em; }
