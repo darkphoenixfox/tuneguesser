@@ -147,11 +147,13 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
 
       {state.phase === "playing" && (
         <div className="card answer">
-          <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
+          {!embedded && <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
+          {!embedded && (<>
           {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
           <Hints state={state} />
           <FoundChips found={found} guess={state.config.guess} hint={state.hint} />
           <ScoreBanner state={state} />
+          </>)}
           {iAmGuesser && state.options ? (
             <div className="guess-form">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
