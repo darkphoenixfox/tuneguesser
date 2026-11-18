@@ -177,7 +177,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           ) : (
             <button className="answer-btn" disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
               {mine.attemptsLeft === 0 ? "Out of tries" : state.config.order === "roundRobin" ? "YOUR SONG: ANSWER" : "ANSWER"}
-              {mine.attemptsLeft > 0 && <><Key>Enter</Key><PadHint button="a" /></>}
+              {mine.attemptsLeft > 0 && <PadHint button="a" />}
             </button>
           )}
           {!embedded && !iAmGuesser && (state.config.order !== "roundRobin" || state.activePlayerId === mine.id) && (() => {
