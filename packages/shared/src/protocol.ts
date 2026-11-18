@@ -29,6 +29,8 @@ export interface RoomState {
   roundMs: number;
   /** server epoch ms when the current round started; clients compute remaining time from it */
   roundStartedAt?: number;
+  /** ms left in the round at the moment this state was sent (use this, not roundStartedAt, to avoid clock skew) */
+  remainingMs?: number;
   reveal?: RevealInfo;
   hostConnected: boolean;
 }
@@ -44,4 +46,5 @@ export type ClientMessage =
 export type ServerMessage =
   | { t: "joined"; playerId: string }
   | { t: "state"; state: RoomState }
+  | { t: "result"; title: boolean; artist: boolean }
   | { t: "error"; message: string };

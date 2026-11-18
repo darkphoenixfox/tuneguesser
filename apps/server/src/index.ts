@@ -160,7 +160,8 @@ wss.on("connection", (ws) => {
       }
       const room = entry.room;
       if (role === "player" && m.t === "answer" && playerId) {
-        room.answer(playerId, { title: String(m.title ?? "").slice(0, 120), artist: String(m.artist ?? "").slice(0, 120) });
+        const r = room.answer(playerId, { title: String(m.title ?? "").slice(0, 120), artist: String(m.artist ?? "").slice(0, 120) });
+        if (r) send(ws, { t: "result", ...r });
       } else if (role === "host") {
         if (m.t === "start") await room.start();
         else if (m.t === "skip" || m.t === "next") room.state().phase === "playing" ? await room.endRound() : await room.nextRound();

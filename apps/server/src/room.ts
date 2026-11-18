@@ -94,7 +94,7 @@ export class Room {
     this.onChange();
   }
 
-  answer(playerId: string, guess: { title?: string; artist?: string }) {
+  answer(playerId: string, guess: { title?: string; artist?: string }): { title: boolean; artist: boolean } | undefined {
     const p = this.players.get(playerId);
     if (!p || this.phase !== "playing" || !this.current || this.roundStartedAt === undefined) return;
     const elapsed = this.now() - this.roundStartedAt;
@@ -111,7 +111,9 @@ export class Room {
     }
     p.answered = p.gotTitle && p.gotArtist;
     this.onChange();
+    const result = { title: p.gotTitle, artist: p.gotArtist };
     if ([...this.players.values()].every((x) => x.answered)) void this.endRound();
+    return result;
   }
 
   async endRound(): Promise<void> {
@@ -138,6 +140,7 @@ export class Room {
       totalRounds: this.round + this.queue.length,
       roundMs: this.opts.roundMs,
       roundStartedAt: this.phase === "playing" ? this.roundStartedAt : undefined,
+      remainingMs: this.phase === "playing" && this.roundStartedAt !== undefined ? Math.max(0, this.opts.roundMs - (this.now() - this.roundStartedAt)) : undefined,
       reveal: this.reveal,
       hostConnected: this.hostConnected,
     };
