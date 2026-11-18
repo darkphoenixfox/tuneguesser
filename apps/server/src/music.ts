@@ -21,6 +21,7 @@ export interface MusicProvider {
 export class DemoProvider implements MusicProvider {
   readonly played: Array<{ id: string; startMs: number }> = [];
   readonly resumed: Array<{ id: string; positionMs: number }> = [];
+  pauses = 0;
   async loadTracks(): Promise<Track[]> {
     const t = (n: number, title: string, artists: string[], year: string): Track => ({
       id: `demo${n}`, uri: `demo:${n}`, title, artists, durationMs: 200_000, year,
@@ -35,6 +36,6 @@ export class DemoProvider implements MusicProvider {
     ];
   }
   async play(track: Track, startMs: number) { this.played.push({ id: track.id, startMs }); }
-  async pause() {}
+  async pause() { this.pauses++; }
   async resume(track: Track, positionMs: number) { this.resumed.push({ id: track.id, positionMs }); }
 }

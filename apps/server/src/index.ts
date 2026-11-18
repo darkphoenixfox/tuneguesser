@@ -118,7 +118,7 @@ const http = createServer(async (req, res) => {
         roundMs: clamp(body.roundSeconds, 10, 120, 40) * 1000,
         guessMs: 25_000,
         maxAttempts: 3,
-        revealMs: 8000,
+        revealMs: 5000, // the song keeps playing while the answer is shown
       });
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Set(), createdAt: Date.now() };
       room.onChange = () => broadcast(entry);

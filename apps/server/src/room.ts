@@ -54,6 +54,8 @@ export class Room {
   private guessTimer?: NodeJS.Timeout;
   /** the pause request sent when someone buzzed; a resume must wait for it so they can't arrive out of order */
   private pausing: Promise<void> = Promise.resolve();
+  /** the song is paused because a player buzzed */
+  private musicPaused = false;
   hostConnected = false;
   onChange: () => void = () => {};
   /** music problems (e.g. Spotify refused to pause) are reported here so the host can see them */
@@ -145,6 +147,7 @@ export class Room {
     this.guessStartedAt = this.now();
     this.frozenElapsed = this.guessStartedAt - this.roundStartedAt;
     clearTimeout(this.timer);
+    this.musicPaused = true;
     this.pausing = this.music.pause().catch(this.musicError("pause"));
     this.guessTimer = setTimeout(() => void this.finishGuess(), this.opts.guessMs);
     this.onChange();
@@ -186,22 +189,31 @@ export class Room {
     this.roundStartedAt = this.now() - this.frozenElapsed;
     this.timer = setTimeout(() => void this.endRound(), Math.max(0, this.opts.roundMs - this.frozenElapsed));
     this.onChange();
+    this.musicPaused = false;
     await this.pausing;
     await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
   }
 
+  /**
+   * Shows the answer. The song keeps playing during the reveal (it is resumed if a guess had paused it) and
+   * the next song starts when the reveal is over.
+   */
   async endRound(): Promise<void> {
     if (this.phase !== "playing" || !this.current) return;
     clearTimeout(this.timer);
     clearTimeout(this.guessTimer);
     this.guesser = undefined;
     this.phase = "reveal";
-    await this.music.pause().catch(this.musicError("pause"));
     const gains: RevealInfo["gains"] = {};
     for (const p of this.players.values()) gains[p.id] = { ...p.gain };
     this.reveal = { title: this.current.title, artists: this.current.artists, albumArt: this.current.albumArt, year: this.current.year, gains };
     this.timer = setTimeout(() => void this.nextRound(), this.opts.revealMs);
     this.onChange();
+    if (this.musicPaused) {
+      this.musicPaused = false;
+      await this.pausing;
+      await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
+    }
   }
 
   dispose() { clearTimeout(this.timer); clearTimeout(this.guessTimer); }

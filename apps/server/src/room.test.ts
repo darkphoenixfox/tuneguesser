@@ -142,14 +142,35 @@ describe("Room (buzzer game)", () => {
     expect(a).toBeTruthy();
   });
 
-  it("round ends when every player is out of attempts", async () => {
-    const { room } = make();
+  it("when everyone is out of attempts the answer is shown, the song plays on for 5s, then the next starts", async () => {
+    const { room, music } = make(2);
     const a = room.addPlayer("Ana")!;
     await room.start();
     for (let i = 0; i < 2; i++) { room.buzz(a); await room.answer(a, "nope nope"); }
     expect(room.state().phase).toBe("playing");
     room.buzz(a); await room.answer(a, "nope nope");
+    await vi.advanceTimersByTimeAsync(0);
     expect(room.state().phase).toBe("reveal");
+    expect(room.state().reveal?.title).toBeTruthy();
+    expect(music.resumed.length).toBe(3); // the paused song is playing again during the reveal
+    expect(music.pauses).toBe(3); // no extra pause at the reveal
+    await vi.advanceTimersByTimeAsync(4_999);
+    expect(room.state().phase).toBe("reveal");
+    await vi.advanceTimersByTimeAsync(2);
+    expect(room.state().round).toBe(2);
+    expect(music.played.length).toBe(2); // next song started
+  });
+
+  it("a timeout reveal does not interrupt the music; the music stops only when the game ends", async () => {
+    const { room, music } = make(1);
+    room.addPlayer("A");
+    await room.start();
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(room.state().phase).toBe("reveal");
+    expect(music.pauses).toBe(0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(room.state().phase).toBe("finished");
+    expect(music.pauses).toBe(1);
   });
 
   it("ends on timeout, reveals, then advances and finishes", async () => {
