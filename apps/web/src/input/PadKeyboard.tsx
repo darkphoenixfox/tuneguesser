@@ -10,7 +10,7 @@ const SPECIAL = ["space", "back", "send"] as const;
  * On-screen keyboard for gamepads, with auto-completion: the top row offers whole titles/artists and words from the
  * playlist. D-pad moves (up from the letters reaches the suggestions), A types / picks, B deletes, X adds a space, Y sends.
  */
-export function PadKeyboard({ text, words, onText, onSend, disabled }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; disabled?: boolean }) {
+export function PadKeyboard({ text, words, onText, onSend, disabled, sendLabel = "send" }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; disabled?: boolean; sendLabel?: string }) {
   const sugg = useMemo(() => suggest(text, words), [text, words]);
   // r = -1 is the suggestion row, 0..ROWS.length-1 the letter rows, ROWS.length the space/back/send row
   const [pos, setPos] = useState({ r: 1, c: 0 });
@@ -69,7 +69,7 @@ export function PadKeyboard({ text, words, onText, onSend, disabled }: { text: s
       <div className="pk-row">
         <button type="button" className={cls(ROWS.length, 0) + " wide"} onClick={() => press(ROWS.length, 0)}><Glyph button="x" /> space</button>
         <button type="button" className={cls(ROWS.length, 1) + " wide"} onClick={() => press(ROWS.length, 1)}><Glyph button="b" /> ⌫</button>
-        <button type="button" className={cls(ROWS.length, 2) + " wide send"} onClick={() => press(ROWS.length, 2)}><Glyph button="y" /> send</button>
+        <button type="button" className={cls(ROWS.length, 2) + " wide send"} onClick={() => press(ROWS.length, 2)}><Glyph button="y" /> {sendLabel}</button>
       </div>
     </div>
   );

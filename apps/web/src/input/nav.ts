@@ -71,7 +71,8 @@ function onButton(b: PadButtonName) {
     move(b);
   } else if (b === "a") {
     if (!el || el === document.body) return move("down");
-    if (el instanceof HTMLSelectElement) (el as any).showPicker?.();
+    if (el instanceof HTMLInputElement && /^(text|search|)$/.test(el.type)) window.dispatchEvent(new CustomEvent("tg-pad-text", { detail: el }));
+    else if (el instanceof HTMLSelectElement) (el as any).showPicker?.();
     else el.click();
   } else if (b === "lb" || b === "rb") {
     const tabs = [...document.querySelectorAll<HTMLElement>(".tabs button")];
