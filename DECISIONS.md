@@ -142,6 +142,9 @@ Host-only 🔈 button lists the Spotify devices and transfers playback (`PUT /me
 ### DEC-038 · Cancel an answer · 2026-11-18 · Active
 The player who pressed ANSWER can cancel (Esc, Start, or a Cancel button): no attempt is used and the music resumes. The round clock was frozen while they were answering, so nothing is lost or gained; they can buzz again at once.
 
+### DEC-039 · Common-word dictionary in the autocomplete · 2026-11-18 · Active
+After up to 3 words from the playlist, the suggestion row is filled with the 5,000 most common English words (frequency list from the Google n-gram data, `packages/shared/src/dictionary.ts`, bundled into the web app, about 35 KB). English only for now; song titles in other languages come from the playlist words.
+
 ---
 
 ## Open questions

@@ -6,7 +6,7 @@ const list = ["Billie Jean", "Bohemian Rhapsody", "Beat It", "Michael Jackson", 
 describe("suggest", () => {
   it("completes the word being typed", () => {
     const s = suggest("billie je", list);
-    expect(s.map((x) => x.label)).toEqual(["Jean"]);
+    expect(s[0]!.label).toBe("Jean");
     expect(s[0]!.text).toBe("billie Jean ");
     expect(suggest("bo", list).map((x) => x.label)).toContain("Bohemian");
   });
@@ -19,10 +19,17 @@ describe("suggest", () => {
   it("suggests nothing for empty text or after a space or a complete word", () => {
     expect(suggest("", list)).toEqual([]);
     expect(suggest("queen ", list)).toEqual([]);
-    expect(suggest("queen", list)).toEqual([]);
+    expect(suggest("queen ", list)).toEqual([]);
   });
   it("never offers a whole multi-word title", () => {
     expect(suggest("bohemian rha", list).every((x) => !x.label.includes(" "))).toBe(true);
+  });
+  it("adds common English words after the playlist words", () => {
+    const s = suggest("lo", list).map((x) => x.label);
+    expect(s).toContain("love");
+    const mixed = suggest("be", list).map((x) => x.label);
+    expect(mixed.indexOf("Beat")).toBe(0); // playlist words first
+    expect(mixed.length).toBeGreaterThan(2);
   });
   it("is limited", () => {
     expect(suggest("b", list, 3).length).toBeLessThanOrEqual(3);
