@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
 import { ThemeButton } from "./Settings";
-import { Key, PadHint } from "./input/Glyph";
+import { PadHint } from "./input/Glyph";
 import { PadKeyboard } from "./input/PadKeyboard";
 import { onPadButton, usePad } from "./input/pad";
 import { useCountdown, useRoom } from "./net";
@@ -162,7 +162,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           {iAmGuesser && state.options ? (
             <div className="guess-form">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
-              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel <Key>Esc</Key><PadHint button="start" /></button>
+              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel<PadHint button="start" /></button>
               <div className="choices">
                 {state.options.map((o, i) => <button key={o.id} className="choice" disabled={sent} onClick={() => doChoose(i)}><span className="num">{i + 1}</span>{o.label}{(["a", "b", "x", "y"] as const)[i] && <PadHint button={(["a", "b", "x", "y"] as const)[i]!} />}</button>)}
               </div>
@@ -191,9 +191,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           )}
           {!embedded && !iAmGuesser && (state.config.order !== "roundRobin" || state.activePlayerId === mine.id) && (() => {
             const sk = state.skip ?? { votes: 0, voters: state.players.length };
-            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters}) <Key>Alt+S</Key><PadHint button="select" /></button>;
+            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters})<PadHint button="select" /></button>;
           })()}
-          {!embedded && !iAmGuesser && <button className="btn ghost" onClick={() => send({ t: "pause" })}>{state.paused ? "▶ Continue" : "⏸ Pause"} <Key>Alt+P</Key><PadHint button="start" /></button>}
+          {!embedded && !iAmGuesser && <button className="btn ghost" onClick={() => send({ t: "pause" })}>{state.paused ? "▶ Continue" : "⏸ Pause"}<PadHint button="start" /></button>}
         </div>
       )}
 
@@ -211,8 +211,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
             </div>
           </div>
-          {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end, or press <Key>Enter</Key><PadHint button="a" /> to continue.</p>}
-          <button className="btn" onClick={() => send({ t: "next" })}>Next song <Key>Enter</Key><PadHint button="a" /></button>
+          {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end, or when someone presses Next song.</p>}
+          <button className="btn" onClick={() => send({ t: "next" })}>Next song<PadHint button="a" /></button>
         </div>
       )}
       {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}

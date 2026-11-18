@@ -7,7 +7,7 @@ import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
-import { Key, PadHint } from "./input/Glyph";
+import { PadHint } from "./input/Glyph";
 import { onPadButton } from "./input/pad";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
@@ -313,9 +313,9 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
         <p className="muted">{roundLabel(state)}</p>
       <div className="controls">
         <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
-          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<Key>Alt+S</Key><PadHint button="select" />
+          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<PadHint button="select" />
         </button>
-        {!guessing && <button className="btn ghost" onClick={onPause}>{state.paused ? "▶ Continue" : "⏸ Pause"}<Key>Alt+P</Key><PadHint button="start" /></button>}
+        {!guessing && <button className="btn ghost" onClick={onPause}>{state.paused ? "▶ Continue" : "⏸ Pause"}<PadHint button="start" /></button>}
       </div>
       </div>
       <div className="top">
@@ -376,7 +376,7 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
         </div>
       </div>
       {state.awaitingNext && <p className="waiting">The song keeps playing. The next round starts when it ends, or when you continue.</p>}
-      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<Key>Enter</Key><PadHint button="a" /></button>
+      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<PadHint button="a" /></button>
     </div>
   );
 }

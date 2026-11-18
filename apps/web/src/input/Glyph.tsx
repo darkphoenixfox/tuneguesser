@@ -60,5 +60,5 @@ export function PadHint({ button, focusOnly }: { button: PadButtonName; focusOnl
   return connected ? <span className={"pad-hint" + (focusOnly ? " focus-only" : "")}><Glyph button={button} /></span> : null;
 }
 
-/** Small keycap label, e.g. <Key>Enter</Key> */
+/** Small keycap label, e.g. */
 export const Key = ({ children }: { children: React.ReactNode }) => <kbd className="keycap">{children}</kbd>;
