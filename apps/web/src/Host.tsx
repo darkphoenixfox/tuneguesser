@@ -189,11 +189,11 @@ function Scoreboard({ state, reveal }: { state: RoomState; reveal?: RevealInfo }
         const g = reveal?.gains[p.id];
         const add = g ? g.title + g.artist : 0;
         return (
-          <li key={p.id} className={(p.attempted && state.phase === "playing" ? "tried " : "") + (state.guesser?.id === p.id ? "guessing" : "")}>
+          <li key={p.id} className={(p.attemptsLeft === 0 && state.phase === "playing" ? "tried " : "") + (state.guesser?.id === p.id ? "guessing" : "")}>
             <span className="name">{p.name}</span>
             <span className="score">{p.score}</span>
             {add > 0 && <span className="gain">+{add}</span>}
-            {state.phase === "playing" && p.attempted && <span className="tick">tried</span>}
+            {state.phase === "playing" && <span className="lives" title="attempts left">{Array.from({ length: state.maxAttempts }, (_, i) => <i key={i} className={i < p.attemptsLeft ? "on" : ""} />)}</span>}
           </li>
         );
       })}

@@ -7,8 +7,8 @@ export interface PlayerPublic {
   name: string;
   score: number;
   connected: boolean;
-  /** already used their one attempt this round */
-  attempted: boolean;
+  /** wrong or timed-out answers left this round (a guess with a correct part is free) */
+  attemptsLeft: number;
 }
 
 /** Parts of the song found so far this round, shown to everyone while the music continues. */
@@ -34,6 +34,7 @@ export interface RoomState {
   totalRounds: number;
   roundMs: number;
   guessMs: number;
+  maxAttempts: number;
   /** ms left in the round. While someone is guessing the clock is frozen at this value. */
   remainingMs?: number;
   /** the player who pressed ANSWER: music and round clock are stopped while they type */

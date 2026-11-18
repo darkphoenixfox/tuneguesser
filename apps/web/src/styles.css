@@ -161,3 +161,11 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .phone-head b { flex: 1; }
 .exit { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
 .exit:active { transform: scale(.95); }
+
+/* attempts left */
+.lives { display: inline-flex; gap: 5px; align-items: center; }
+.lives i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.15); }
+.lives i.on { background: var(--pink); box-shadow: 0 0 8px var(--pink); }
+.lives.big { display: flex; justify-content: center; margin: 0; color: var(--muted); font-size: .85rem; gap: 8px; }
+.lives.big i { width: 14px; height: 14px; }
+.lives.big span { margin-left: 4px; }

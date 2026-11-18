@@ -116,6 +116,7 @@ const http = createServer(async (req, res) => {
         rounds: clamp(body.rounds, 1, 50, 10),
         roundMs: clamp(body.roundSeconds, 10, 120, 40) * 1000,
         guessMs: 25_000,
+        maxAttempts: 3,
         revealMs: 8000,
       });
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Set(), createdAt: Date.now() };

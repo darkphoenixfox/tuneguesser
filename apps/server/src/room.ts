@@ -6,6 +6,8 @@ export interface RoomOptions {
   roundMs: number;
   /** how long the player who pressed ANSWER has to send their guess */
   guessMs: number;
+  /** wrong/timed-out answers allowed per player per round */
+  maxAttempts: number;
   revealMs: number;
 }
 
@@ -14,8 +16,8 @@ interface Player {
   name: string;
   score: number;
   connected: boolean;
-  /** one attempt per round */
-  attempted: boolean;
+  /** wrong or timed-out answers this round */
+  attemptsUsed: number;
   gain: { title: number; artist: number };
 }
 
@@ -65,7 +67,7 @@ export class Room {
     if (prior) { prior.connected = true; this.onChange(); return prior.id; }
     if (this.phase !== "lobby" || this.players.size >= 4) return null;
     const id = Math.random().toString(36).slice(2, 10);
-    this.players.set(id, { id, name: name.trim().slice(0, 16) || "Player", score: 0, connected: true, attempted: false, gain: { title: 0, artist: 0 } });
+    this.players.set(id, { id, name: name.trim().slice(0, 16) || "Player", score: 0, connected: true, attemptsUsed: 0, gain: { title: 0, artist: 0 } });
     this.onChange();
     return id;
   }
@@ -83,7 +85,9 @@ export class Room {
       this.onChange();
       return;
     }
-    this.players.get(id)!.connected = false;
+    const gone = this.players.get(id)!;
+    gone.connected = false;
+    gone.attemptsUsed = this.opts.maxAttempts; // out for this round (and the rest of the game)
     if (this.guesser === id) void this.finishGuess();
     else this.onChange();
   }
@@ -112,7 +116,7 @@ export class Room {
     this.reveal = undefined;
     this.found = {};
     this.guesser = undefined;
-    for (const p of this.players.values()) { p.attempted = false; p.gain = { title: 0, artist: 0 }; }
+    for (const p of this.players.values()) { p.attemptsUsed = 0; p.gain = { title: 0, artist: 0 }; }
     // start somewhere in the middle so we don't always get the intro
     const maxStart = Math.max(0, track.durationMs - this.opts.roundMs - 5_000);
     this.startMs = Math.floor((0.15 + Math.random() * 0.5) * maxStart);
@@ -127,7 +131,7 @@ export class Room {
   /** A player presses ANSWER. First press wins; the music and the round clock stop. */
   buzz(playerId: string): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || this.guesser || p.attempted || this.roundStartedAt === undefined) return false;
+    if (!p || this.phase !== "playing" || this.guesser || p.attemptsUsed >= this.opts.maxAttempts || this.roundStartedAt === undefined) return false;
     this.guesser = playerId;
     this.guessStartedAt = this.now();
     this.frozenElapsed = this.guessStartedAt - this.roundStartedAt;
@@ -156,19 +160,20 @@ export class Room {
       p.score += p.gain.artist;
       this.found.artist = { text: this.current.artists.join(", "), by: p.name };
     }
-    await this.finishGuess();
+    // a guess that found the title or the artist is free; only a fully wrong answer uses an attempt
+    await this.finishGuess(!(m.title || m.artist));
     return m;
   }
 
   /** Ends the current guess (answered, or timed out) and either resumes the music or ends the round. */
-  private async finishGuess(): Promise<void> {
+  private async finishGuess(consumeAttempt = true): Promise<void> {
     if (!this.guesser || !this.current) return;
     clearTimeout(this.guessTimer);
     const p = this.players.get(this.guesser);
-    if (p) p.attempted = true;
+    if (p && consumeAttempt) p.attemptsUsed++;
     this.guesser = undefined;
     const everythingFound = !!this.found.title && !!this.found.artist;
-    const everyoneTried = [...this.players.values()].every((x) => x.attempted);
+    const everyoneTried = [...this.players.values()].every((x) => x.attemptsUsed >= this.opts.maxAttempts);
     if (everythingFound || everyoneTried) return this.endRound();
     this.roundStartedAt = this.now() - this.frozenElapsed;
     this.timer = setTimeout(() => void this.endRound(), Math.max(0, this.opts.roundMs - this.frozenElapsed));
@@ -193,7 +198,7 @@ export class Room {
   dispose() { clearTimeout(this.timer); clearTimeout(this.guessTimer); }
 
   state(): RoomState {
-    const players: PlayerPublic[] = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected, attempted: p.attempted }));
+    const players: PlayerPublic[] = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected, attemptsLeft: Math.max(0, this.opts.maxAttempts - p.attemptsUsed) }));
     const playing = this.phase === "playing" && this.roundStartedAt !== undefined;
     const g = this.guesser ? this.players.get(this.guesser) : undefined;
     return {
@@ -204,6 +209,7 @@ export class Room {
       totalRounds: this.round + this.queue.length,
       roundMs: this.opts.roundMs,
       guessMs: this.opts.guessMs,
+      maxAttempts: this.opts.maxAttempts,
       remainingMs: playing ? Math.max(0, this.opts.roundMs - (g ? this.frozenElapsed : this.now() - this.roundStartedAt!)) : undefined,
       guesser: g ? { id: g.id, name: g.name } : undefined,
       guessRemainingMs: g ? Math.max(0, this.opts.guessMs - (this.now() - this.guessStartedAt)) : undefined,
