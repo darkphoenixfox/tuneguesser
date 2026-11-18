@@ -54,10 +54,10 @@ export function Glyph({ button }: { button: PadButtonName }) {
   return <span className="pad-glyph-text">{TEXT[layout][button] ?? button.toUpperCase()}</span>;
 }
 
-/** A glyph only while a pad is connected. */
-export function PadHint({ button }: { button: PadButtonName }) {
+/** A glyph only while a pad is connected. `focusOnly`: shown only while the button around it has the focus (A presses the focused control). */
+export function PadHint({ button, focusOnly }: { button: PadButtonName; focusOnly?: boolean }) {
   const { connected } = usePad();
-  return connected ? <span className="pad-hint"><Glyph button={button} /></span> : null;
+  return connected ? <span className={"pad-hint" + (focusOnly ? " focus-only" : "")}><Glyph button={button} /></span> : null;
 }
 
 /** Small keycap label, e.g. <Key>Enter</Key> */

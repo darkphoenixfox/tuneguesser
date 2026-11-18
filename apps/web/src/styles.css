@@ -277,3 +277,5 @@ html[data-pad] :focus { outline: 3px solid #facc15 !important; outline-offset: 3
 .padbar span { display: inline-flex; align-items: center; gap: 6px; }
 .padbar .dpad { color: var(--text); font-size: 1.2rem; }
 .screen { padding-bottom: 70px; }
+.pad-hint.focus-only { display: none; }
+button:focus > .pad-hint.focus-only, a:focus > .pad-hint.focus-only { display: inline-flex; }

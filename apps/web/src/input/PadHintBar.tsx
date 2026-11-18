@@ -14,11 +14,13 @@ export function PadHintBar() {
   }, []);
   if (!connected || !menu) return null;
   const tabs = !!document.querySelector(".tabs");
+  const quick = !!document.querySelector("[data-pad-quick]");
   return (
     <div className="padbar" aria-hidden>
       <span><b className="dpad">✥</b> Move</span>
       <span><Glyph button="a" /> Select</span>
       <span><b className="dpad">◀ ▶</b> Change value</span>
+      {quick && <span><Glyph button="y" /> Quickstart</span>}
       {tabs && <span><Glyph button="lb" /><Glyph button="rb" /> Switch tab</span>}
     </div>
   );

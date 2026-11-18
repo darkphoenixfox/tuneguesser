@@ -70,7 +70,11 @@ function onButton(b: PadButtonName) {
   document.documentElement.dataset.pad = "1"; // shows the focus ring
   if (document.querySelector("[data-pad-game]")) return;
   const el = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
-  if (b === "up" || b === "down") move(b);
+  if (b === "y") {
+    // Y = Quickstart wherever it is on the page
+    const q = document.querySelector<HTMLButtonElement>("[data-pad-quick]");
+    if (q && !q.disabled) q.click();
+  } else if (b === "up" || b === "down") move(b);
   else if (b === "left" || b === "right") {
     if (el && adjust(el, b === "right" ? 1 : -1)) return;
     move(b);

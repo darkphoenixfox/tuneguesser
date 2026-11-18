@@ -68,7 +68,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 | Skip vote | Alt+S | Select / Share |
 | Pause / continue | Alt+P | Start / Options |
 
-- **Menus with a gamepad** (main screen, host setup, lobby): the d-pad moves the highlight, A presses, left/right change a number or drop-down, LB/RB switch between the *Join* and *Host* tabs. Pressing A on a text box (room code, name) opens the **on-screen keyboard** (Y = done, Start = cancel).
+- **Menus with a gamepad** (main screen, host setup, lobby): the d-pad moves the highlight, A presses, left/right change a number or drop-down, LB/RB switch between the *Join* and *Host* tabs, **Y = Quickstart** from anywhere on the host setup page. A glyph on a menu button only shows while that button is highlighted. Pressing A on a text box (room code, name) opens the **on-screen keyboard** (Y = done, Start = cancel).
 - **Pause** stops the music and the round clock for everybody (host or any player can press it; not while someone is answering). Buzzing is blocked until it continues.
 - When a gamepad is connected, the person answering by typing gets an **on-screen keyboard** with **auto-completion** (a row of suggested words from the playlist; press up from the letters to reach it): d-pad moves, A types the key, B deletes, X adds a space, Y sends. Button glyphs (Xbox or PlayStation style, detected from the pad) are drawn on the buttons they trigger.
 - **Play on** (🔈 top right on the host screen): move the music to another Spotify device during a game; the song carries on there.
