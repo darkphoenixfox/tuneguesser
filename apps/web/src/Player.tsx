@@ -120,6 +120,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <p className="muted">{state.reveal.artists.join(", ")}</p>
           {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
           <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
+          {state.awaitingNext && <p className="muted">Waiting for the host to continue…</p>}
         </div>
       )}
       {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}

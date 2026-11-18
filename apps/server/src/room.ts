@@ -9,6 +9,8 @@ export interface RoomOptions {
   /** wrong/timed-out answers allowed per player per round */
   maxAttempts: number;
   revealMs: number;
+  /** after a round that ended because time ran out: go to the next song by itself (true) or wait for the host (false) */
+  autoAdvance: boolean;
 }
 
 interface Player {
@@ -59,6 +61,8 @@ export class Room {
   private musicPaused = false;
   hostConnected = false;
   private hostSkipVote = false;
+  private revealFromTimeout = false;
+  private awaitingNext = false;
   /** set when the host also plays: the host then has one vote, as that player */
   private hostPlayerId?: string;
   onChange: () => void = () => {};
@@ -174,6 +178,8 @@ export class Room {
     this.guesser = undefined;
     for (const p of this.players.values()) { p.attemptsUsed = 0; p.skipVote = false; p.gain = { title: 0, artist: 0 }; }
     this.hostSkipVote = false;
+    this.revealFromTimeout = false;
+    this.awaitingNext = false;
     // start somewhere in the middle so we don't always get the intro
     const maxStart = Math.max(0, track.durationMs - this.opts.roundMs - 5_000);
     this.startMs = Math.floor((0.15 + Math.random() * 0.5) * maxStart);
@@ -181,7 +187,7 @@ export class Room {
     this.roundStartedAt = this.now();
     await this.music.play(track, this.startMs);
     this.roundStartedAt = this.now();
-    this.timer = setTimeout(() => void this.endRound(), this.opts.roundMs);
+    this.timer = setTimeout(() => void this.endRound("timeout"), this.opts.roundMs);
     this.onChange();
   }
 
@@ -233,7 +239,7 @@ export class Room {
     const everyoneTried = [...this.players.values()].every((x) => x.attemptsUsed >= this.opts.maxAttempts);
     if (everythingFound || everyoneTried) return this.endRound();
     this.roundStartedAt = this.now() - this.frozenElapsed;
-    this.timer = setTimeout(() => void this.endRound(), Math.max(0, this.opts.roundMs - this.frozenElapsed));
+    this.timer = setTimeout(() => void this.endRound("timeout"), Math.max(0, this.opts.roundMs - this.frozenElapsed));
     this.onChange();
     this.musicPaused = false;
     await this.pausing;
@@ -244,7 +250,7 @@ export class Room {
    * Shows the answer. The song keeps playing during the reveal (it is resumed if a guess had paused it) and
    * the next song starts when the reveal is over.
    */
-  async endRound(): Promise<void> {
+  async endRound(reason: "timeout" | "other" = "other"): Promise<void> {
     if (this.phase !== "playing" || !this.current) return;
     clearTimeout(this.timer);
     clearTimeout(this.guessTimer);
@@ -253,13 +259,28 @@ export class Room {
     const gains: RevealInfo["gains"] = {};
     for (const p of this.players.values()) gains[p.id] = { ...p.gain };
     this.reveal = { title: this.current.title, artists: this.current.artists, albumArt: this.current.albumArt, year: this.current.year, gains };
-    this.timer = setTimeout(() => void this.nextRound(), this.opts.revealMs);
+    this.revealFromTimeout = reason === "timeout";
+    this.awaitingNext = this.revealFromTimeout && !this.opts.autoAdvance;
+    if (!this.awaitingNext) this.timer = setTimeout(() => void this.nextRound(), this.opts.revealMs);
     this.onChange();
     if (this.musicPaused) {
       this.musicPaused = false;
       await this.pausing;
       await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
     }
+  }
+
+  /** Host changes a setting. Takes effect at once, also on a reveal that is already showing. */
+  setSettings(s: { autoAdvance?: boolean }) {
+    if (typeof s.autoAdvance === "boolean" && s.autoAdvance !== this.opts.autoAdvance) {
+      this.opts.autoAdvance = s.autoAdvance;
+      if (this.phase === "reveal" && this.revealFromTimeout) {
+        clearTimeout(this.timer);
+        this.awaitingNext = !s.autoAdvance;
+        if (s.autoAdvance) this.timer = setTimeout(() => void this.nextRound(), this.opts.revealMs);
+      }
+    }
+    this.onChange();
   }
 
   dispose() { clearTimeout(this.timer); clearTimeout(this.guessTimer); }
@@ -294,6 +315,8 @@ export class Room {
       found: this.phase === "playing" ? { ...this.found } : undefined,
       reveal: this.reveal,
       hostConnected: this.hostConnected,
+      settings: { autoAdvance: this.opts.autoAdvance },
+      awaitingNext: this.phase === "reveal" && this.awaitingNext ? true : undefined,
       skip: this.phase === "playing" ? this.skipInfo() : undefined,
     };
   }

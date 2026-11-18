@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import type { RevealInfo, RoomState } from "@tuneguesser/shared";
 import { FoundChips, GuessBar } from "./Found";
 import { Scoreboard } from "./Scoreboard";
+import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
@@ -33,6 +34,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const [deviceId, setDeviceId] = useState("");
   const [rounds, setRounds] = useState(10);
   const [seconds, setSeconds] = useState(40);
+  const [autoAdvance, setAutoAdvance] = useState(true);
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
   const [busy, setBusy] = useState(false);
 
@@ -56,7 +58,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
     sfx.start(); // unlocks audio on this screen
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ demo, playlistId, deviceId: deviceId || undefined, rounds, roundSeconds: seconds }),
+      body: JSON.stringify({ demo, playlistId, deviceId: deviceId || undefined, rounds, roundSeconds: seconds, autoAdvance }),
     });
     const j = await r.json();
     setBusy(false);
@@ -66,6 +68,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
 
   return (
     <main className="screen setup">
+      <HostSettings autoAdvance={autoAdvance} onAutoAdvance={setAutoAdvance} />
       <h1 className="logo">Tune<span>Guesser</span></h1>
       {err && <p className="error">{err}</p>}
       {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
@@ -142,6 +145,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   return (
     <main className="screen game">
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
+      <HostSettings autoAdvance={state.settings.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
@@ -231,7 +235,8 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
       <h1 className="rv-title">{r.title}</h1>
       <h2 className="rv-artist">{r.artists.join(", ")}{r.year ? ` · ${r.year}` : ""}</h2>
       <Scoreboard state={state} reveal={r} />
-      <button className="btn" onClick={onNext}>{state.round >= state.totalRounds ? "Final results" : "Next song"}</button>
+      {state.awaitingNext && <p className="waiting">Time ran out. The song keeps playing until you continue.</p>}
+      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.round >= state.totalRounds ? "Final results" : "Next song"}</button>
     </div>
   );
 }

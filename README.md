@@ -37,6 +37,12 @@ Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 - A vote can be withdrawn by pressing again. Players who left or lost connection are not counted. If the host screen is closed, the host is not counted either.
 - A skipped round still shows the answer and plays on for 5 seconds before the next song.
 
+### Host settings (⚙ button on the host screen)
+| Setting | Default | Effect |
+| :--- | :--- | :--- |
+| Skip to the next song automatically when time runs out | **Yes** | **Yes:** 5 seconds after the answer is shown, the next song starts. **No:** the answer stays on screen with the song still playing until the host presses *Next song* (phones show "Waiting for the host to continue…"). It only applies to rounds that end because **time ran out**; other endings (answer found, everyone out of attempts, skip vote) always move on by themselves. Can be changed during the game and applies at once. |
+| Theme | Dark | Dark or light colours. Saved on the device that sets it; the host's choice applies to the host screen, phones stay dark. |
+
 ### Scoring
 | Part | Max points |
 | :--- | ---: |

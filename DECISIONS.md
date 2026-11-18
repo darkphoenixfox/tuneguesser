@@ -88,9 +88,17 @@ The dots showing remaining attempts were shown, then removed at the user's reque
 ### DEC-021 · Scores on phones after every round · 2026-11-18 · Active
 Phones only showed the player's own points at the reveal. The same ranking as the host screen (all players, totals and points earned this round, own row highlighted) now shows on every phone at each reveal and at game over.
 
+### DEC-022 · Host settings: auto-advance and theme · 2026-11-18 · Active
+A ⚙ panel on the host screen (also available on the setup screen before the room exists).
+- **Auto-advance** (default **Yes** = the previous behavior). Applies **only to rounds that end because time ran out**, as the user worded it; other round endings keep their automatic 5 s reveal. With **No** the reveal waits for the host's *Next song* and the music keeps playing. Changeable live; takes effect on a reveal that is already showing.
+- **Dark/Light theme:** stored per device in `localStorage`; the host's choice does not propagate to phones (phones stay dark; a phone toggle can be added).
+Open: should "No" also apply to every other kind of round ending?
+
 ---
 
 ## Open questions
+- Should the auto-advance setting also cover rounds that end for other reasons (answer found, out of attempts, skip)? (see DEC-022)
+- Should the theme choice reach the phones, or should phones have their own toggle?
 - Should the 5-second playing reveal apply to every round end (current) or only when everyone is out of attempts?
 - Should a player be allowed more than 3 tries when playing solo?
 - Game modes still to build: multiple choice, hints (year, artist trivia), video-clip mode (needs YouTube).

@@ -46,6 +46,9 @@ export interface RoomState {
   found?: Found;
   reveal?: RevealInfo;
   hostConnected: boolean;
+  settings: { autoAdvance: boolean };
+  /** the reveal is waiting for the host to press Next (auto-advance is off and time ran out) */
+  awaitingNext?: boolean;
   /** skip votes this round. Voters = connected players, plus the host if the host is not also playing. */
   skip?: { votes: number; voters: number; host: boolean };
 }
@@ -60,6 +63,8 @@ export type ClientMessage =
   | { t: "answer"; text: string }
   /** a player exits to the main screen */
   | { t: "leave" }
+  /** host: change a game setting */
+  | { t: "settings"; autoAdvance?: boolean }
   | { t: "start" }
   /** toggle a skip vote (host and players alike; the song is skipped when every voter has voted) */
   | { t: "skip" }

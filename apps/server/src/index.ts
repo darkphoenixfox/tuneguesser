@@ -119,6 +119,7 @@ const http = createServer(async (req, res) => {
         guessMs: 25_000,
         maxAttempts: 3,
         revealMs: 5000, // the song keeps playing while the answer is shown
+        autoAdvance: body.autoAdvance !== false,
       });
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Set(), createdAt: Date.now() };
       room.onChange = () => broadcast(entry);
@@ -176,6 +177,7 @@ wss.on("connection", (ws) => {
         if (r) send(ws, { t: "result", ...r });
       } else if (role === "host") {
         if (m.t === "start") await room.start();
+        else if (m.t === "settings") room.setSettings({ autoAdvance: typeof m.autoAdvance === "boolean" ? m.autoAdvance : undefined });
         else if (m.t === "skip") room.voteSkipHost();
         else if (m.t === "next" && room.state().phase === "reveal") await room.nextRound();
       }

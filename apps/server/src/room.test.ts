@@ -11,9 +11,9 @@ describe("Room (buzzer game)", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const make = (rounds = 2) => {
+  const make = (rounds = 2, autoAdvance = true) => {
     const music = new DemoProvider();
-    const room = new Room("ABCD", music, { rounds, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000 });
+    const room = new Room("ABCD", music, { rounds, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000, autoAdvance });
     const song = () => SONGS[music.played.at(-1)!.id]!;
     return { music, room, song };
   };
@@ -113,7 +113,7 @@ describe("Room (buzzer game)", () => {
   it("reports it when the music source refuses to pause", async () => {
     const music = new DemoProvider();
     music.pause = async () => { throw new Error("Spotify PUT /me/player/pause: 403"); };
-    const room = new Room("ABCD", music, { rounds: 1, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000 });
+    const room = new Room("ABCD", music, { rounds: 1, roundMs: 40_000, guessMs: 25_000, maxAttempts: 3, revealMs: 5_000, autoAdvance: true });
     const errors: string[] = [];
     room.onError = (m) => errors.push(m);
     const a = room.addPlayer("Ana")!;
@@ -180,6 +180,50 @@ describe("Room (buzzer game)", () => {
     expect(room.state().skip).toEqual({ votes: 1, voters: 2, host: true });
     room.voteSkip(b);
     await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().phase).toBe("reveal");
+  });
+
+  it("with auto-advance off, a timeout waits on the reveal (music playing) until the host continues", async () => {
+    const { room, music } = make(2, false);
+    room.addPlayer("A");
+    await room.start();
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(room.state().phase).toBe("reveal");
+    expect(room.state().awaitingNext).toBe(true);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(room.state().phase).toBe("reveal"); // still waiting
+    expect(music.pauses).toBe(0); // the song keeps playing
+    await room.nextRound();
+    expect(room.state().round).toBe(2);
+    expect(room.state().awaitingNext).toBeUndefined();
+  });
+
+  it("with auto-advance off, other round endings still advance by themselves", async () => {
+    const { room } = make(2, false);
+    const a = room.addPlayer("Ana")!;
+    await room.start();
+    room.voteSkip(a);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().phase).toBe("reveal");
+    expect(room.state().awaitingNext).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(room.state().round).toBe(2);
+  });
+
+  it("changing the setting during a waiting reveal takes effect immediately", async () => {
+    const { room } = make(2, false);
+    room.addPlayer("A");
+    await room.start();
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(room.state().awaitingNext).toBe(true);
+    room.setSettings({ autoAdvance: true });
+    expect(room.state().awaitingNext).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(room.state().round).toBe(2);
+    await vi.advanceTimersByTimeAsync(40_000); // round 2 times out
+    room.setSettings({ autoAdvance: false }); // turned off while the reveal countdown runs
+    expect(room.state().awaitingNext).toBe(true);
+    await vi.advanceTimersByTimeAsync(30_000);
     expect(room.state().phase).toBe("reveal");
   });
 
