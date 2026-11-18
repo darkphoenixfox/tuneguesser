@@ -118,3 +118,14 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .gain-big.none { color: var(--muted); font-size: 1.5rem; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; width: fit-content; margin: max(16px, env(safe-area-inset-top)) auto 0; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; backdrop-filter: blur(14px); position: relative; z-index: 4; }
+.tabs button { background: transparent; border: 0; border-radius: 12px; padding: 10px 20px; font-weight: 700; color: var(--muted); cursor: pointer; transition: background .2s, color .2s; }
+.tabs button.on { background: var(--grad); color: #fff; box-shadow: 0 4px 18px rgba(138,91,255,.4); }
+.tabs + .screen { min-height: auto; padding-top: 12px; }
+
+/* host plays too */
+.hostplay { display: flex; gap: 8px; }
+.hostplay input { font-size: 1rem; }
+.embedded { width: min(480px, 100%); margin: 0 auto; }

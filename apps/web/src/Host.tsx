@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import type { RevealInfo, RoomState } from "@tuneguesser/shared";
 import { useCountdown, useRoom } from "./net";
+import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
@@ -12,8 +13,9 @@ const load = (): Saved | null => {
   try { return JSON.parse(sessionStorage.getItem("tg_room") ?? "null"); } catch { return null; }
 };
 
-export function Host() {
+export function Host({ onInGame }: { onInGame?: (v: boolean) => void }) {
   const [saved, setSaved] = useState<Saved | null>(load);
+  useEffect(() => onInGame?.(!!saved), [!!saved]);
   return saved ? (
     <Game saved={saved} onLeave={() => { sessionStorage.removeItem("tg_room"); setSaved(null); }} />
   ) : (
@@ -107,6 +109,14 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   const [mute, setMute] = useState(false);
   const prev = useRef<RoomState["phase"]>();
   const joinUrl = `${location.origin}/?code=${saved.code}`;
+  // optional: the host device plays too
+  const [me, setMe] = useState<{ name: string; playerId?: string } | null>(() => {
+    try { return JSON.parse(sessionStorage.getItem("tg_hostplayer") ?? "null"); } catch { return null; }
+  });
+  const saveMe = (m: { name: string; playerId?: string } | null) => {
+    setMe(m);
+    if (m) sessionStorage.setItem("tg_hostplayer", JSON.stringify(m)); else sessionStorage.removeItem("tg_hostplayer");
+  };
 
   useEffect(() => { setMuted(mute); }, [mute]);
   useEffect(() => {
@@ -130,17 +140,19 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   return (
     <main className="screen game">
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
-      {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
+      {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} onSkip={() => send({ t: "skip" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={onLeave} />}
+      {me && <Play embedded saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {error && <p className="error toast">{error}</p>}
     </main>
   );
 }
 
-function Lobby({ state, joinUrl, onStart, onLeave }: { state: RoomState; joinUrl: string; onStart: () => void; onLeave: () => void }) {
+function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomState; joinUrl: string; me: { name: string } | null; onPlay: (name: string) => void; onStart: () => void; onLeave: () => void }) {
   const [qr, setQr] = useState("");
+  const [name, setName] = useState("");
   useEffect(() => { QRCode.toDataURL(joinUrl, { margin: 1, width: 280, color: { dark: "#0b0b1a", light: "#ffffff" } }).then(setQr); }, [joinUrl]);
   return (
     <div className="lobby">
@@ -155,6 +167,12 @@ function Lobby({ state, joinUrl, onStart, onLeave }: { state: RoomState; joinUrl
           {state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)} style={{ opacity: p.connected ? 1 : 0.4 }}>{p.name}</li>)}
           {state.players.length === 0 && <li className="muted">Waiting for players…</li>}
         </ul>
+        {me ? <p className="muted">You're playing as <b>{me.name}</b> on this screen.</p> : (
+          <form className="hostplay" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { sfx.join(); onPlay(name.trim()); } }}>
+            <input placeholder="Play on this screen too? Your name" maxLength={16} value={name} onChange={(e) => setName(e.target.value)} />
+            <button className="btn" disabled={!name.trim() || state.players.length >= 4}>Join</button>
+          </form>
+        )}
         <button className="btn big" disabled={state.players.length === 0} onClick={onStart}>Start game</button>
         <button className="btn ghost" onClick={onLeave}>Cancel</button>
       </div>
