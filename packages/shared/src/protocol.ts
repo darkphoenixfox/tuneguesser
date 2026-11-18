@@ -108,4 +108,6 @@ export type ServerMessage =
   | { t: "joined"; playerId: string }
   | { t: "state"; state: RoomState }
   | { t: "result"; title: boolean; artist: boolean; points: number; multipliers: Multiplier[] }
+  /** sent once to a player who is about to answer by typing: song titles and artists of the playlist, for auto-completion */
+  | { t: "words"; list: string[] }
   | { t: "error"; message: string };

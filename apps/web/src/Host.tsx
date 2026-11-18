@@ -99,6 +99,10 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
         </div>
       ) : (
         <>
+          <div className="quick">
+            <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>⚡ Quickstart</button>
+            <small className="muted">{picked.length === 0 ? "Choose playlists below once; Quickstart then reuses your last playlists and settings." : `Starts a game with your last settings (${picked.length} playlist${picked.length > 1 ? "s" : ""}) and creates the room.`}</small>
+          </div>
           <section className="card">
             <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
             <p className="muted">Pick one or more. Only playlists you own or collaborate on can be used (a Spotify rule). To use someone else's or an editorial playlist, copy its songs into one of your own.</p>

@@ -453,6 +453,16 @@ export class Room {
     return { ...m, points, multipliers };
   }
 
+  /** Titles and artists of the playlist(s), for the on-screen keyboard's auto-completion. */
+  suggestions(): string[] {
+    const out = new Set<string>();
+    for (const t of this.pool) {
+      if (this.wantTitle) out.add(hintText(t.title));
+      if (this.wantArtist) for (const a of t.artists) out.add(a);
+    }
+    return [...out].slice(0, 3000);
+  }
+
   /** Who has to run out of attempts (or find everything) for the round to end. */
   private contenders(): Player[] {
     if (this.config.order !== "roundRobin") return [...this.players.values()];

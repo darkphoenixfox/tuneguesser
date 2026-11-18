@@ -18,7 +18,7 @@ Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 4. Optional: the host can also play on the host screen (name field in the lobby). The host then counts as one of the 4 players.
 
 ### Game types (Host a game page)
-The last chosen playlists and options are remembered on the host's device.
+The last chosen playlists and options are remembered on the host's device. The **⚡ Quickstart** button at the top starts a game at once with those last settings.
 
 | Option | Choices | Meaning |
 | :--- | :--- | :--- |
@@ -69,7 +69,7 @@ The last chosen playlists and options are remembered on the host's device.
 | Pause / continue | Alt+P | Start / Options |
 
 - **Pause** stops the music and the round clock for everybody (host or any player can press it; not while someone is answering). Buzzing is blocked until it continues.
-- When a gamepad is connected, the person answering by typing gets an **on-screen keyboard**: d-pad moves, A types the key, B deletes, X adds a space, Y sends. Button glyphs (Xbox or PlayStation style, detected from the pad) are drawn on the buttons they trigger.
+- When a gamepad is connected, the person answering by typing gets an **on-screen keyboard** with **auto-completion** (a row of suggested titles, artists and words from the playlist; press up from the letters to reach it): d-pad moves, A types the key, B deletes, X adds a space, Y sends. Button glyphs (Xbox or PlayStation style, detected from the pad) are drawn on the buttons they trigger.
 - **Quit** (✕ on the host screen) stops the music and ends the game for everyone.
 
 ### Scoring

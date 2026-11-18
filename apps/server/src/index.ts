@@ -135,6 +135,7 @@ wss.on("connection", (ws) => {
   let entry: RoomEntry | undefined;
   let role: "host" | "player" | undefined;
   let playerId: string | undefined;
+  let wordsSent = false;
 
   ws.on("message", async (raw) => {
     let m: ClientMessage;
@@ -160,7 +161,7 @@ wss.on("connection", (ws) => {
       }
       const room = entry.room;
       if (role === "player" && playerId && m.t === "buzz") {
-        room.buzz(playerId);
+        if (room.buzz(playerId) && !wordsSent && room.state().config.answers === "type") { wordsSent = true; send(ws, { t: "words", list: room.suggestions() }); }
       } else if (role === "player" && playerId && m.t === "skip") {
         room.voteSkip(playerId);
       } else if (role === "player" && m.t === "next") {

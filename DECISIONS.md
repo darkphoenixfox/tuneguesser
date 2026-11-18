@@ -130,6 +130,9 @@ The host's quit (and Cancel / New game) sends a `quit` message: the server pause
 ### DEC-034 · Adaptive two-column layout, no duplicate info · 2026-11-18 · Active
 From 900 px wide, screens use two columns: host playing = timer | scores, then answers | trivia and score banner; reveal = song details | scores; the phone/keyboard player view (also usable in a desktop browser) = answer field | on-screen keyboard, multiple-choice options in 2 columns, reveal = song | scores. Below 900 px it is one column. Duplicates removed: the letter hint is shown **inside** the Song/Artist answer panel (no separate "? ? ?" and "_ _ _" blocks), and at the reveal the points banner shows only the multipliers because the scoreboard already shows the points.
 
+### DEC-035 · Keyboard auto-completion and Quickstart · 2026-11-18 · Active
+The gamepad on-screen keyboard has a suggestion row (up from the letters): up to 2 whole titles/artists starting with what was typed, plus words completing the word being typed (accents and case ignored; a picked word is followed by a space). The list (titles/artists of the selected playlists, only the part being guessed) is sent once per connection to a player who buzzes in type mode; it contains the answer among all the others, like a search box. **Quickstart** button at the top of the host setup creates a room at once with the last playlists, device and settings (remembered on the host's device).
+
 ---
 
 ## Open questions

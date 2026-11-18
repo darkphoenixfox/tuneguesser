@@ -47,7 +47,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   const [me, setMe] = useState(saved.playerId);
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
+  const [words, setWords] = useState<string[]>([]);
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => {
+    if (m.t === "words") setWords(m.list);
     if (m.t === "joined") { setMe(m.playerId); onId(m.playerId); }
     if (m.t === "result") {
       if (m.title || m.artist) { sfx.correct(); navigator.vibrate?.(80); } else { sfx.wrong(); navigator.vibrate?.([40, 40, 40]); }
@@ -166,7 +168,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               </label>
               <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
               </div>
-              {pad.connected && <PadKeyboard disabled={sent} onType={(c) => setText((t) => (t + c).slice(0, 160))} onBack={() => setText((t) => t.slice(0, -1))} onSend={doSubmit} />}
+              {pad.connected && <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} />}
             </form>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>

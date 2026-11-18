@@ -1,45 +1,66 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { suggest } from "@tuneguesser/shared";
 import { Glyph } from "./Glyph";
 import { onPadButton } from "./pad";
 
 const ROWS = ["1234567890", "qwertyuiop", "asdfghjkl'", "zxcvbnm-.&"];
-/** Special keys on the last row */
 const SPECIAL = ["space", "back", "send"] as const;
 
-/** On-screen keyboard for gamepads: d-pad moves, A types the key, B deletes, X adds a space, Y sends. Tap works too. */
-export function PadKeyboard({ onType, onBack, onSend, disabled }: { onType: (c: string) => void; onBack: () => void; onSend: () => void; disabled?: boolean }) {
+/**
+ * On-screen keyboard for gamepads, with auto-completion: the top row offers whole titles/artists and words from the
+ * playlist. D-pad moves (up from the letters reaches the suggestions), A types / picks, B deletes, X adds a space, Y sends.
+ */
+export function PadKeyboard({ text, words, onText, onSend, disabled }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; disabled?: boolean }) {
+  const sugg = useMemo(() => suggest(text, words), [text, words]);
+  // r = -1 is the suggestion row, 0..ROWS.length-1 the letter rows, ROWS.length the space/back/send row
   const [pos, setPos] = useState({ r: 1, c: 0 });
-  const cb = useRef({ onType, onBack, onSend, disabled, pos });
-  cb.current = { onType, onBack, onSend, disabled, pos };
+  const live = useRef({ text, sugg, disabled, pos, onText, onSend });
+  live.current = { text, sugg, disabled, pos, onText, onSend };
+
+  const width = (r: number) => (r === -1 ? live.current.sugg.length : r < ROWS.length ? ROWS[r]!.length : SPECIAL.length);
+  const clamp = (r: number, c: number) => {
+    const minR = live.current.sugg.length ? -1 : 0;
+    const rr = Math.min(ROWS.length, Math.max(minR, r));
+    return { r: rr, c: Math.min(Math.max(0, c), width(rr) - 1) };
+  };
 
   const press = (r: number, c: number) => {
-    const h = cb.current;
+    const h = live.current;
     if (h.disabled) return;
-    if (r < ROWS.length) h.onType(ROWS[r]![c]!);
+    if (r === -1) {
+      const s = h.sugg[c];
+      if (s) { h.onText(s.text.slice(0, 160)); setPos({ r: -1, c: 0 }); }
+    } else if (r < ROWS.length) h.onText((h.text + ROWS[r]![c]!).slice(0, 160));
     else {
       const k = SPECIAL[c]!;
-      if (k === "space") h.onType(" "); else if (k === "back") h.onBack(); else h.onSend();
+      if (k === "space") h.onText(h.text + " "); else if (k === "back") h.onText(h.text.slice(0, -1)); else h.onSend();
     }
   };
 
+  // the suggestions come and go as the text changes
+  useEffect(() => { setPos((p) => clamp(p.r, p.c)); }, [sugg.length]);
+
   useEffect(() => onPadButton((b) => {
-    const h = cb.current;
-    const { r, c } = h.pos;
-    const width = (row: number) => (row < ROWS.length ? ROWS[row]!.length : SPECIAL.length);
-    const clampC = (row: number, col: number) => Math.min(col, width(row) - 1);
-    if (b === "up") setPos({ r: Math.max(0, r - 1), c: clampC(Math.max(0, r - 1), c) });
-    else if (b === "down") setPos({ r: Math.min(ROWS.length, r + 1), c: clampC(Math.min(ROWS.length, r + 1), c) });
+    const h = live.current;
+    const { r, c } = clamp(h.pos.r, h.pos.c);
+    if (b === "up") setPos(clamp(r - 1, c));
+    else if (b === "down") setPos(clamp(r + 1, c));
     else if (b === "left") setPos({ r, c: (c + width(r) - 1) % width(r) });
     else if (b === "right") setPos({ r, c: (c + 1) % width(r) });
     else if (b === "a") press(r, c);
-    else if (b === "b" && !h.disabled) h.onBack();
-    else if (b === "x" && !h.disabled) h.onType(" ");
+    else if (b === "b" && !h.disabled) h.onText(h.text.slice(0, -1));
+    else if (b === "x" && !h.disabled) h.onText(h.text + " ");
     else if (b === "y" && !h.disabled) h.onSend();
   }), []);
 
-  const cls = (r: number, c: number) => "pk-key" + (pos.r === r && pos.c === c ? " on" : "");
+  const cur = clamp(pos.r, pos.c);
+  const cls = (r: number, c: number) => "pk-key" + (cur.r === r && cur.c === c ? " on" : "");
   return (
     <div className="padkb" aria-label="On-screen keyboard">
+      <div className="pk-row pk-sugg">
+        {sugg.length === 0 && <span className="muted pk-none">Suggestions appear as you type</span>}
+        {sugg.map((s, c) => <button type="button" key={s.text} className={cls(-1, c) + " sugg"} onClick={() => { setPos({ r: -1, c }); press(-1, c); }}>{s.label}</button>)}
+      </div>
       {ROWS.map((row, r) => (
         <div className="pk-row" key={r}>
           {[...row].map((ch, c) => <button type="button" key={ch} className={cls(r, c)} onClick={() => { setPos({ r, c }); press(r, c); }}>{ch}</button>)}
