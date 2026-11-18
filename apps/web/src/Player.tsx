@@ -148,7 +148,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
           {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
           <Hints state={state} />
-          <FoundChips found={found} guess={state.config.guess} />
+          <FoundChips found={found} guess={state.config.guess} hint={state.hint} />
           <ScoreBanner state={state} />
           {iAmGuesser && state.options ? (
             <div className="guess-form">
@@ -158,12 +158,14 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               </div>
             </div>
           ) : iAmGuesser ? (
-            <form className="guess-form" onSubmit={submit}>
+            <form className={"guess-form" + (pad.connected ? " with-kb" : "")} onSubmit={submit}>
+              <div className="gf-main">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
               <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
                 <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
               <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
+              </div>
               {pad.connected && <PadKeyboard disabled={sent} onType={(c) => setText((t) => (t + c).slice(0, 160))} onBack={() => setText((t) => t.slice(0, -1))} onSend={doSubmit} />}
             </form>
           ) : guessing ? (
@@ -186,12 +188,18 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
 
       {state.phase === "reveal" && state.reveal && (
         <div className="card center">
-          {state.reveal.albumArt && <img className="art small" src={state.reveal.albumArt} alt="" />}
-          <h2>{state.reveal.title}</h2>
-          <p className="muted">{state.reveal.artists.join(", ")}</p>
-          {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
-          <ScoreBanner state={state} />
-          <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
+          <div className="cols">
+            <div className="col">
+              {state.reveal.albumArt && <img className="art small" src={state.reveal.albumArt} alt="" />}
+              <h2>{state.reveal.title}</h2>
+              <p className="muted">{state.reveal.artists.join(", ")}</p>
+              {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
+            </div>
+            <div className="col">
+              <ScoreBanner state={state} bare />
+              <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
+            </div>
+          </div>
           {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end, or press <Key>Enter</Key><PadHint button="a" /> to continue.</p>}
           <button className="btn" onClick={() => send({ t: "next" })}>Next song <Key>Enter</Key><PadHint button="a" /></button>
         </div>

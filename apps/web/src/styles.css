@@ -246,3 +246,17 @@ main.phone > .theme-btn { align-self: flex-end; }
 .pk-key.on { outline: 3px solid #facc15; box-shadow: 0 0 14px rgba(250,204,21,.7); }
 .paused-banner { margin: 0; padding: 10px 18px; border-radius: 12px; border: 1px solid var(--amber); color: var(--amber); background: rgba(255,197,61,.12); font-weight: 900; letter-spacing: .1em; }
 .choice .num { display: inline-block; min-width: 1.6em; color: var(--muted); font-weight: 800; }
+
+/* adaptive layout */
+.chip.ctx { border-style: solid; color: var(--text); background: transparent; }
+.chip.hinted b { font: 800 1.1rem ui-monospace, monospace; letter-spacing: .12em; color: var(--text); }
+.found { width: min(620px, 100%); }
+.cols, .col { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+.gf-main { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width: 900px) {
+  .screen.phone { max-width: 1000px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 40px; align-items: center; }
+  .guess-form.with-kb { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: center; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; }
+  .answer-btn { min-height: 28vh; }
+}

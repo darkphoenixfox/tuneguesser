@@ -127,6 +127,9 @@ The host's quit (and Cancel / New game) sends a `quit` message: the server pause
 ### DEC-033 · Guess setting (song / artist / both) · 2026-11-18 · Active
 `GameConfig.guess`. Only the wanted parts can be found or scored; the other is ignored (a typed answer matching only the unwanted part counts as wrong). The round ends when all wanted parts are found. Artist-only is scored on the title's 1000 scale so a round is still worth a full song. Multiple choice shows just the title or just the artist as options (distinct values). The "title + artist at once" multiplier applies only with *Both*. With *Reveal* hints the unguessed part is displayed in full as context.
 
+### DEC-034 · Adaptive two-column layout, no duplicate info · 2026-11-18 · Active
+From 900 px wide, screens use two columns: host playing = timer | scores, then answers | trivia and score banner; reveal = song details | scores; the phone/keyboard player view (also usable in a desktop browser) = answer field | on-screen keyboard, multiple-choice options in 2 columns, reveal = song | scores. Below 900 px it is one column. Duplicates removed: the letter hint is shown **inside** the Song/Artist answer panel (no separate "? ? ?" and "_ _ _" blocks), and at the reveal the points banner shows only the multipliers because the scoreboard already shows the points.
+
 ---
 
 ## Open questions

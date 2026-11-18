@@ -300,9 +300,17 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
       <Scoreboard state={state} />
       </div>
       </div>
-      <Hints state={state} />
-      <FoundChips found={state.found} guess={state.config.guess} />
-      <ScoreBanner state={state} />
+      <div className="top">
+        <div className="top-main">
+          <FoundChips found={state.found} guess={state.config.guess} hint={state.hint} />
+        </div>
+        {(state.config.hints === "trivia" || state.lastScore) && (
+          <div className="top-side">
+            <Hints state={state} />
+            <ScoreBanner state={state} />
+          </div>
+        )}
+      </div>
       <div className="controls">
         <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
           {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<Key>Alt+S</Key><PadHint button="select" />
@@ -323,11 +331,17 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
   const r = state.reveal!;
   return (
     <div className="reveal">
-      {r.albumArt && <img className="art spin-in" src={r.albumArt} alt="" />}
-      <h1 className="rv-title">{r.title}</h1>
-      <h2 className="rv-artist">{r.artists.join(", ")}{r.year ? ` · ${r.year}` : ""}</h2>
-      <ScoreBanner state={state} />
-      <Scoreboard state={state} reveal={r} />
+      <div className="top">
+        <div className="top-main">
+          {r.albumArt && <img className="art spin-in" src={r.albumArt} alt="" />}
+          <h1 className="rv-title">{r.title}</h1>
+          <h2 className="rv-artist">{r.artists.join(", ")}{r.year ? ` · ${r.year}` : ""}</h2>
+        </div>
+        <div className="top-side">
+          <ScoreBanner state={state} bare />
+          <Scoreboard state={state} reveal={r} />
+        </div>
+      </div>
       {state.awaitingNext && <p className="waiting">The song keeps playing. The next round starts when it ends, or when you continue.</p>}
       <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<Key>Enter</Key><PadHint button="a" /></button>
     </div>

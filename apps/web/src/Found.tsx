@@ -1,22 +1,24 @@
 import type { Found, RoomState } from "@tuneguesser/shared";
 import { useCountdown } from "./net";
 
-/** What has been guessed so far this round (shown to everyone while the music continues). */
-export function FoundChips({ found, guess = "both" }: { found?: Found; guess?: "both" | "title" | "artist" }) {
-  return (
-    <div className="found">
-      {guess !== "artist" && <div className={"chip" + (found?.title ? " got" : "")}>
-        <small>Song</small>
-        <b>{found?.title ? found.title.text : "? ? ? ? ?"}</b>
-        {found?.title && <em>{found.title.by}</em>}
-      </div>}
-      {guess !== "title" && <div className={"chip" + (found?.artist ? " got" : "")}>
-        <small>Artist</small>
-        <b>{found?.artist ? found.artist.text : "? ? ? ? ?"}</b>
-        {found?.artist && <em>{found.artist.by}</em>}
-      </div>}
-    </div>
-  );
+/**
+ * The answer panel: what has been found, else the letter hint (when Reveal hints are on), else "? ? ?".
+ * Parts that are not being guessed only appear (in full) when there is a hint to show as context.
+ */
+export function FoundChips({ found, guess = "both", hint }: { found?: Found; guess?: "both" | "title" | "artist"; hint?: { title: string; artist: string } }) {
+  const part = (key: "title" | "artist", label: string) => {
+    const wanted = guess === "both" || guess === key;
+    const got = found?.[key];
+    if (!wanted && !hint) return null;
+    return (
+      <div className={"chip" + (got ? " got" : "") + (!wanted ? " ctx" : "") + (hint && !got && wanted ? " hinted" : "")}>
+        <small>{label}</small>
+        <b>{got ? got.text : hint ? hint[key] : "? ? ? ? ?"}</b>
+        {got && <em>{got.by}</em>}
+      </div>
+    );
+  };
+  return <div className="found">{part("title", "Song")}{part("artist", "Artist")}</div>;
 }
 
 /** Shrinking bar: how long the guesser has left to send their answer. */
@@ -25,37 +27,26 @@ export function GuessBar({ endsAt, totalMs }: { endsAt: number; totalMs: number 
   return <div className="bar-time"><i style={{ width: `${Math.min(100, (left * 1000 / totalMs) * 100)}%` }} /></div>;
 }
 
-/** Hint area: underscores that fill in over time, or trivia facts. */
+/** Trivia facts (the letter hints are shown inside the answer panel). */
 export function Hints({ state }: { state: RoomState }) {
-  if (state.hint) {
-    return (
-      <div className="hint" aria-label="Hint">
-        {state.config.guess !== "artist" && <div><small>Song</small><code>{state.hint.title}</code></div>}
-        {state.config.guess !== "title" && <div><small>Artist</small><code>{state.hint.artist}</code></div>}
-        {state.config.guess === "title" && <div><small>Artist</small><b>{state.hint.artist}</b></div>}
-        {state.config.guess === "artist" && <div><small>Song</small><b>{state.hint.title}</b></div>}
-      </div>
-    );
-  }
-  if (state.config.hints === "trivia") {
-    const t = state.trivia ?? [];
-    return (
-      <ul className="trivia" aria-label="Trivia">
-        {t.length === 0 && <li className="muted">Trivia coming up…</li>}
-        {t.map((x, i) => <li key={i}>{x}</li>)}
-      </ul>
-    );
-  }
-  return null;
+  if (state.config.hints !== "trivia") return null;
+  const t = state.trivia ?? [];
+  return (
+    <ul className="trivia" aria-label="Trivia">
+      {t.length === 0 && <li className="muted">Trivia coming up…</li>}
+      {t.map((x, i) => <li key={i}>{x}</li>)}
+    </ul>
+  );
 }
 
 /** "+1350 Ana · ×1.5 Title + artist at once · ×1.25 1 round in a row" */
-export function ScoreBanner({ state }: { state: RoomState }) {
+export function ScoreBanner({ state, bare }: { state: RoomState; bare?: boolean }) {
   const l = state.lastScore;
   if (!l || l.points <= 0) return null;
+  if (bare && l.multipliers.length === 0) return null; // the scoreboard already shows the points
   return (
     <div className="score-banner pop" key={`${l.name}${l.points}`}>
-      <b>+{l.points}</b> <span>{l.name}</span>
+      {!bare && <b>+{l.points}</b>} <span>{l.name}</span>
       {l.multipliers.map((m) => <em key={m.label}>×{m.x} {m.label}</em>)}
     </div>
   );
