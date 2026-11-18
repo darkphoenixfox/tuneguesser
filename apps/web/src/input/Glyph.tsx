@@ -16,7 +16,7 @@ const XBOX: Partial<Record<PadButtonName, { light: string; mid: string; dark: st
 };
 const TEXT: Record<"xbox" | "ps", Partial<Record<PadButtonName, string>>> = {
   xbox: { start: "☰", select: "⧉" },
-  ps: { start: "OPT", select: "SHARE" },
+  ps: { start: "OPT", select: "SHARE", lb: "L1", rb: "R1" },
 };
 
 function Xbox({ button }: { button: PadButtonName }) {

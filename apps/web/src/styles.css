@@ -273,3 +273,7 @@ html[data-pad] :focus { outline: 3px solid #facc15 !important; outline-offset: 3
 .devbtn { position: fixed; top: 14px; right: 170px; background: var(--card); border: 1px solid var(--line); border-radius: 50%; width: 44px; height: 44px; cursor: pointer; font-size: 1.2rem; z-index: 6; color: var(--text); }
 .devices ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .devices li .btn { width: 100%; text-align: left; }
+.padbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: center; align-items: center; padding: 8px 14px; background: var(--card); border-top: 1px solid var(--line); color: var(--muted); font-weight: 700; }
+.padbar span { display: inline-flex; align-items: center; gap: 6px; }
+.padbar .dpad { color: var(--text); font-size: 1.2rem; }
+.screen { padding-bottom: 70px; }

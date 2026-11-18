@@ -35,7 +35,7 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
       <form className="card" onSubmit={(e) => { e.preventDefault(); if (ok) { sfx.join(); onJoin({ code, name: name.trim() }); } }}>
         <label>Room code<input className="codein" value={code} maxLength={4} autoCapitalize="characters" autoComplete="off" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} /></label>
         <label>Your name<input value={name} maxLength={16} autoComplete="nickname" onChange={(e) => setName(e.target.value)} /></label>
-        <button className="btn big" disabled={!ok}>Join</button>
+        <button className="btn big" disabled={!ok}>Join<PadHint button="a" /></button>
       </form>
     </main>
   );

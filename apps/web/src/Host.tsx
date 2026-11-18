@@ -94,13 +94,13 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
       {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
         <div className="card center">
           <p>Log in with the Spotify account that will play the music (Premium required).</p>
-          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login">Log in with Spotify</a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
+          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first>Log in with Spotify<PadHint button="a" /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
           <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
         </div>
       ) : (
         <>
           <div className="quick">
-            <button className="btn big" data-pad-first disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>⚡ Quickstart</button>
+            <button className="btn big" data-pad-first disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>⚡ Quickstart<PadHint button="a" /></button>
             <small className="muted">{picked.length === 0 ? "Choose playlists below once; Quickstart then reuses your last playlists and settings." : `Starts a game with your last settings (${picked.length} playlist${picked.length > 1 ? "s" : ""}) and creates the room.`}</small>
           </div>
           <section className="card">
@@ -157,7 +157,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               <small className="muted">Extra points for song + artist at once, and for streaks.</small>
             </div>
           </section>
-          <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>Create room</button>
+          <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>Create room<PadHint button="a" /></button>
         </>
       )}
     </main>
@@ -284,7 +284,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
             <button className="btn" disabled={!name.trim() || state.players.length >= 4}>Join</button>
           </form>
         )}
-        <button className="btn big" data-pad-first disabled={state.players.length === 0} onClick={onStart}>Start game</button>
+        <button className="btn big" data-pad-first disabled={state.players.length === 0} onClick={onStart}>Start game<PadHint button="a" /></button>
         <button className="btn ghost" onClick={onLeave}>Cancel</button>
       </div>
     </div>
