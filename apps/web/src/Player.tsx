@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
 import { ThemeButton } from "./Settings";
+import { Key, PadHint } from "./input/Glyph";
+import { PadKeyboard } from "./input/PadKeyboard";
+import { onPadButton, usePad } from "./input/pad";
 import { useCountdown, useRoom } from "./net";
 import { Scoreboard } from "./Scoreboard";
 import { sfx } from "./sfx";
@@ -51,7 +54,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
     }
   });
   const guessing = !!state?.guesser;
-  const left = useCountdown(endsAt, guessing ? state?.remainingMs : undefined);
+  const left = useCountdown(endsAt, guessing || state?.paused ? state?.remainingMs : undefined);
+  const pad = usePad();
   const mine = state?.players.find((p) => p.id === me);
   const iAmGuesser = !!mine && state?.guesser?.id === mine.id;
   const titleRef = useRef<HTMLInputElement>(null);
@@ -60,6 +64,56 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   useEffect(() => {
     if (iAmGuesser) { setText(""); setSent(false); sfx.buzz(); navigator.vibrate?.(30); setTimeout(() => titleRef.current?.focus(), 50); }
   }, [iAmGuesser]);
+
+  // keyboard and gamepad shortcuts (the host screen handles pause/skip/next itself when this is embedded in it)
+  const live = useRef({ state, mine, iAmGuesser, sent, text });
+  live.current = { state, mine, iAmGuesser, sent, text };
+  const doSubmit = () => {
+    const l = live.current;
+    if (l.sent || !l.text.trim()) return;
+    setSent(true);
+    send({ t: "answer", text: l.text });
+  };
+  const doChoose = (i: number) => {
+    const l = live.current;
+    const o = l.state?.options?.[i];
+    if (!l.iAmGuesser || !o || l.sent) return;
+    setSent(true);
+    send({ t: "choose", optionId: o.id });
+  };
+  /** the accept key/button: ANSWER when a song is playing, next song at the reveal */
+  const accept = () => {
+    const { state: st, mine: m, iAmGuesser: g } = live.current;
+    if (!st || !m || g) return;
+    if (st.phase === "playing" && !st.guesser && !st.paused && m.attemptsLeft > 0 && (st.config.order !== "roundRobin" || st.activePlayerId === m.id)) send({ t: "buzz" });
+    else if (st.phase === "reveal" && !embedded) send({ t: "next" });
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName);
+      if (e.altKey && !embedded) {
+        if (e.code === "KeyS") { e.preventDefault(); send({ t: "skip" }); }
+        else if (e.code === "KeyP") { e.preventDefault(); send({ t: "pause" }); }
+        return;
+      }
+      if (typing || e.ctrlKey || e.metaKey) return;
+      if (e.key === "Enter" && t?.tagName !== "BUTTON") accept();
+      else if (/^[1-4]$/.test(e.key)) doChoose(+e.key - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    const off = onPadButton((b) => {
+      const l = live.current;
+      const choice = ({ a: 0, b: 1, x: 2, y: 3 } as Record<string, number>)[b];
+      if (l.iAmGuesser && l.state?.options) { if (choice !== undefined) doChoose(choice); return; }
+      if (l.iAmGuesser) return; // the on-screen keyboard has the buttons
+      if (b === "a") accept();
+      else if (!embedded && b === "start") send({ t: "pause" });
+      else if (!embedded && b === "select") send({ t: "skip" });
+    });
+    return () => { window.removeEventListener("keydown", onKey); off(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [embedded, send]);
 
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
   if (error && !state) return <main className="screen phone center"><p className="error">{error}</p><button className="btn" onClick={onLeave}>Back</button></main>;
@@ -92,6 +146,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
       {state.phase === "playing" && (
         <div className="card answer">
           <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
+          {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
           <Hints state={state} />
           <FoundChips found={found} />
           <ScoreBanner state={state} />
@@ -99,7 +154,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
             <div className="guess-form">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
               <div className="choices">
-                {state.options.map((o) => <button key={o.id} className="choice" disabled={sent} onClick={() => { setSent(true); send({ t: "choose", optionId: o.id }); }}>{o.label}</button>)}
+                {state.options.map((o, i) => <button key={o.id} className="choice" disabled={sent} onClick={() => doChoose(i)}><span className="num">{i + 1}</span>{o.label}{(["a", "b", "x", "y"] as const)[i] && <PadHint button={(["a", "b", "x", "y"] as const)[i]!} />}</button>)}
               </div>
             </div>
           ) : iAmGuesser ? (
@@ -109,6 +164,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
                 <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
               <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
+              {pad.connected && <PadKeyboard disabled={sent} onType={(c) => setText((t) => (t + c).slice(0, 160))} onBack={() => setText((t) => t.slice(0, -1))} onSend={doSubmit} />}
             </form>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
@@ -117,12 +173,14 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           ) : (
             <button className="answer-btn" disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
               {mine.attemptsLeft === 0 ? "Out of tries" : state.config.order === "roundRobin" ? "YOUR SONG: ANSWER" : "ANSWER"}
+              {mine.attemptsLeft > 0 && <><Key>Enter</Key><PadHint button="a" /></>}
             </button>
           )}
           {!embedded && !iAmGuesser && (state.config.order !== "roundRobin" || state.activePlayerId === mine.id) && (() => {
             const sk = state.skip ?? { votes: 0, voters: state.players.length };
-            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters})</button>;
+            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters}) <Key>Alt+S</Key><PadHint button="select" /></button>;
           })()}
+          {!embedded && !iAmGuesser && <button className="btn ghost" onClick={() => send({ t: "pause" })}>{state.paused ? "▶ Continue" : "⏸ Pause"} <Key>Alt+P</Key><PadHint button="start" /></button>}
         </div>
       )}
 
@@ -134,7 +192,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
           <ScoreBanner state={state} />
           <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
-          {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end or when the host continues.</p>}
+          {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end, or press <Key>Enter</Key><PadHint button="a" /> to continue.</p>}
+          <button className="btn" onClick={() => send({ t: "next" })}>Next song <Key>Enter</Key><PadHint button="a" /></button>
         </div>
       )}
       {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}

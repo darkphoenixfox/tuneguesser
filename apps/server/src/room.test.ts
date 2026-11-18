@@ -459,4 +459,35 @@ describe("Room (buzzer game)", () => {
       expect(room.state().trivia).toEqual(facts);
     });
   });
+
+  it("pause stops the clock and the music, blocks buzzing, and resumes in place", async () => {
+    const { room, music } = make(2);
+    const a = room.addPlayer("Ana")!;
+    await room.start();
+    await vi.advanceTimersByTimeAsync(10_000);
+    room.togglePause();
+    expect(room.state().paused).toBe(true);
+    expect(room.state().remainingMs).toBe(30_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(room.state().phase).toBe("playing");
+    expect(room.buzz(a)).toBe(false);
+    expect(music.pauses).toBe(1);
+    room.togglePause();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().paused).toBeUndefined();
+    expect(music.resumed.length).toBe(1);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(room.state().phase).toBe("reveal");
+  });
+
+  it("quitting stops the music and ends the game", async () => {
+    const { room, music } = make(2);
+    room.addPlayer("Ana");
+    await room.start();
+    await room.stop();
+    expect(music.pauses).toBe(1);
+    expect(room.state().phase).toBe("finished");
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(music.played.length).toBe(1); // no next song
+  });
 });

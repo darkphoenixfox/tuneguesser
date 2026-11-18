@@ -7,6 +7,8 @@ import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
+import { Key, PadHint } from "./input/Glyph";
+import { onPadButton } from "./input/pad";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
@@ -185,18 +187,38 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
     joined.current = state.players.length;
   }, [state?.players.length]);
 
+  // keyboard / gamepad: Alt+P or Start pause, Alt+S or Select skip, Enter or A = next song at the reveal
+  const phaseRef = useRef(state?.phase);
+  phaseRef.current = state?.phase;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.altKey && e.code === "KeyP") { e.preventDefault(); send({ t: "pause" }); }
+      else if (e.altKey && e.code === "KeyS") { e.preventDefault(); send({ t: "skip" }); }
+      else if (e.key === "Enter" && !e.altKey && !e.ctrlKey && !e.metaKey && phaseRef.current === "reveal" && !/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(t?.tagName ?? "")) send({ t: "next" });
+    };
+    window.addEventListener("keydown", onKey);
+    const off = onPadButton((b) => {
+      if (b === "start") send({ t: "pause" });
+      else if (b === "select") send({ t: "skip" });
+      else if (b === "a" && phaseRef.current === "reveal") send({ t: "next" });
+    });
+    return () => { window.removeEventListener("keydown", onKey); off(); };
+  }, [send]);
+
+  const quit = () => { send({ t: "quit" }); onLeave(); }; // also stops the music
   if (error && !state) return <main className="screen center"><p className="error">{error}</p><button className="btn" onClick={onLeave}>Back</button></main>;
   if (!state) return <main className="screen center"><p className="muted">Connecting…</p></main>;
 
   return (
     <main className="screen game">
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
-      <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished" || window.confirm("Quit the game for everyone?")) onLeave(); }} aria-label="Quit game" title="Quit game">✕</button>
+      <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished" || window.confirm("Quit the game for everyone?")) quit(); }} aria-label="Quit game" title="Quit game">✕</button>
       <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
-      {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={onLeave} />}
-      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} />}
+      {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
+      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
-      {state.phase === "finished" && <Finished state={state} onLeave={onLeave} />}
+      {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {error && <p className="error toast">{error}</p>}
     </main>
@@ -234,9 +256,9 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
   );
 }
 
-function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void }) {
+function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void }) {
   const guessing = !!state.guesser;
-  const left = useCountdown(endsAt, guessing ? state.remainingMs : undefined);
+  const left = useCountdown(endsAt, guessing || state.paused ? state.remainingMs : undefined);
   const unlimited = state.roundMs === null;
   const frac = unlimited ? 1 : Math.min(1, left / (state.roundMs! / 1000));
   const lastTick = useRef(-1);
@@ -259,6 +281,7 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
         <b>{unlimited ? "∞" : Math.ceil(left)}</b>
       </div>
+      {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
       {guessing ? (
         <div className="guessing-banner">
           <h2>🎤 {state.guesser!.name} is guessing…</h2>
@@ -278,8 +301,9 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
       <ScoreBanner state={state} />
       <div className="controls">
         <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
-          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}
+          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}<Key>Alt+S</Key><PadHint button="select" />
         </button>
+        {!guessing && <button className="btn ghost" onClick={onPause}>{state.paused ? "▶ Continue" : "⏸ Pause"}<Key>Alt+P</Key><PadHint button="start" /></button>}
       </div>
     </div>
   );
@@ -301,7 +325,7 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
       <ScoreBanner state={state} />
       <Scoreboard state={state} reveal={r} />
       {state.awaitingNext && <p className="waiting">The song keeps playing. The next round starts when it ends, or when you continue.</p>}
-      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}</button>
+      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<Key>Enter</Key><PadHint button="a" /></button>
     </div>
   );
 }

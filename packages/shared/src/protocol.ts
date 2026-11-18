@@ -60,6 +60,8 @@ export interface RoomState {
   /** ms left in the round. While someone is guessing the clock is frozen at this value. */
   remainingMs?: number;
   /** the player who pressed ANSWER: music and round clock are stopped while they type */
+  /** the host or a player paused the game: music and clock are stopped */
+  paused?: boolean;
   guesser?: { id: string; name: string };
   /** ms the guesser has left to send an answer */
   guessRemainingMs?: number;
@@ -98,6 +100,8 @@ export type ClientMessage =
   | { t: "start" }
   /** toggle a skip vote (host and players alike; the song is skipped when every voter has voted) */
   | { t: "skip" }
+  | { t: "pause" }
+  | { t: "quit" }
   | { t: "next" };
 
 export type ServerMessage =

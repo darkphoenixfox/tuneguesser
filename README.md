@@ -58,6 +58,19 @@ The last chosen playlists and options are remembered on the host's device.
 | Next song automatically | ⚙ on the host screen (default **Yes**) | Yes: next song 5 s after the reveal. No: hold every round end until the song ends or the host continues. Changeable live. |
 | Theme | ⚙ on the host screen, ☀️/🌙 on phones | Dark or light, saved **per device**. |
 
+### Keyboard and gamepad
+| Action | Keyboard | Gamepad (Xbox / PlayStation) |
+| :--- | :--- | :--- |
+| ANSWER (buzz) | Enter | A / ✕ |
+| Next song (at the reveal) | Enter | A / ✕ |
+| Multiple choice option 1-4 | 1 2 3 4 | A B X Y / ✕ ○ □ △ |
+| Skip vote | Alt+S | Select / Share |
+| Pause / continue | Alt+P | Start / Options |
+
+- **Pause** stops the music and the round clock for everybody (host or any player can press it; not while someone is answering). Buzzing is blocked until it continues.
+- When a gamepad is connected, the person answering by typing gets an **on-screen keyboard**: d-pad moves, A types the key, B deletes, X adds a space, Y sends. Button glyphs (Xbox or PlayStation style, detected from the pad) are drawn on the buttons they trigger.
+- **Quit** (✕ on the host screen) stops the music and ends the game for everyone.
+
 ### Scoring
 | Part | Max points |
 | :--- | ---: |

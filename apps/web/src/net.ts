@@ -27,7 +27,7 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
         const m: ServerMessage = JSON.parse(e.data);
         if (m.t === "state") {
           setState(m.state);
-          setEndsAt(m.state.remainingMs !== undefined && !m.state.guesser ? Date.now() + m.state.remainingMs : 0);
+          setEndsAt(m.state.remainingMs !== undefined && !m.state.guesser && !m.state.paused ? Date.now() + m.state.remainingMs : 0);
           setGuessEndsAt(m.state.guessRemainingMs !== undefined ? Date.now() + m.state.guessRemainingMs : 0);
         } else if (m.t === "error") { setError(m.message); setTimeout(() => setError((cur) => (cur === m.message ? undefined : cur)), 7000); }
         cb.current?.(m);

@@ -100,6 +100,8 @@ export class Room {
   private pausing: Promise<void> = Promise.resolve();
   /** the song is paused because a player buzzed */
   private musicPaused = false;
+  /** paused by a player or the host (not by a buzz) */
+  private paused = false;
   hostConnected = false;
   private hostSkipVote = false;
   /** set when the host also plays: the host then has one vote, as that player */
@@ -150,7 +152,7 @@ export class Room {
   }
   private elapsed(): number {
     if (this.roundStartedAt === undefined) return 0;
-    return this.guesser ? this.frozenElapsed : this.now() - this.roundStartedAt;
+    return this.guesser || this.paused ? this.frozenElapsed : this.now() - this.roundStartedAt;
   }
 
   // ---------------------------------------------------------------- players
@@ -282,6 +284,8 @@ export class Room {
     this.found = {};
     this.lastScore = undefined;
     this.guesser = undefined;
+    this.paused = false;
+    this.musicPaused = false;
     for (const p of this.players.values()) { p.attemptsUsed = 0; p.skipVote = false; p.gain = { title: 0, artist: 0 }; }
     this.hostSkipVote = false;
     this.awaitingNext = false;
@@ -352,10 +356,30 @@ export class Room {
 
   // ---------------------------------------------------------------- answering
 
+  /** Pause or continue the round (music and clock). Not while someone is answering: that already stops both. */
+  togglePause() {
+    if (this.phase !== "playing" || this.guesser || this.roundStartedAt === undefined || !this.current) return;
+    if (!this.paused) {
+      this.paused = true;
+      this.frozenElapsed = this.now() - this.roundStartedAt;
+      clearTimeout(this.timer);
+      this.musicPaused = true;
+      this.pausing = this.music.pause().catch(this.musicError("pause"));
+      this.onChange();
+      return;
+    }
+    this.paused = false;
+    this.startClock(this.frozenElapsed);
+    this.onChange();
+    this.musicPaused = false;
+    const track = this.current;
+    void this.pausing.then(() => this.music.resume(track, this.startMs + this.frozenElapsed)).catch(this.musicError("resume"));
+  }
+
   /** A player presses ANSWER. The first press wins; the music and the round clock stop. */
   buzz(playerId: string): boolean {
     const p = this.players.get(playerId);
-    if (!p || this.phase !== "playing" || this.guesser || p.attemptsUsed >= this.config.attempts || this.roundStartedAt === undefined) return false;
+    if (!p || this.phase !== "playing" || this.guesser || p.attemptsUsed >= this.config.attempts || this.roundStartedAt === undefined || this.paused) return false;
     if (this.config.order === "roundRobin" && playerId !== this.activeId) return false; // not their song
     this.guesser = playerId;
     this.guessStartedAt = this.now();
@@ -462,6 +486,7 @@ export class Room {
     clearInterval(this.hintTicker);
     const elapsed = this.elapsed();
     this.guesser = undefined;
+    this.paused = false;
     this.phase = "reveal";
     // streaks: a round in which a player scored continues their streak, otherwise it resets
     for (const p of this.contenders()) p.streak = p.gain.title + p.gain.artist > 0 ? p.streak + 1 : 0;
@@ -502,6 +527,18 @@ export class Room {
       }
     }
     this.onChange();
+  }
+
+  /** The host quits: stop the music and end the game for everyone. */
+  async stop() {
+    this.dispose();
+    this.paused = false;
+    this.guesser = undefined;
+    this.awaitingNext = false;
+    if (this.phase !== "lobby") this.phase = "finished";
+    this.onChange();
+    await this.pausing;
+    await this.music.pause().catch(this.musicError("pause"));
   }
 
   dispose() {
@@ -552,6 +589,7 @@ export class Room {
       guessMs: this.opts.guessMs,
       maxAttempts: this.config.attempts,
       remainingMs: playing && this.limitMs !== null ? Math.max(0, this.limitMs - elapsed) : undefined,
+      paused: playing && this.paused ? true : undefined,
       guesser: g ? { id: g.id, name: g.name } : undefined,
       guessRemainingMs: g ? Math.max(0, this.opts.guessMs - (this.now() - this.guessStartedAt)) : undefined,
       activePlayerId: this.config.order === "roundRobin" && (playing || this.phase === "reveal") ? this.activeId : undefined,

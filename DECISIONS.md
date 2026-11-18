@@ -118,6 +118,12 @@ Title + artist in one answer ×1.5; streak ×(1 + 0.25 × rounds in a row, max 4
 ### DEC-030 · Unlimited timer · 2026-11-18 · Active
 No countdown (∞). The round ends when the song ends. Score decay uses a 40 s window and hints a 60 s window so speed still matters.
 
+### DEC-031 · Keyboard and gamepad controls · 2026-11-18 · Active
+Enter / A = accept (buzz, and next song at the reveal, also for phone players); 1-4 or A B X Y pick multiple-choice options; Alt+S / Select skip; Alt+P / Start pause. Alt combos use the physical key code so they work with any layout. A gamepad (Gamepad API, standard mapping) shows Xbox or PlayStation glyphs (taken from the another project project's style) and an on-screen keyboard for typed answers. **Pause** is a new feature: it freezes the clock and music; any player or the host can toggle it. Open: should pause be host-only?
+
+### DEC-032 · Quit stops the music · 2026-11-18 · Active
+The host's quit (and Cancel / New game) sends a `quit` message: the server pauses Spotify, ends the game for players and deletes the room. Closing the browser tab without quitting does not stop the music.
+
 ---
 
 ## Open questions

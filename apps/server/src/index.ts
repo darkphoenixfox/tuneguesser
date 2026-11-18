@@ -163,6 +163,10 @@ wss.on("connection", (ws) => {
         room.buzz(playerId);
       } else if (role === "player" && playerId && m.t === "skip") {
         room.voteSkip(playerId);
+      } else if (role === "player" && m.t === "next") {
+        if (room.state().phase === "reveal") await room.nextRound(); // the accept key/button moves on after a round
+      } else if (role === "player" && m.t === "pause") {
+        room.togglePause();
       } else if (role === "player" && playerId && m.t === "leave") {
         room.leave(playerId);
         playerId = undefined;
@@ -177,6 +181,8 @@ wss.on("connection", (ws) => {
         if (m.t === "start") await room.start();
         else if (m.t === "settings") room.setSettings({ autoAdvance: typeof m.autoAdvance === "boolean" ? m.autoAdvance : undefined });
         else if (m.t === "skip") room.voteSkipHost();
+        else if (m.t === "pause") room.togglePause();
+        else if (m.t === "quit") { await room.stop(); rooms.delete(room.code); }
         else if (m.t === "next" && room.state().phase === "reveal") await room.nextRound();
       }
     } catch (e) {
