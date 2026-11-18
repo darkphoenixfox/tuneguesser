@@ -392,3 +392,8 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .p2-ctrl { grid-area: ctrl; margin-left: 0; justify-content: center; }
 .p2-head { padding-right: 240px; min-height: 52px; }
 @media (max-width: 899px) { .p2 { grid-template-areas: "ctrl" "head" "timer" "hint" "bar" "eq"; } .p2-head { padding-right: 0; } }
+
+.icon-wrap { position: relative; display: inline-flex; }
+.icon-wrap .pad-hint { position: absolute; right: -8px; bottom: -8px; margin: 0; pointer-events: none; }
+.icon-wrap .pad-glyph-svg, .icon-wrap .pad-glyph-text { --glyph: 1.35rem; width: 1.35rem; height: 1.35rem; }
+.ctl small { min-height: 1.2rem; font-weight: 700; }

@@ -312,13 +312,19 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
         <div className="p2-ctrl">
           {!guessing && (
             <div className="ctl">
-              <button className="icon-btn" onClick={onPause} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>
-              <small><PadHint button="start" /></small>
+              <span className="icon-wrap">
+                <button className="icon-btn" onClick={onPause} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>
+                <PadHint button="start" />
+              </span>
+              <small />
             </div>
           )}
           <div className="ctl">
-            <button className={"icon-btn" + (state.skip?.host ? " voted" : "")} onClick={onSkip} aria-label="Skip song" title="Skip song">⏭</button>
-            <small>{state.skip ? `(${state.skip.votes}/${state.skip.voters})` : ""}<PadHint button="select" /></small>
+            <span className="icon-wrap">
+              <button className={"icon-btn" + (state.skip?.host ? " voted" : "")} onClick={onSkip} aria-label="Skip song" title="Skip song">⏭</button>
+              <PadHint button="select" />
+            </span>
+            <small>{state.skip && state.skip.voters > 1 && state.skip.votes > 0 ? `(${state.skip.votes}/${state.skip.voters})` : ""}</small>
           </div>
         </div>
       <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
