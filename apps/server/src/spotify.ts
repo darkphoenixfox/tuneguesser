@@ -71,8 +71,14 @@ export class SpotifyClient {
       const text = await res.text();
       throw new Error(`Spotify ${method} ${path}: ${res.status} ${text.slice(0, 200)}`);
     }
+    // Success. Playback commands (play/pause) may answer with an empty or plain-text body, not JSON: that is still success.
     const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    if (!text) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
   }
 
   /**
