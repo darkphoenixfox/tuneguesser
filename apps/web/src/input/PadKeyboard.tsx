@@ -7,9 +7,9 @@ const ROWS = ["1234567890", "qwertyuiop", "asdfghjkl'", "zxcvbnm-.&"];
 /** The action column on the right, top to bottom */
 const ACTIONS: Array<{ id: "send" | "space" | "cancel" | "back"; button: PadButtonName; label: string }> = [
   { id: "send", button: "y", label: "SEND" },
-  { id: "space", button: "rb", label: "SPACE" },
+  { id: "space", button: "x", label: "SPACE" },
   { id: "cancel", button: "b", label: "CANCEL" },
-  { id: "back", button: "x", label: "BACKSPACE" },
+  { id: "back", button: "rb", label: "BACKSPACE" },
 ];
 const SUGG = -1;
 const ACT = ROWS.length; // position row of the action column
@@ -17,7 +17,7 @@ const ACT = ROWS.length; // position row of the action column
 /**
  * On-screen keyboard for gamepads: letter keys (with a row of word suggestions above) and a column of action buttons on the
  * right. D-pad moves (right from the last letter reaches the actions), A presses, and the action buttons have their own
- * gamepad buttons: Y send, R1/RB space, B cancel, X backspace. `children` is shown above the keys (the answer field).
+ * gamepad buttons: Y send, X space, B cancel, R1/RB backspace. `children` is shown above the keys (the answer field).
  */
 export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, sendLabel = "SEND", children }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; onCancel: () => void; disabled?: boolean; sendLabel?: string; children?: ReactNode }) {
   const sugg = useMemo(() => suggest(text, words), [text, words]);

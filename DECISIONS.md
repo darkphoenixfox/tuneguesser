@@ -149,7 +149,7 @@ After up to 3 words from the playlist, the suggestion row is filled with the 5,0
 A device with a gamepad connected tells the server (`padkb`); its player then has **60 s** instead of 25 s to answer. The on-screen keyboard is also about 1.7x wider than the text column (the answer area takes up to 1400 px on wide screens).
 
 ### DEC-041 · On-screen keyboard buttons · 2026-11-18 · Active · supersedes the button choices in DEC-031/035
-A presses the highlighted key, **B cancels** (no attempt used), **X backspace**, **Y send**. The bottom row shows space plus labelled Cancel / Backspace / Send keys with their glyphs. Space is the R1/RB shoulder button (also the on-screen key). The same keyboard is used by the text-box pop-up (B or Start closes it, Y = Done).
+A presses the highlighted key, **B cancels** (no attempt used), **X backspace**, **Y send**. The bottom row shows space plus labelled Cancel / Backspace / Send keys with their glyphs. Swapped later at the user's request: **X = space, R1/RB = backspace**. The same keyboard is used by the text-box pop-up (B or Start closes it, Y = Done).
 
 ---
 
