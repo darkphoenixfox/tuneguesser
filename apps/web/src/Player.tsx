@@ -105,6 +105,11 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
               {mine.attemptsLeft === 0 ? "Out of tries" : "ANSWER"}
             </button>
           )}
+          {!embedded && !iAmGuesser && (() => {
+            const present = state.players.filter((p) => p.connected);
+            const votes = present.filter((p) => p.skipVote).length;
+            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({votes}/{present.length})</button>;
+          })()}
         </div>
       )}
 

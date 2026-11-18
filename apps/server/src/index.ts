@@ -165,6 +165,8 @@ wss.on("connection", (ws) => {
       const room = entry.room;
       if (role === "player" && playerId && m.t === "buzz") {
         room.buzz(playerId);
+      } else if (role === "player" && playerId && m.t === "skip") {
+        room.voteSkip(playerId);
       } else if (role === "player" && playerId && m.t === "leave") {
         room.leave(playerId);
         playerId = undefined;

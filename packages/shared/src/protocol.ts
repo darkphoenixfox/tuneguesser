@@ -9,6 +9,8 @@ export interface PlayerPublic {
   connected: boolean;
   /** wrong or timed-out answers left this round (a guess with a correct part is free) */
   attemptsLeft: number;
+  /** wants to skip this song (the song is skipped when every connected player does) */
+  skipVote: boolean;
 }
 
 /** Parts of the song found so far this round, shown to everyone while the music continues. */
@@ -56,6 +58,7 @@ export type ClientMessage =
   /** a player exits to the main screen */
   | { t: "leave" }
   | { t: "start" }
+  /** host: skip now. Player: toggle a skip vote. */
   | { t: "skip" }
   | { t: "next" };
 

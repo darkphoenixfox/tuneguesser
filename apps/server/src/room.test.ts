@@ -125,6 +125,34 @@ describe("Room (buzzer game)", () => {
     expect(room.state().remainingMs).toBe(40_000);
   });
 
+  it("skips the song when every connected player votes to skip; votes can be withdrawn and reset each round", async () => {
+    const { room } = make(2);
+    const a = room.addPlayer("Ana")!;
+    const b = room.addPlayer("Bo")!;
+    const c = room.addPlayer("Cy")!;
+    await room.start();
+    room.voteSkip(a); room.voteSkip(b);
+    expect(room.state().phase).toBe("playing");
+    room.voteSkip(b); // withdrawn
+    room.voteSkip(b);
+    expect(room.state().phase).toBe("playing");
+    room.setConnected(c, false); // the player who did not vote drops: the rest all want to skip
+    await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().phase).toBe("reveal");
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(room.state().round).toBe(2);
+    expect(room.state().players.every((p) => !p.skipVote)).toBe(true); // reset
+  });
+
+  it("a single player can skip on their own", async () => {
+    const { room } = make(2);
+    const a = room.addPlayer("Ana")!;
+    await room.start();
+    room.voteSkip(a);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().phase).toBe("reveal");
+  });
+
   it("leaving frees a lobby slot; leaving mid-guess ends the guess and the music continues", async () => {
     const { room, music } = make();
     const a = room.addPlayer("Ana")!;

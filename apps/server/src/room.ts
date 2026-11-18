@@ -18,6 +18,7 @@ interface Player {
   connected: boolean;
   /** wrong or timed-out answers this round */
   attemptsUsed: number;
+  skipVote: boolean;
   gain: { title: number; artist: number };
 }
 
@@ -78,14 +79,32 @@ export class Room {
     if (prior) { prior.connected = true; this.onChange(); return prior.id; }
     if (this.phase !== "lobby" || this.players.size >= 4) return null;
     const id = Math.random().toString(36).slice(2, 10);
-    this.players.set(id, { id, name: name.trim().slice(0, 16) || "Player", score: 0, connected: true, attemptsUsed: 0, gain: { title: 0, artist: 0 } });
+    this.players.set(id, { id, name: name.trim().slice(0, 16) || "Player", score: 0, connected: true, attemptsUsed: 0, skipVote: false, gain: { title: 0, artist: 0 } });
     this.onChange();
     return id;
   }
 
   setConnected(id: string, connected: boolean) {
     const p = this.players.get(id);
-    if (p) { p.connected = connected; this.onChange(); }
+    if (!p) return;
+    p.connected = connected;
+    this.onChange();
+    if (!connected) this.checkSkip(); // the remaining players may now all want to skip
+  }
+
+  /** A player toggles their vote to skip this song. When every connected player wants to, the round ends. */
+  voteSkip(id: string) {
+    const p = this.players.get(id);
+    if (!p || this.phase !== "playing") return;
+    p.skipVote = !p.skipVote;
+    this.onChange();
+    this.checkSkip();
+  }
+
+  private checkSkip() {
+    if (this.phase !== "playing") return;
+    const present = [...this.players.values()].filter((p) => p.connected);
+    if (present.length > 0 && present.every((p) => p.skipVote)) void this.endRound();
   }
 
   /** A player exits on purpose: frees their slot in the lobby; mid-game they just drop out (and a pending guess ends). */
@@ -99,8 +118,10 @@ export class Room {
     const gone = this.players.get(id)!;
     gone.connected = false;
     gone.attemptsUsed = this.opts.maxAttempts; // out for this round (and the rest of the game)
+    gone.skipVote = false;
     if (this.guesser === id) void this.finishGuess();
     else this.onChange();
+    this.checkSkip();
   }
 
   async start(): Promise<void> {
@@ -127,7 +148,7 @@ export class Room {
     this.reveal = undefined;
     this.found = {};
     this.guesser = undefined;
-    for (const p of this.players.values()) { p.attemptsUsed = 0; p.gain = { title: 0, artist: 0 }; }
+    for (const p of this.players.values()) { p.attemptsUsed = 0; p.skipVote = false; p.gain = { title: 0, artist: 0 }; }
     // start somewhere in the middle so we don't always get the intro
     const maxStart = Math.max(0, track.durationMs - this.opts.roundMs - 5_000);
     this.startMs = Math.floor((0.15 + Math.random() * 0.5) * maxStart);
@@ -219,7 +240,7 @@ export class Room {
   dispose() { clearTimeout(this.timer); clearTimeout(this.guessTimer); }
 
   state(): RoomState {
-    const players: PlayerPublic[] = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected, attemptsLeft: Math.max(0, this.opts.maxAttempts - p.attemptsUsed) }));
+    const players: PlayerPublic[] = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected, attemptsLeft: Math.max(0, this.opts.maxAttempts - p.attemptsUsed), skipVote: p.skipVote }));
     const playing = this.phase === "playing" && this.roundStartedAt !== undefined;
     const g = this.guesser ? this.players.get(this.guesser) : undefined;
     return {

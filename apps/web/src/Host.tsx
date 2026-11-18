@@ -232,7 +232,10 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
       )}
       <FoundChips found={state.found} />
       <Scoreboard state={state} />
-      <div className="controls"><button className="btn ghost" onClick={onSkip}>Skip song</button></div>
+      <div className="controls">
+        <button className="btn ghost" onClick={onSkip}>Skip song</button>
+        {state.players.some((p) => p.skipVote) && <span className="muted">Skip votes: {state.players.filter((p) => p.skipVote).length}/{state.players.filter((p) => p.connected).length}</span>}
+      </div>
     </div>
   );
 }

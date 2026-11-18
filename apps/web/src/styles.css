@@ -161,3 +161,6 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .phone-head b { flex: 1; }
 .exit { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 10px; padding: 6px 12px; font-weight: 700; cursor: pointer; }
 .exit:active { transform: scale(.95); }
+
+.btn.skip { align-self: center; }
+.btn.skip.voted { color: var(--lime); border-color: var(--lime); background: rgba(182,255,61,.08); }
