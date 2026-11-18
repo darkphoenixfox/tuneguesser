@@ -279,3 +279,12 @@ html[data-pad] :focus { outline: 3px solid #facc15 !important; outline-offset: 3
 .screen { padding-bottom: 70px; }
 .pad-hint.focus-only { display: none; }
 button:focus > .pad-hint.focus-only, a:focus > .pad-hint.focus-only { display: inline-flex; }
+
+/* wider on-screen keyboard */
+.padkb { gap: 8px; }
+.pk-key { padding: 14px 0; font-size: 1.25rem; }
+.padtext .card { width: min(1000px, 100%); }
+@media (min-width: 900px) {
+  .screen.phone { max-width: 1400px; }
+  .guess-form.with-kb { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); }
+}

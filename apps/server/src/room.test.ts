@@ -539,4 +539,22 @@ describe("Room (buzzer game)", () => {
     expect(room.state().players.find((p) => p.id === a)!.attemptsLeft).toBe(3);
     expect(music.resumed.length).toBe(1);
   });
+
+  it("players on the on-screen keyboard get a longer time to answer", async () => {
+    const music = new DemoProvider();
+    const room = new Room("ABCD", music, cfg(), { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5_000 });
+    const a = room.addPlayer("Ana")!;
+    const b = room.addPlayer("Bo")!;
+    room.setSlowInput(b, true);
+    await room.start();
+    room.buzz(a);
+    expect(room.state().guessMs).toBe(25_000);
+    await room.cancelGuess(a);
+    room.buzz(b);
+    expect(room.state().guessMs).toBe(60_000);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(room.state().guesser?.id).toBe(b);
+    await vi.advanceTimersByTimeAsync(31_000);
+    expect(room.state().guesser).toBeUndefined();
+  });
 });

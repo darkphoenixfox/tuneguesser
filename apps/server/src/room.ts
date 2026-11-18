@@ -22,6 +22,8 @@ import type { MusicProvider, Track } from "./music";
 export interface RoomOptions {
   /** how long the player who pressed ANSWER has to send their guess */
   guessMs: number;
+  /** time to answer for players using the gamepad's on-screen keyboard (slower than typing) */
+  slowGuessMs?: number;
   /** how long the answer is shown before the next song when auto-advance is on */
   revealMs: number;
 }
@@ -88,6 +90,9 @@ export class Room {
   private roundStartedAt?: number;
   private guesser?: string;
   private guessStartedAt = 0;
+  private guessLimit = 0;
+  /** players answering with the on-screen keyboard get longer */
+  private slowInput = new Set<string>();
   /** play time elapsed at the moment the guesser buzzed (also used for scoring) */
   private frozenElapsed = 0;
   private found: Found = {};
@@ -392,7 +397,8 @@ export class Room {
     clearTimeout(this.timer);
     this.musicPaused = true;
     this.pausing = this.music.pause().catch(this.musicError("pause"));
-    this.guessTimer = setTimeout(() => void this.finishGuess(), this.opts.guessMs);
+    this.guessLimit = this.slowInput.has(playerId) ? (this.opts.slowGuessMs ?? this.opts.guessMs) : this.opts.guessMs;
+    this.guessTimer = setTimeout(() => void this.finishGuess(), this.guessLimit);
     this.onChange();
     return true;
   }
@@ -421,6 +427,11 @@ export class Room {
     p.score += points;
     if (points > 0) this.lastScore = { name: p.name, points, multipliers };
     return { points, multipliers };
+  }
+
+  /** A player's device uses the on-screen keyboard (gamepad): they get more time to answer. */
+  setSlowInput(playerId: string, on: boolean) {
+    if (on) this.slowInput.add(playerId); else this.slowInput.delete(playerId);
   }
 
   /** The guesser gives up this turn without answering: no attempt is used and the music resumes. */
@@ -614,12 +625,12 @@ export class Room {
       totalRounds: this.config.playTo.kind === "rounds" ? this.round + this.queue.length : undefined,
       config: this.config,
       roundMs: this.limitMs,
-      guessMs: this.opts.guessMs,
+      guessMs: g ? this.guessLimit : this.opts.guessMs,
       maxAttempts: this.config.attempts,
       remainingMs: playing && this.limitMs !== null ? Math.max(0, this.limitMs - elapsed) : undefined,
       paused: playing && this.paused ? true : undefined,
       guesser: g ? { id: g.id, name: g.name } : undefined,
-      guessRemainingMs: g ? Math.max(0, this.opts.guessMs - (this.now() - this.guessStartedAt)) : undefined,
+      guessRemainingMs: g ? Math.max(0, this.guessLimit - (this.now() - this.guessStartedAt)) : undefined,
       activePlayerId: this.config.order === "roundRobin" && (playing || this.phase === "reveal") ? this.activeId : undefined,
       hint,
       trivia: triviaShown,

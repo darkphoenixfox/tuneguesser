@@ -145,6 +145,9 @@ The player who pressed ANSWER can cancel (Esc, Start, or a Cancel button): no at
 ### DEC-039 · Common-word dictionary in the autocomplete · 2026-11-18 · Active
 After up to 3 words from the playlist, the suggestion row is filled with the 5,000 most common English words (frequency list from the Google n-gram data, `packages/shared/src/dictionary.ts`, bundled into the web app, about 35 KB). English only for now; song titles in other languages come from the playlist words.
 
+### DEC-040 · Longer answer time with the on-screen keyboard · 2026-11-18 · Active
+A device with a gamepad connected tells the server (`padkb`); its player then has **60 s** instead of 25 s to answer. The on-screen keyboard is also about 1.7x wider than the text column (the answer area takes up to 1400 px on wide screens).
+
 ---
 
 ## Open questions

@@ -103,6 +103,8 @@ export type ClientMessage =
   | { t: "pause" }
   /** the player who pressed ANSWER gives up this turn (no attempt used; the music continues) */
   | { t: "cancel" }
+  /** this player is using the gamepad's on-screen keyboard: give them more time to answer */
+  | { t: "padkb"; on: boolean }
   | { t: "quit" }
   /** host: play the music on another device */
   | { t: "device"; deviceId: string }

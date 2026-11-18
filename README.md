@@ -39,7 +39,7 @@ The last chosen playlists and options are remembered on the host's device. The *
    - the **music pauses** and the **round clock freezes**,
    - everyone else sees "<Player> is guessing…",
    - only that player gets the answer box (or the 4 options).
-3. The guesser has **25 seconds** to send an answer. If they run out of time, it counts as a wrong answer.
+3. The guesser has **25 seconds** to send an answer (**60 seconds** with the gamepad's on-screen keyboard). If they run out of time, it counts as a wrong answer.
 4. **One answer box.** Type the song, the artist, or both, in any order ("Billie Jean", "Michael Jackson", "Billie Jean - Michael Jackson", "billie jean by michael jackson"…).
 5. After the answer:
    - **Song and/or artist correct:** that part is **shown to everyone** (with the name of whoever found it) and the guesser scores points. It does **not** use up an attempt, so they can press ANSWER again for the missing part.

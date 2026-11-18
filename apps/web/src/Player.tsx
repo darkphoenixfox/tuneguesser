@@ -119,6 +119,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embedded, send]);
 
+  // tell the server when this device types with the on-screen keyboard (it gets more time to answer)
+  useEffect(() => { if (mine) send({ t: "padkb", on: pad.connected }); }, [pad.connected, !!mine]);
+
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
   if (error && !state) return <main className="screen phone center"><p className="error">{error}</p><button className="btn" onClick={onLeave}>Back</button></main>;
   if (!state || !mine) return <main className="screen phone center"><p className="muted">Joining…</p></main>;

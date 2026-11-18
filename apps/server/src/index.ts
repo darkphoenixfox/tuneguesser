@@ -114,7 +114,7 @@ const http = createServer(async (req, res) => {
         music = new SpotifyProvider(s.client, ids, typeof body.deviceId === "string" ? body.deviceId : undefined);
       }
       const code = newCode();
-      const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, revealMs: 5000 }, trivia);
+      const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Map(), createdAt: Date.now() };
       room.onChange = () => broadcast(entry);
       room.onError = (message) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws)) send(ws, { t: "error", message }); };
@@ -164,6 +164,8 @@ wss.on("connection", (ws) => {
         if (room.buzz(playerId) && !wordsSent && room.state().config.answers === "type") { wordsSent = true; send(ws, { t: "words", list: room.suggestions() }); }
       } else if (role === "player" && playerId && m.t === "skip") {
         room.voteSkip(playerId);
+      } else if (role === "player" && playerId && m.t === "padkb") {
+        room.setSlowInput(playerId, m.on === true);
       } else if (role === "player" && playerId && m.t === "cancel") {
         await room.cancelGuess(playerId);
       } else if (role === "player" && m.t === "next") {
