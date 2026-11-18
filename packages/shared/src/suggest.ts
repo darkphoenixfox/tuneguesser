@@ -22,7 +22,7 @@ export function suggest(text: string, phrases: string[], max = 5): Suggestion[] 
     for (const p of phrases) for (const raw of p.split(/\s+/)) {
       const w = stripEdges(raw);
       const n = norm(w);
-      if (n.length > token.length && n.startsWith(token) && !words.has(n)) words.set(n, w);
+      if (n.length > token.length && n.startsWith(token) && !words.has(n)) words.set(n, w.toLowerCase());
     }
     const ranked = [...words.values()].sort((a, b) => a.length - b.length || a.localeCompare(b));
     // playlist words first (at most 3, so that common words get a place too), then the common-word dictionary

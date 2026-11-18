@@ -329,3 +329,11 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .roundbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 24px; }
 .roundbar .controls { display: flex; gap: 10px; margin: 0; }
 @media (min-width: 900px) { .guess-form.with-kb { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+
+/* long titles must wrap, never run off the screen */
+.rv-title, .rv-artist, .reveal h1, .reveal h2, .card h2, .guessing-banner h2, .chip b, .hint code, .trivia li, .score-banner, .board .name, .choice { overflow-wrap: anywhere; word-break: break-word; min-width: 0; max-width: 100%; }
+.rv-title { font-size: clamp(1.6rem, 5vw, 3.2rem); line-height: 1.15; text-align: center; }
+.rv-artist { font-size: clamp(1.1rem, 3vw, 1.8rem); text-align: center; }
+.chip { grid-template-columns: 4.5rem minmax(0, 1fr) auto; }
+.chip b { white-space: normal; }
+.top-main, .top-side, .col, .reveal, .playing { min-width: 0; max-width: 100%; }

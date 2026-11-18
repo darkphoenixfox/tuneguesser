@@ -6,15 +6,15 @@ const list = ["Billie Jean", "Bohemian Rhapsody", "Beat It", "Michael Jackson", 
 describe("suggest", () => {
   it("completes the word being typed", () => {
     const s = suggest("billie je", list);
-    expect(s[0]!.label).toBe("Jean");
-    expect(s[0]!.text).toBe("billie Jean ");
-    expect(suggest("bo", list).map((x) => x.label)).toContain("Bohemian");
+    expect(s[0]!.label).toBe("jean");
+    expect(s[0]!.text).toBe("billie jean ");
+    expect(suggest("bo", list).map((x) => x.label)).toContain("bohemian");
   });
   it("completes a word and keeps what was typed before it", () => {
-    expect(suggest("michael jack", list).find((x) => x.label === "Jackson")!.text).toBe("michael Jackson ");
+    expect(suggest("michael jack", list).find((x) => x.label === "jackson")!.text).toBe("michael jackson ");
   });
   it("ignores accents and case", () => {
-    expect(suggest("beyon", list).map((x) => x.label)).toContain("Beyoncé");
+    expect(suggest("beyon", list).map((x) => x.label)).toContain("beyoncé");
   });
   it("suggests nothing for empty text or after a space or a complete word", () => {
     expect(suggest("", list)).toEqual([]);
@@ -28,7 +28,7 @@ describe("suggest", () => {
     const s = suggest("lo", list).map((x) => x.label);
     expect(s).toContain("love");
     const mixed = suggest("be", list).map((x) => x.label);
-    expect(mixed.indexOf("Beat")).toBe(0); // playlist words first
+    expect(mixed.indexOf("beat")).toBe(0); // playlist words first
     expect(mixed.length).toBeGreaterThan(2);
   });
   it("is limited", () => {
