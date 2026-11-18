@@ -75,14 +75,18 @@ Failures from Spotify (pause/resume) are shown as a red message on the host scre
 When a round ends (any reason) the answer is shown and the song **plays on for 5 seconds** before the next song starts. If a guess had paused the music, it is resumed for the reveal. Reveal length changed from 8 s to 5 s. Music stops only after the last song.
 The user specified this for the "everyone is out of guesses" case; we applied it to every way a round can end for consistency (can be narrowed if wanted).
 
-### DEC-018 · Player skip vote · 2026-11-18 · Active
-Players get a *Skip song* button; the song is skipped when **every connected player** has voted (votes can be withdrawn; players who left or disconnected are not counted; a solo player skips alone). The host's Skip still works immediately. A skip ends the round the normal way (reveal + 5 s of music).
+### DEC-018 · Skip is a vote, host included · 2026-11-18 · Active
+Players get a *Skip song* button and the song is skipped only when **every voter** has voted (votes can be withdrawn). First version: players voted but the host's Skip skipped immediately. **Changed at the user's request:** the host's Skip is **one vote like everyone else's**, with no override.
+Voters = connected players, plus the host if the host is not also playing (a host who plays has one vote, as that player, linked through the host token when joining). Players who left or disconnected are not counted; if the host screen is closed the host is not counted. A solo player with no host screen open can skip alone. A skip ends the round the normal way (reveal + 5 s of music). The host's *Next song* button during the reveal still advances immediately.
 
 ### DEC-019 · Player Exit · 2026-11-18 · Active
 Phones have an **✕ Exit** button. In the lobby it frees the player's slot; mid-game it drops them out and ends any guess in progress (confirmation is asked during a game).
 
 ### DEC-020 · Attempts-left indicator removed · 2026-11-18 · Active
 The dots showing remaining attempts were shown, then removed at the user's request. The rule remains; a player with no attempts sees a disabled "Out of tries" button.
+
+### DEC-021 · Scores on phones after every round · 2026-11-18 · Active
+Phones only showed the player's own points at the reveal. The same ranking as the host screen (all players, totals and points earned this round, own row highlighted) now shows on every phone at each reveal and at game over.
 
 ---
 

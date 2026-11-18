@@ -33,8 +33,8 @@ Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 7. **Reveal:** the full title, artist, year and album art are shown with the points each player earned. The song **keeps playing for 5 seconds**, then the next song starts. After the last song, the final results (podium) are shown.
 
 ### Skipping
-- **Host:** the *Skip song* button ends the round immediately.
-- **Players:** each player has a *Skip song* button. The song is skipped when **every connected player** has voted. A vote can be withdrawn by pressing again. Players who left or lost connection are not counted.
+- Everyone has a *Skip song* button, **the host included**, and every voter gets **one vote**. The song is skipped only when **all voters** have voted: every connected player, plus the host (unless the host is also playing, in which case they have one vote, as a player). The button shows the count, e.g. `(2/4)`.
+- A vote can be withdrawn by pressing again. Players who left or lost connection are not counted. If the host screen is closed, the host is not counted either.
 - A skipped round still shows the answer and plays on for 5 seconds before the next song.
 
 ### Scoring

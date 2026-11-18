@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import type { RevealInfo, RoomState } from "@tuneguesser/shared";
 import { FoundChips, GuessBar } from "./Found";
+import { Scoreboard } from "./Scoreboard";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
@@ -145,7 +146,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={onLeave} />}
-      {me && <Play embedded saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
+      {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {error && <p className="error toast">{error}</p>}
     </main>
   );
@@ -178,25 +179,6 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
         <button className="btn ghost" onClick={onLeave}>Cancel</button>
       </div>
     </div>
-  );
-}
-
-function Scoreboard({ state, reveal }: { state: RoomState; reveal?: RevealInfo }) {
-  const sorted = [...state.players].sort((a, b) => b.score - a.score);
-  return (
-    <ol className="board">
-      {sorted.map((p) => {
-        const g = reveal?.gains[p.id];
-        const add = g ? g.title + g.artist : 0;
-        return (
-          <li key={p.id} className={(p.attemptsLeft === 0 && state.phase === "playing" ? "tried " : "") + (state.guesser?.id === p.id ? "guessing" : "")}>
-            <span className="name">{p.name}</span>
-            <span className="score">{p.score}</span>
-            {add > 0 && <span className="gain">+{add}</span>}
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
@@ -233,8 +215,9 @@ function Playing({ state, endsAt, guessEndsAt, onSkip }: { state: RoomState; end
       <FoundChips found={state.found} />
       <Scoreboard state={state} />
       <div className="controls">
-        <button className="btn ghost" onClick={onSkip}>Skip song</button>
-        {state.players.some((p) => p.skipVote) && <span className="muted">Skip votes: {state.players.filter((p) => p.skipVote).length}/{state.players.filter((p) => p.connected).length}</span>}
+        <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>
+          {state.skip?.host ? "✓ Skip vote" : "Skip song"}{state.skip ? ` (${state.skip.votes}/${state.skip.voters})` : ""}
+        </button>
       </div>
     </div>
   );

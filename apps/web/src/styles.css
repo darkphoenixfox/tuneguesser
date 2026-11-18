@@ -164,3 +164,9 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 
 .btn.skip { align-self: center; }
 .btn.skip.voted { color: var(--lime); border-color: var(--lime); background: rgba(182,255,61,.08); }
+
+.controls .btn.voted { color: var(--lime); border-color: var(--lime); background: rgba(182,255,61,.08); }
+
+.board li.me { border-color: var(--cyan); box-shadow: 0 0 16px rgba(41,224,255,.25); }
+.card .board { width: 100%; }
+.card .board li { font-size: 1.05rem; padding: 10px 14px; }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FoundChips, GuessBar } from "./Found";
 import { useCountdown, useRoom } from "./net";
+import { Scoreboard } from "./Scoreboard";
 import { sfx } from "./sfx";
 
 interface Saved { code: string; name: string; playerId?: string }
@@ -36,8 +37,8 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
 }
 
 /** `embedded`: shown inside the host screen (only while a round is running), so the host device can play too. */
-export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean }) {
-  const first = useMemo(() => ({ t: "join" as const, code: saved.code, name: saved.name, playerId: saved.playerId }), [saved.code, saved.name]);
+export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean; hostToken?: string }) {
+  const first = useMemo(() => ({ t: "join" as const, code: saved.code, name: saved.name, playerId: saved.playerId, hostToken }), [saved.code, saved.name, hostToken]);
   const [me, setMe] = useState(saved.playerId);
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
@@ -106,9 +107,8 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
             </button>
           )}
           {!embedded && !iAmGuesser && (() => {
-            const present = state.players.filter((p) => p.connected);
-            const votes = present.filter((p) => p.skipVote).length;
-            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({votes}/{present.length})</button>;
+            const sk = state.skip ?? { votes: 0, voters: state.players.length };
+            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters})</button>;
           })()}
         </div>
       )}
@@ -119,9 +119,10 @@ export function Play({ saved, onLeave, onId, embedded }: { saved: Saved; onLeave
           <h2>{state.reveal.title}</h2>
           <p className="muted">{state.reveal.artists.join(", ")}</p>
           {(() => { const g = state.reveal.gains[mine.id]; const t = g ? g.title + g.artist : 0; return <p className={"gain-big" + (t ? "" : " none")}>{t ? `+${t}` : "No points"}</p>; })()}
+          <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
         </div>
       )}
-      {state.phase === "finished" && <div className="card center"><h2>Game over</h2><p className="gain-big">{mine.score}</p><button className="btn" onClick={exit}>Back to main screen</button></div>}
+      {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}
     </Wrap>
   );
 }

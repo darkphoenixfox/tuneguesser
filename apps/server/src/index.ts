@@ -150,11 +150,12 @@ wss.on("connection", (ws) => {
         if (!e) return send(ws, { t: "error", message: "Room not found" });
         if (m.t === "host") {
           if (m.token !== e.hostToken) return send(ws, { t: "error", message: "Bad host token" });
-          entry = e; role = "host"; e.room.hostConnected = true; hostSockets.add(ws);
+          entry = e; role = "host"; hostSockets.add(ws); e.room.setHostConnected(true);
         } else if (m.t === "join") {
           const id = e.room.addPlayer(String(m.name ?? ""), m.playerId);
           if (!id) return send(ws, { t: "error", message: "Room is full or already started" });
           entry = e; role = "player"; playerId = id;
+          if (m.hostToken && m.hostToken === e.hostToken) e.room.markHostPlayer(id); // the host plays too
           send(ws, { t: "joined", playerId: id });
         } else return;
         entry.sockets.add(ws);
@@ -175,7 +176,8 @@ wss.on("connection", (ws) => {
         if (r) send(ws, { t: "result", ...r });
       } else if (role === "host") {
         if (m.t === "start") await room.start();
-        else if (m.t === "skip" || m.t === "next") room.state().phase === "playing" ? await room.endRound() : await room.nextRound();
+        else if (m.t === "skip") room.voteSkipHost();
+        else if (m.t === "next" && room.state().phase === "reveal") await room.nextRound();
       }
     } catch (e) {
       send(ws, { t: "error", message: e instanceof Error ? e.message : "error" });
@@ -186,7 +188,7 @@ wss.on("connection", (ws) => {
     if (!entry) return;
     entry.sockets.delete(ws);
     if (role === "player" && playerId) entry.room.setConnected(playerId, false);
-    if (role === "host") { entry.room.hostConnected = false; broadcast(entry); }
+    if (role === "host") entry.room.setHostConnected(false);
   });
 });
 

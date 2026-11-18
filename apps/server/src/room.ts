@@ -58,6 +58,9 @@ export class Room {
   /** the song is paused because a player buzzed */
   private musicPaused = false;
   hostConnected = false;
+  private hostSkipVote = false;
+  /** set when the host also plays: the host then has one vote, as that player */
+  private hostPlayerId?: string;
   onChange: () => void = () => {};
   /** music problems (e.g. Spotify refused to pause) are reported here so the host can see them */
   onError: (message: string) => void = () => {};
@@ -92,6 +95,26 @@ export class Room {
     if (!connected) this.checkSkip(); // the remaining players may now all want to skip
   }
 
+  setHostConnected(connected: boolean) {
+    this.hostConnected = connected;
+    this.onChange();
+    if (!connected) this.checkSkip();
+  }
+
+  /** The host also plays as this player: they get one skip vote, not two. */
+  markHostPlayer(id: string) {
+    if (this.players.has(id)) this.hostPlayerId = id;
+  }
+
+  /** The host's own skip vote (or, if the host plays, that player's vote). */
+  voteSkipHost() {
+    if (this.hostPlayerId && this.players.has(this.hostPlayerId)) return this.voteSkip(this.hostPlayerId);
+    if (this.phase !== "playing") return;
+    this.hostSkipVote = !this.hostSkipVote;
+    this.onChange();
+    this.checkSkip();
+  }
+
   /** A player toggles their vote to skip this song. When every connected player wants to, the round ends. */
   voteSkip(id: string) {
     const p = this.players.get(id);
@@ -104,7 +127,8 @@ export class Room {
   private checkSkip() {
     if (this.phase !== "playing") return;
     const present = [...this.players.values()].filter((p) => p.connected);
-    if (present.length > 0 && present.every((p) => p.skipVote)) void this.endRound();
+    const hostIsVoter = !this.hostPlayerId && this.hostConnected;
+    if (present.length > 0 && present.every((p) => p.skipVote) && (!hostIsVoter || this.hostSkipVote)) void this.endRound();
   }
 
   /** A player exits on purpose: frees their slot in the lobby; mid-game they just drop out (and a pending guess ends). */
@@ -149,6 +173,7 @@ export class Room {
     this.found = {};
     this.guesser = undefined;
     for (const p of this.players.values()) { p.attemptsUsed = 0; p.skipVote = false; p.gain = { title: 0, artist: 0 }; }
+    this.hostSkipVote = false;
     // start somewhere in the middle so we don't always get the intro
     const maxStart = Math.max(0, track.durationMs - this.opts.roundMs - 5_000);
     this.startMs = Math.floor((0.15 + Math.random() * 0.5) * maxStart);
@@ -239,6 +264,17 @@ export class Room {
 
   dispose() { clearTimeout(this.timer); clearTimeout(this.guessTimer); }
 
+  private skipInfo() {
+    const present = [...this.players.values()].filter((p) => p.connected);
+    const hostIsVoter = !this.hostPlayerId && this.hostConnected;
+    const hostPlayer = this.hostPlayerId ? this.players.get(this.hostPlayerId) : undefined;
+    return {
+      votes: present.filter((p) => p.skipVote).length + (hostIsVoter && this.hostSkipVote ? 1 : 0),
+      voters: present.length + (hostIsVoter ? 1 : 0),
+      host: hostPlayer ? hostPlayer.skipVote : this.hostSkipVote,
+    };
+  }
+
   state(): RoomState {
     const players: PlayerPublic[] = [...this.players.values()].map((p) => ({ id: p.id, name: p.name, score: p.score, connected: p.connected, attemptsLeft: Math.max(0, this.opts.maxAttempts - p.attemptsUsed), skipVote: p.skipVote }));
     const playing = this.phase === "playing" && this.roundStartedAt !== undefined;
@@ -258,6 +294,7 @@ export class Room {
       found: this.phase === "playing" ? { ...this.found } : undefined,
       reveal: this.reveal,
       hostConnected: this.hostConnected,
+      skip: this.phase === "playing" ? this.skipInfo() : undefined,
     };
   }
 }

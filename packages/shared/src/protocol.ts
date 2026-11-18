@@ -46,10 +46,13 @@ export interface RoomState {
   found?: Found;
   reveal?: RevealInfo;
   hostConnected: boolean;
+  /** skip votes this round. Voters = connected players, plus the host if the host is not also playing. */
+  skip?: { votes: number; voters: number; host: boolean };
 }
 
 export type ClientMessage =
-  | { t: "join"; code: string; name: string; playerId?: string }
+  /** hostToken: set when the host joins as a player from the host screen (the host still counts as one voter) */
+  | { t: "join"; code: string; name: string; playerId?: string; hostToken?: string }
   | { t: "host"; code: string; token: string }
   /** press the ANSWER button */
   | { t: "buzz" }
@@ -58,7 +61,7 @@ export type ClientMessage =
   /** a player exits to the main screen */
   | { t: "leave" }
   | { t: "start" }
-  /** host: skip now. Player: toggle a skip vote. */
+  /** toggle a skip vote (host and players alike; the song is skipped when every voter has voted) */
   | { t: "skip" }
   | { t: "next" };
 
