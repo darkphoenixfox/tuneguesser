@@ -124,6 +124,9 @@ Enter / A = accept (buzz, and next song at the reveal, also for phone players); 
 ### DEC-032 · Quit stops the music · 2026-11-18 · Active
 The host's quit (and Cancel / New game) sends a `quit` message: the server pauses Spotify, ends the game for players and deletes the room. Closing the browser tab without quitting does not stop the music.
 
+### DEC-033 · Guess setting (song / artist / both) · 2026-11-18 · Active
+`GameConfig.guess`. Only the wanted parts can be found or scored; the other is ignored (a typed answer matching only the unwanted part counts as wrong). The round ends when all wanted parts are found. Artist-only is scored on the title's 1000 scale so a round is still worth a full song. Multiple choice shows just the title or just the artist as options (distinct values). The "title + artist at once" multiplier applies only with *Both*. With *Reveal* hints the unguessed part is displayed in full as context.
+
 ---
 
 ## Open questions

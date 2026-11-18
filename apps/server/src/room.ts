@@ -147,6 +147,8 @@ export class Room {
   private get scoreWindowMs(): number {
     return this.limitMs ?? UNLIMITED_SCORE_WINDOW_MS;
   }
+  private get wantTitle(): boolean { return this.config.guess !== "artist"; }
+  private get wantArtist(): boolean { return this.config.guess !== "title"; }
   private get hintWindowMs(): number {
     return this.limitMs ?? UNLIMITED_HINT_WINDOW_MS;
   }
@@ -322,12 +324,15 @@ export class Room {
   private prepareChoices(track: Track) {
     this.choices = [];
     if (this.config.answers !== "choice") return;
-    const label = (t: Track) => `${hintText(t.title)} — ${t.artists[0] ?? ""}`;
+    const label = (t: Track) => {
+      const ti = hintText(t.title), ar = t.artists[0] ?? "";
+      return this.config.guess === "title" ? ti : this.config.guess === "artist" ? ar : `${ti} — ${ar}`;
+    };
     const right = label(track);
     const wrong: string[] = [];
     for (const t of shuffle(this.pool)) {
       const l = label(t);
-      if (t.id !== track.id && l !== right && !wrong.includes(l)) wrong.push(l);
+      if (l !== right && !wrong.includes(l)) wrong.push(l);
       if (wrong.length === 3) break;
     }
     if (wrong.length === 0) return; // nothing to choose from: this round falls back to typing
@@ -397,7 +402,7 @@ export class Room {
     const track = this.current!;
     const t = Math.min(this.frozenElapsed, this.scoreWindowMs);
     const multipliers = this.config.multipliers
-      ? multipliersFor({ both: parts.title && parts.artist && this.config.answers === "type", streak: p.streak })
+      ? multipliersFor({ both: this.config.guess === "both" && parts.title && parts.artist && this.config.answers === "type", streak: p.streak })
       : [];
     const x = totalMultiplier(multipliers);
     let points = 0;
@@ -408,7 +413,7 @@ export class Room {
       this.found.title = { text: track.title, by: p.name };
     }
     if (parts.artist) {
-      const g = Math.round(pointsFor(DEFAULT_SCORE.artistMax, t, this.scoreWindowMs) * x);
+      const g = Math.round(pointsFor(this.config.guess === "artist" ? DEFAULT_SCORE.titleMax : DEFAULT_SCORE.artistMax, t, this.scoreWindowMs) * x);
       p.gain.artist += g;
       points += g;
       this.found.artist = { text: track.artists.join(", "), by: p.name };
@@ -424,7 +429,7 @@ export class Room {
     if (!p || this.guesser !== playerId || !this.current) return;
     if (this.choices.length > 0) return; // this round is multiple choice
     const hit = matchFreeText(text, { title: this.current.title, artists: this.current.artists });
-    const m = { title: hit.title && !this.found.title, artist: hit.artist && !this.found.artist };
+    const m = { title: this.wantTitle && hit.title && !this.found.title, artist: this.wantArtist && hit.artist && !this.found.artist };
     const { points, multipliers } = this.award(p, m);
     // a guess that found the title or the artist is free; only a fully wrong answer uses an attempt
     await this.finishGuess(!(m.title || m.artist));
@@ -442,7 +447,7 @@ export class Room {
       await this.finishGuess(true);
       return { title: false, artist: false, points: 0, multipliers: [] };
     }
-    const m = { title: !this.found.title, artist: !this.found.artist };
+    const m = { title: this.wantTitle && !this.found.title, artist: this.wantArtist && !this.found.artist };
     const { points, multipliers } = this.award(p, m);
     await this.finishGuess(false);
     return { ...m, points, multipliers };
@@ -462,7 +467,7 @@ export class Room {
     const p = this.players.get(this.guesser);
     if (p && consumeAttempt) p.attemptsUsed++;
     this.guesser = undefined;
-    const everythingFound = !!this.found.title && !!this.found.artist;
+    const everythingFound = (!this.wantTitle || !!this.found.title) && (!this.wantArtist || !!this.found.artist);
     const everyoneTried = this.contenders().every((x) => x.attemptsUsed >= this.config.attempts);
     if (everythingFound || everyoneTried) return this.endRound();
     this.startClock(this.frozenElapsed);
@@ -563,8 +568,8 @@ export class Room {
     let hint: RoomState["hint"];
     if (playing && this.config.hints === "reveal") {
       hint = {
-        title: maskText(this.hintTitle, this.hintOrder.title, revealCount(progress, this.hintOrder.title.length)),
-        artist: maskText(this.hintArtist, this.hintOrder.artist, revealCount(progress, this.hintOrder.artist.length)),
+        title: this.wantTitle ? maskText(this.hintTitle, this.hintOrder.title, revealCount(progress, this.hintOrder.title.length)) : this.hintTitle,
+        artist: this.wantArtist ? maskText(this.hintArtist, this.hintOrder.artist, revealCount(progress, this.hintOrder.artist.length)) : this.hintArtist,
       };
     }
     let triviaShown: string[] | undefined;

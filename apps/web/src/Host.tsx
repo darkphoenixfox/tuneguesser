@@ -128,6 +128,10 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               <Seg value={cfg.order} options={[["buzzer", "Buzzer"], ["roundRobin", "Round robin"]]} onChange={(order) => set({ order })} />
               <small className="muted">{cfg.order === "buzzer" ? "Everyone can buzz in; the first to press ANSWER guesses." : "Players take turns: each player gets one song to guess, or skip."}</small>
             </div>
+            <div className="opt"><span>Guess</span>
+              <Seg value={cfg.guess} options={[["both", "Both"], ["title", "Song"], ["artist", "Artist"]]} onChange={(guess) => set({ guess })} />
+              {cfg.guess !== "both" && <small className="muted">{cfg.guess === "title" ? "Only the song title counts. Handy when the playlist is one artist." : "Only the artist counts. Handy for mixed playlists where you only care who it is."}</small>}
+            </div>
             <div className="opt"><span>Answers</span>
               <Seg value={cfg.answers} options={[["type", "Type"], ["choice", "Multiple choice"]]} onChange={(answers) => set({ answers })} />
               {cfg.answers === "choice" && <small className="muted">4 options, the wrong ones are other songs from the playlist(s).</small>}
@@ -297,7 +301,7 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
       </div>
       </div>
       <Hints state={state} />
-      <FoundChips found={state.found} />
+      <FoundChips found={state.found} guess={state.config.guess} />
       <ScoreBanner state={state} />
       <div className="controls">
         <button className={"btn ghost" + (state.skip?.host ? " voted" : "")} onClick={onSkip}>

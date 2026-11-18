@@ -2,19 +2,19 @@ import type { Found, RoomState } from "@tuneguesser/shared";
 import { useCountdown } from "./net";
 
 /** What has been guessed so far this round (shown to everyone while the music continues). */
-export function FoundChips({ found }: { found?: Found }) {
+export function FoundChips({ found, guess = "both" }: { found?: Found; guess?: "both" | "title" | "artist" }) {
   return (
     <div className="found">
-      <div className={"chip" + (found?.title ? " got" : "")}>
+      {guess !== "artist" && <div className={"chip" + (found?.title ? " got" : "")}>
         <small>Song</small>
         <b>{found?.title ? found.title.text : "? ? ? ? ?"}</b>
         {found?.title && <em>{found.title.by}</em>}
-      </div>
-      <div className={"chip" + (found?.artist ? " got" : "")}>
+      </div>}
+      {guess !== "title" && <div className={"chip" + (found?.artist ? " got" : "")}>
         <small>Artist</small>
         <b>{found?.artist ? found.artist.text : "? ? ? ? ?"}</b>
         {found?.artist && <em>{found.artist.by}</em>}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -30,8 +30,10 @@ export function Hints({ state }: { state: RoomState }) {
   if (state.hint) {
     return (
       <div className="hint" aria-label="Hint">
-        <div><small>Song</small><code>{state.hint.title}</code></div>
-        <div><small>Artist</small><code>{state.hint.artist}</code></div>
+        {state.config.guess !== "artist" && <div><small>Song</small><code>{state.hint.title}</code></div>}
+        {state.config.guess !== "title" && <div><small>Artist</small><code>{state.hint.artist}</code></div>}
+        {state.config.guess === "title" && <div><small>Artist</small><b>{state.hint.artist}</b></div>}
+        {state.config.guess === "artist" && <div><small>Song</small><b>{state.hint.title}</b></div>}
       </div>
     );
   }
@@ -65,6 +67,7 @@ export function GameSummary({ state }: { state: RoomState }) {
   const items: Array<[string, string]> = [
     ["Play to", c.playTo.kind === "rounds" ? `${c.playTo.rounds} rounds` : `${c.playTo.target} points`],
     ["Order", c.order === "buzzer" ? "Buzzer" : "Round robin"],
+    ["Guess", c.guess === "both" ? "Song + artist" : c.guess === "title" ? "Song" : "Artist"],
     ["Answers", c.answers === "type" ? "Type" : "Multiple choice"],
     ["Hints", c.hints === "none" ? "None" : c.hints === "reveal" ? "Reveal letters" : "Trivia"],
     ["Timer", c.roundSeconds === null ? "Unlimited" : `${c.roundSeconds} s per song`],

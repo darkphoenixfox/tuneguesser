@@ -490,4 +490,41 @@ describe("Room (buzzer game)", () => {
     await vi.advanceTimersByTimeAsync(300_000);
     expect(music.played.length).toBe(1); // no next song
   });
+
+  describe("guess setting", () => {
+    it("title only: the artist doesn't count, and the title alone finishes the round", async () => {
+      const { room, song } = make(2, true, { guess: "title", multipliers: false });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      room.buzz(a);
+      const wrong = await room.answer(a, song()[1]); // the artist
+      expect(wrong).toMatchObject({ title: false, artist: false });
+      expect(room.state().players[0]!.attemptsLeft).toBe(2);
+      room.buzz(a);
+      const r = await room.answer(a, `${song()[0]} ${song()[1]}`);
+      expect(r).toMatchObject({ title: true, artist: false, points: expect.any(Number) });
+      expect(room.state().phase).toBe("reveal");
+    });
+
+    it("artist only: the artist is worth the full 1000 and ends the round", async () => {
+      const { room, song } = make(2, true, { guess: "artist", multipliers: false });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      room.buzz(a);
+      const r = await room.answer(a, song()[1]);
+      expect(r).toMatchObject({ title: false, artist: true, points: 1000 });
+      expect(room.state().phase).toBe("reveal");
+    });
+
+    it("multiple choice offers only the guessed part", async () => {
+      const { room } = make(2, true, { guess: "artist", answers: "choice" });
+      const a = room.addPlayer("Ana")!;
+      await room.start();
+      room.buzz(a);
+      const labels = room.state(a).options!.map((o) => o.label);
+      expect(labels.length).toBe(4);
+      expect(labels.every((l) => !l.includes("—"))).toBe(true);
+      expect(new Set(labels).size).toBe(4);
+    });
+  });
 });

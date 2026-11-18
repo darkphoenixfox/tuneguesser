@@ -3,6 +3,8 @@ export interface GameConfig {
   playTo: { kind: "rounds"; rounds: number } | { kind: "score"; target: number };
   /** buzzer: first to press ANSWER. roundRobin: each song belongs to one player in turn, who must guess or skip. */
   order: "buzzer" | "roundRobin";
+  /** what has to be guessed: the song title, the artist, or both (handy for single-artist playlists) */
+  guess: "both" | "title" | "artist";
   answers: "type" | "choice";
   hints: "none" | "reveal" | "trivia";
   /** seconds per song; null = unlimited (the round lasts until the song ends) */
@@ -18,6 +20,7 @@ export interface GameConfig {
 export const DEFAULT_CONFIG: GameConfig = {
   playTo: { kind: "rounds", rounds: 10 },
   order: "buzzer",
+  guess: "both",
   answers: "type",
   hints: "none",
   roundSeconds: 40,
@@ -42,6 +45,7 @@ export function sanitizeConfig(raw: unknown): GameConfig {
   return {
     playTo,
     order: pick(r.order, ["buzzer", "roundRobin"] as const, "buzzer"),
+    guess: pick(r.guess, ["both", "title", "artist"] as const, "both"),
     answers: pick(r.answers, ["type", "choice"] as const, "type"),
     hints: pick(r.hints, ["none", "reveal", "trivia"] as const, "none"),
     roundSeconds: r.roundSeconds === null ? null : num(r.roundSeconds, 10, 120, 40),

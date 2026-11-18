@@ -148,7 +148,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>
           {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
           <Hints state={state} />
-          <FoundChips found={found} />
+          <FoundChips found={found} guess={state.config.guess} />
           <ScoreBanner state={state} />
           {iAmGuesser && state.options ? (
             <div className="guess-form">
@@ -160,8 +160,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           ) : iAmGuesser ? (
             <form className="guess-form" onSubmit={submit}>
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
-              <label>{found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
-                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
+              <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
+                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
               <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
               {pad.connected && <PadKeyboard disabled={sent} onType={(c) => setText((t) => (t + c).slice(0, 160))} onBack={() => setText((t) => t.slice(0, -1))} onSend={doSubmit} />}
