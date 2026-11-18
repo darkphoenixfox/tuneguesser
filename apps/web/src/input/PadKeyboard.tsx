@@ -8,7 +8,7 @@ const SPECIAL = ["space", "cancel", "back", "send"] as const;
 
 /**
  * On-screen keyboard for gamepads, with auto-completion: the top row offers whole titles/artists and words from the
- * playlist. D-pad moves (up from the letters reaches the suggestions), A presses the key, B cancels, X deletes (backspace), Y sends.
+ * playlist. D-pad moves (up from the letters reaches the suggestions), A presses the key, B cancels, X deletes (backspace), R1/RB adds a space, Y sends.
  */
 export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, sendLabel = "Send" }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; onCancel: () => void; disabled?: boolean; sendLabel?: string }) {
   const sugg = useMemo(() => suggest(text, words), [text, words]);
@@ -48,6 +48,7 @@ export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, s
     else if (b === "left") setPos({ r, c: (c + width(r) - 1) % width(r) });
     else if (b === "right") setPos({ r, c: (c + 1) % width(r) });
     else if (b === "a") press(r, c);
+    else if (b === "rb" && !h.disabled) h.onText(h.text + " ");
     else if (b === "b") h.onCancel();
     else if (b === "x" && !h.disabled) h.onText(h.text.slice(0, -1));
     else if (b === "y" && !h.disabled) h.onSend();
@@ -67,7 +68,7 @@ export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, s
         </div>
       ))}
       <div className="pk-row">
-        <button type="button" className={cls(ROWS.length, 0) + " wide"} onClick={() => press(ROWS.length, 0)}>space</button>
+        <button type="button" className={cls(ROWS.length, 0) + " wide"} onClick={() => press(ROWS.length, 0)}><Glyph button="rb" /> Space</button>
         <button type="button" className={cls(ROWS.length, 1) + " wide"} onClick={() => press(ROWS.length, 1)}><Glyph button="b" /> Cancel</button>
         <button type="button" className={cls(ROWS.length, 2) + " wide"} onClick={() => press(ROWS.length, 2)}><Glyph button="x" /> Backspace</button>
         <button type="button" className={cls(ROWS.length, 3) + " wide send"} onClick={() => press(ROWS.length, 3)}><Glyph button="y" /> {sendLabel}</button>
