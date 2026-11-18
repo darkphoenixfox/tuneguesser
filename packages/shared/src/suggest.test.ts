@@ -6,7 +6,8 @@ const list = ["Billie Jean", "Bohemian Rhapsody", "Beat It", "Michael Jackson", 
 describe("suggest", () => {
   it("completes the word being typed", () => {
     const s = suggest("billie je", list);
-    expect(s.map((x) => x.text)).toContain("Billie Jean");
+    expect(s.map((x) => x.label)).toEqual(["Jean"]);
+    expect(s[0]!.text).toBe("billie Jean ");
     expect(suggest("bo", list).map((x) => x.label)).toContain("Bohemian");
   });
   it("completes a word and keeps what was typed before it", () => {
@@ -19,6 +20,9 @@ describe("suggest", () => {
     expect(suggest("", list)).toEqual([]);
     expect(suggest("queen ", list)).toEqual([]);
     expect(suggest("queen", list)).toEqual([]);
+  });
+  it("never offers a whole multi-word title", () => {
+    expect(suggest("bohemian rha", list).every((x) => !x.label.includes(" "))).toBe(true);
   });
   it("is limited", () => {
     expect(suggest("b", list, 3).length).toBeLessThanOrEqual(3);
