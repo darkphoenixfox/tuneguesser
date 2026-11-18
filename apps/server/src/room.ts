@@ -544,6 +544,14 @@ export class Room {
     this.onChange();
   }
 
+  /** The host moves the music to another device; the song carries on there (or stays paused if it is paused now). */
+  async setDevice(deviceId: string) {
+    if (!this.music.setDevice) return;
+    const playingNow = (this.phase === "playing" || this.phase === "reveal") && !this.musicPaused;
+    await this.pausing;
+    await this.music.setDevice(deviceId, playingNow).catch(this.musicError("device change"));
+  }
+
   /** The host quits: stop the music and end the game for everyone. */
   async stop() {
     this.dispose();

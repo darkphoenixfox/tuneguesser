@@ -136,6 +136,9 @@ The gamepad on-screen keyboard has a suggestion row (up from the letters): up to
 ### DEC-036 · Gamepad navigation of menus · 2026-11-18 · Active
 A small spatial focus navigator (`input/nav.ts`): d-pad moves to the nearest control in that direction, A clicks, left/right adjust number boxes and drop-downs, LB/RB switch tabs; a yellow focus ring shows while a pad is used (hidden again on mouse/touch). It is off while a screen marked `data-pad-game` is up (a running round or reveal, the on-screen keyboard) because those use the buttons for game actions. Text boxes open the same on-screen keyboard (without auto-completion) as a pop-up: A on the box, Y = done, Start = cancel; the text is passed to the app as a normal input event so its own tidying (e.g. upper-casing the room code) applies.
 
+### DEC-037 · Change device during a game · 2026-11-18 · Active
+Host-only 🔈 button lists the Spotify devices and transfers playback (`PUT /me/player` with `play` true if the music was playing, false if paused by a buzz or pause). The Enter keycap was removed from the ANSWER button at the user's request (the gamepad glyph stays).
+
 ---
 
 ## Open questions

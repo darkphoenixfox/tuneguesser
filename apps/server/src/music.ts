@@ -15,6 +15,8 @@ export interface MusicProvider {
   pause(): Promise<void>;
   /** Continue a paused track exactly where it stopped. `positionMs` is only a fallback if the source can't resume. */
   resume(track: Track, positionMs: number): Promise<void>;
+  /** Move playback to another device (optional). `keepPlaying`: continue playing there, else stay paused. */
+  setDevice?(deviceId: string, keepPlaying: boolean): Promise<void>;
 }
 
 /** Silent provider for development and tests. */

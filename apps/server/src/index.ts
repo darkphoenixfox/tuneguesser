@@ -183,6 +183,7 @@ wss.on("connection", (ws) => {
         else if (m.t === "settings") room.setSettings({ autoAdvance: typeof m.autoAdvance === "boolean" ? m.autoAdvance : undefined });
         else if (m.t === "skip") room.voteSkipHost();
         else if (m.t === "pause") room.togglePause();
+        else if (m.t === "device" && typeof m.deviceId === "string") await room.setDevice(m.deviceId.slice(0, 80));
         else if (m.t === "quit") { await room.stop(); rooms.delete(room.code); }
         else if (m.t === "next" && room.state().phase === "reveal") await room.nextRound();
       }

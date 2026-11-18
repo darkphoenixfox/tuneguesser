@@ -222,6 +222,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
     <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
       <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished" || window.confirm("Quit the game for everyone?")) quit(); }} aria-label="Quit game" title="Quit game">✕</button>
+      <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
       <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
@@ -230,6 +231,32 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {error && <p className="error toast">{error}</p>}
     </main>
+  );
+}
+
+/** Top-right button: choose which Spotify device plays the music, also during a game. */
+function DevicePicker({ onPick }: { onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [devices, setDevices] = useState<Device[] | null>(null);
+  const load = () => fetch("/api/devices").then((r) => r.json()).then(setDevices).catch(() => setDevices([]));
+  return (
+    <>
+      <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label="Play on device" aria-expanded={open} title="Play on device">🔈</button>
+      {open && (
+        <div className="settings card devices" role="dialog" aria-label="Play on">
+          <h2>Play on</h2>
+          {devices === null ? <p className="muted">Looking for devices…</p> : devices.length === 0 ? <p className="muted">No device found. Open Spotify somewhere.</p> : (
+            <ul>
+              {devices.map((d) => (
+                <li key={d.id}><button className={"btn ghost" + (d.active ? " voted" : "")} onClick={() => { onPick(d.id); setTimeout(load, 1500); }}>{d.active ? "● " : ""}{d.name} <small className="muted">({d.type})</small></button></li>
+              ))}
+            </ul>
+          )}
+          <button className="btn ghost" onClick={load}>Refresh</button>
+          <button className="btn ghost" onClick={() => setOpen(false)}>Close</button>
+        </div>
+      )}
+    </>
   );
 }
 

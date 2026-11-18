@@ -126,6 +126,12 @@ export class SpotifyProvider implements MusicProvider {
     return out;
   }
 
+  /** Transfers the running playback to another device (the song continues where it is). */
+  async setDevice(deviceId: string, keepPlaying: boolean) {
+    this.deviceId = deviceId;
+    await this.client.api("PUT", "/me/player", { device_ids: [deviceId], play: keepPlaying });
+  }
+
   private dev() { return this.deviceId ? `?device_id=${encodeURIComponent(this.deviceId)}` : ""; }
 
   async play(track: Track, startMs: number) {

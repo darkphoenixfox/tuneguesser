@@ -270,3 +270,6 @@ html[data-pad] :focus { outline: 3px solid #facc15 !important; outline-offset: 3
 .padtext-value { min-height: 3rem; padding: 10px 14px; border-radius: 12px; background: var(--field); border: 1px solid var(--line); font-size: 1.4rem; font-weight: 700; word-break: break-all; }
 .padtext-value i { display: inline-block; width: 2px; height: 1.2em; background: var(--cyan); margin-left: 2px; vertical-align: middle; animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+.devbtn { position: fixed; top: 14px; right: 170px; background: var(--card); border: 1px solid var(--line); border-radius: 50%; width: 44px; height: 44px; cursor: pointer; font-size: 1.2rem; z-index: 6; color: var(--text); }
+.devices ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.devices li .btn { width: 100%; text-align: left; }

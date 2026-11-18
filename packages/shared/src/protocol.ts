@@ -102,6 +102,8 @@ export type ClientMessage =
   | { t: "skip" }
   | { t: "pause" }
   | { t: "quit" }
+  /** host: play the music on another device */
+  | { t: "device"; deviceId: string }
   | { t: "next" };
 
 export type ServerMessage =
