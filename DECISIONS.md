@@ -199,6 +199,9 @@ The home page is now a menu (logo, two-line explanation incl. the Spotify requir
 ### DEC-057 · Spotify logins persist across restarts · 2026-11-19 · Active
 Sessions were only in server memory, so every restart/deploy logged everyone out (the app showed the login button again). Refresh tokens are now written to `DATA_DIR/sessions.json` (mode 600, a new `/data` volume in the stack), keyed by the 30-day session cookie, and reloaded at start. Needs `deploy-nas.mjs --stack` once. Anyone with the file could use the tokens, so it stays on the NAS and out of git.
 
+### DEC-058 · One floating status bar on every game screen · 2026-11-19 · Active
+Host, solo and player screens had a mix of fixed corner buttons and static controls that did not line up with the round/score text. They now share one sticky `.statusbar`: pause, skip, round (+ seconds on phones), scores on the left; sound, mic, device, settings, quit on the right (player: exit, name + round, theme, mic, pause, skip, score, same order as before). All buttons are the same circle (44 px, 32 px on phones); vote counts are badges. The host's round screen fills the bar's left part through a portal, so the body grid lost its header row.
+
 ---
 
 ## Open questions

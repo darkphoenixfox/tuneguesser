@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
@@ -241,6 +242,7 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first);
   const [mute, setMute] = useState(false);
   const [askQuit, setAskQuit] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null); // the left part of the status bar, filled by the round screen
   useScrollTop(state?.phase ?? "");
   const prev = useRef<RoomState["phase"]>();
   const joinUrl = `${location.origin}/?code=${saved.code}`;
@@ -319,15 +321,20 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
 
   return (
     <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
-      <MicToggle className="micbtn" />
-      <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
-      <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
+      <header className="statusbar">
+        <div className="sb-left" ref={setSlot} />
+        <div className="sb-right">
+          <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
+          <MicToggle className="micbtn" />
+          <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
+          <SettingsMenu />
+          <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
+        </div>
+      </header>
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
-      <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
-      <SettingsMenu />
       {state.phase === "lobby" && solo && <main className="center"><p className="muted">Starting…</p></main>}
       {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
-      {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
+      {state.phase === "playing" && <Playing slot={slot} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
@@ -402,7 +409,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
   );
 }
 
-function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void }) {
+function Playing({ slot, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void }) {
   const guessing = !!state.guesser;
   const left = useCountdown(endsAt, guessing || state.paused ? state.remainingMs : undefined);
   const unlimited = state.roundMs === null;
@@ -420,7 +427,7 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
   const R = 90, C = 2 * Math.PI * R;
   return (
     <div className={"p2" + (state.art ? " with-art" : "")}>
-        <div className="p2-ctrl">
+      {slot && createPortal(<>
           {!guessing && (
             <div className="ctl">
               <span className="icon-wrap">
@@ -437,13 +444,10 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
             </span>
             <small>{state.skip && state.skip.voters > 1 && state.skip.votes > 0 ? `(${state.skip.votes}/${state.skip.voters})` : ""}</small>
           </div>
-          <span className="rl-top">{roundLabel(state)} <b>{unlimited ? "∞" : `${Math.ceil(left)}s`}</b></span>
-        </div>
-      <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
-      <div className="p2-head">
-        <span className="rl">{roundLabel(state)}</span>
+        <span className="rl">{roundLabel(state)}<b className="rl-secs">{unlimited ? "∞" : `${Math.ceil(left)}s`}</b></span>
         <ScoreLine state={state} />
-      </div>
+      </>, slot)}
+      <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
       <div className="vbar" aria-hidden="true"><i style={{ height: `${frac * 100}%` }} /></div>
       <div className={"timer p2-timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>

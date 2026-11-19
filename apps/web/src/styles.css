@@ -550,3 +550,45 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .menu-buttons { display: flex; flex-direction: column; gap: 14px; width: min(420px, 100%); }
 .menu-buttons .btn { font-size: 1.4rem; padding: 18px 28px; }
 .backlink { position: fixed; top: 14px; left: 14px; z-index: 6; height: 44px; padding: 0 16px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); color: var(--text); font-weight: 700; cursor: pointer; }
+
+/* ---- one floating status bar (host, solo and player screens) ---------------------------------------------------------------------
+   Same order everywhere: controls, round, scores on the left; sound, mic, device, settings, quit on the right. Every button is the same size. */
+.statusbar { --sb: 44px; position: sticky; top: max(6px, env(safe-area-inset-top)); z-index: 6; display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box; width: 100%; padding: 6px 8px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 86%, transparent); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.sb-left { flex: 1 1 auto; min-width: 0; min-height: var(--sb); display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.sb-right { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; min-height: var(--sb); }
+.statusbar :is(.mute, .micbtn, .devbtn, .gear, .quit, .icon-btn, .skip-top, .exit, .theme-btn) {
+  position: relative; inset: auto; top: auto; right: auto; width: var(--sb); height: var(--sb); min-width: 0; padding: 0; box-sizing: border-box; flex: 0 0 auto;
+  display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--card); border: 1px solid var(--line); color: var(--text);
+  font-size: calc(var(--sb) * .45); line-height: 1; font-weight: 700; cursor: pointer; z-index: auto; }
+.statusbar .quit { color: var(--pink); }
+.statusbar .devbtn svg { width: calc(var(--sb) * .58); height: calc(var(--sb) * .58); }
+.statusbar .icon-btn.voted, .statusbar .skip-top.voted { border-color: var(--lime); color: var(--lime); }
+.statusbar .micbtn.on, .statusbar .skip-top.on { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(255,61,154,.35); }
+.statusbar .ctl { position: relative; display: inline-flex; flex-direction: row; gap: 0; }
+.statusbar .ctl small, .statusbar .skip-top small { position: absolute; top: -4px; right: -4px; min-height: 0; padding: 0 5px; border-radius: 9px; background: var(--bg); border: 1px solid var(--line); font-size: .68rem; color: var(--muted); }
+.statusbar .ctl small:empty { display: none; }
+.statusbar .rl, .statusbar .phone-round { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.statusbar .rl-secs { margin-left: 8px; }
+.statusbar .scoreline { flex: 1 1 auto; flex-wrap: nowrap; gap: 4px 16px; overflow: hidden; }
+.statusbar.phone-head { align-items: center; padding: 6px 8px; font-size: .95rem; }
+.statusbar.phone-head > b { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.statusbar.phone-head .score { font-weight: 900; color: var(--cyan); font-variant-numeric: tabular-nums; padding-right: 8px; }
+.screen.game, .screen.phone { padding-top: max(6px, env(safe-area-inset-top)); }
+/* the round screen no longer has its own header row */
+.p2, .p2.with-art { grid-template-areas: "eq hint" "timer hint" "bar bar"; }
+.p2.with-art { grid-template-areas: "eq hint ." "timer hint art" "bar bar bar"; }
+@media (max-width: 899px) {
+  .p2, .p2.with-art { grid-template-areas: "timer" "hint" "bar" "eq"; }
+  .p2.with-art { grid-template-areas: "timer" "art" "hint" "bar" "eq"; }
+}
+@media (max-width: 700px) {
+  .statusbar { --sb: 32px; border-radius: 22px; gap: 6px; padding: 5px 6px; }
+  .sb-right { gap: 5px; }
+  .sb-left { gap: 4px 8px; }
+  .statusbar .scoreline { flex: 1 0 100%; order: 9; font-size: .85rem; }
+  .statusbar .rl { font-size: .85rem; }
+  .statusbar .rl-secs { display: inline; font-weight: 900; color: var(--cyan); font-variant-numeric: tabular-nums; }
+  .p2, .p2.with-art { grid-template-areas: "vbar art" "vbar hint" "bar bar"; }
+  .settings { top: calc(max(6px, env(safe-area-inset-top)) + 50px); }
+}
+@media (min-width: 701px) { .settings { top: 70px; } }

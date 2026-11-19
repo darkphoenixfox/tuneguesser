@@ -164,9 +164,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   return (
     <Wrap className={embedded ? "embedded" : "screen phone"} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       {!embedded && (
-        <header className="phone-head">
-          <button className="exit" onClick={exit} aria-label="Exit to main screen">✕ Exit</button>
-          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round}` : `Round ${state.round}/${state.totalRounds ?? state.config.playTo.rounds}`}</small>}</b><ThemeButton /><MicToggle className="skip-top" />{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭ <small>{skipText}</small></button>}<span className="score">{mine.score}</span>
+        <header className="statusbar phone-head">
+          <button className="exit" onClick={exit} aria-label="Exit to main screen">✕</button>
+          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round}` : `Round ${state.round}/${state.totalRounds ?? state.config.playTo.rounds}`}</small>}</b><ThemeButton /><MicToggle className="skip-top mic-top" />{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
         </header>
       )}
       {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
