@@ -144,7 +144,7 @@ export function doubt(t: Track, artistCount: (name: string) => number): string |
   if (loose.has(t) && artistCount(artist) < 3 && artistCount(t.title) < 3) return "artist/title order of an unspaced hyphen is a guess";
   const outsideBrackets = t.title.replace(/\s*[(\[][^)\]]*[)\]]/g, "");
   if (/\b(official|lyrics?|visuali[sz]er)\b|\b(hd|4k)\b|["“”]/i.test(outsideBrackets)) return "video-title leftovers in the title";
-  if (t.title.length > 80 || t.artists.join(", ").length > 50) return "implausibly long title or artist";
+  if (t.title.length > 80 || t.artists.some((a) => a.length > 50)) return "implausibly long title or artist";
   return undefined;
 }
 
@@ -160,6 +160,18 @@ export function dropDoubtful(tracks: Track[]): Track[] {
 const OVERRIDES: Record<string, { title: string; artists: string[] }> = {
   JUbMWtUyIIE: { title: "Somebody to Love", artists: ["Jefferson Airplane"] }, // uploaded as "somebody to love-jefferson airplane"
 };
+
+/**
+ * Auto-generated "Artist - Topic" videos are named after the first artist only, but their description lists everyone:
+ * "Provided to YouTube by Columbia\n\nSTAY · The Kid LAROI · Justin Bieber". Returns that list (or null).
+ */
+export function topicArtists(description: string, channel: string): string[] | null {
+  if (!/ - Topic$/.test(channel.trim())) return null;
+  const m = /Provided to YouTube by[^\n]*\n+([^\n]+)/.exec(description ?? "");
+  const parts = m?.[1]!.split(/\s+·\s+/).map((x) => x.trim()).filter(Boolean) ?? [];
+  const artists = parts.slice(1);
+  return artists.length > 1 ? artists : null;
+}
 
 export interface YouTubePlaylist { id: string; name: string; tracks: number; image?: string }
 
@@ -194,7 +206,9 @@ export class YouTubeApi {
       for (const v of j.items ?? []) {
         if (v.status?.embeddable === false || v.snippet?.liveBroadcastContent !== "none") continue;
         if (isLiveRecording(v.snippet.title)) continue; // concert footage and fan recordings make poor rounds
-        const meta = OVERRIDES[v.id] ?? parseVideo(v.snippet.title, v.snippet.channelTitle ?? "");
+        const parsed = OVERRIDES[v.id] ?? parseVideo(v.snippet.title, v.snippet.channelTitle ?? "");
+        const all = topicArtists(v.snippet.description ?? "", v.snippet.channelTitle ?? ""); // everyone credited, not only the channel's artist
+        const meta = parsed && all ? { ...parsed, artists: all } : parsed;
         const durationMs = parseDuration(v.contentDetails?.duration ?? "");
         if (!meta || durationMs < 45_000 || durationMs > 15 * 60_000) continue; // clips and mixes make poor rounds
         const track: Track = {

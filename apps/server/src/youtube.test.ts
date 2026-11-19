@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { doubt, isLiveRecording, fixUploaderTitles, trackMeta, parseDuration, parsePlaylistId, parseVideo, YouTubeApi, YouTubeProvider } from "./youtube";
+import { doubt, isLiveRecording, fixUploaderTitles, trackMeta, parseDuration, parsePlaylistId, parseVideo, topicArtists, YouTubeApi, YouTubeProvider } from "./youtube";
 
 describe("youtube", () => {
   it("finds the playlist id in links", () => {
@@ -124,5 +124,15 @@ describe("listeners joining mid-song", () => {
     expect(doubt(mk("Start Me Up - Official Promo", ["The Rolling Stones"]), none)).toBeTruthy();
     expect(doubt(mk("Kiss Me", ["Sixpence None The Richer"]), none)).toBeUndefined();
     expect(doubt(mk("Video Killed the Radio Star", ["The Buggles"]), none)).toBeUndefined();
+  });
+});
+
+describe("topicArtists", () => {
+  it("reads every credited artist from an auto-generated Topic video", () => {
+    const d = "Provided to YouTube by Columbia\n\nSTAY · The Kid LAROI · Justin Bieber\n\nReleased on: 2021";
+    expect(topicArtists(d, "The Kid LAROI - Topic")).toEqual(["The Kid LAROI", "Justin Bieber"]);
+    expect(topicArtists(d, "Some Channel")).toBeNull(); // only for Topic channels
+    expect(topicArtists("Provided to YouTube by X\n\nSong · Solo Artist", "Solo Artist - Topic")).toBeNull(); // one artist: nothing to add
+    expect(topicArtists("nothing useful", "A - Topic")).toBeNull();
   });
 });
