@@ -165,7 +165,10 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
 
       {state.phase === "playing" && (
         <div className="card answer">
-          {!embedded && <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
+          {!embedded && <div className="bar-time hbar"><i style={{ width: `${state.roundMs === null ? 100 : Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
+          <div className="pl-row">
+          {!embedded && <div className="vbar" aria-hidden="true"><i style={{ height: `${state.roundMs === null ? 100 : Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
+          <div className="pl-main">
           {!embedded && (<>
           {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
           <p className="muted phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round} · first to ${state.config.playTo.target}` : `Round ${state.round} / ${state.totalRounds ?? state.config.playTo.rounds}`}</p>
@@ -212,6 +215,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
             </button>
           )}
           {!embedded && !iAmGuesser && <button className="btn ghost" onClick={() => send({ t: "pause" })}>{state.paused ? "▶ Continue" : "⏸ Pause"}<PadHint button="start" /></button>}
+          </div>
+          </div>
         </div>
       )}
 

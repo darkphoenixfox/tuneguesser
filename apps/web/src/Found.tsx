@@ -30,10 +30,12 @@ export function GuessBar({ endsAt, totalMs }: { endsAt: number; totalMs: number 
 
 /** Trivia facts (the letter hints are shown inside the answer panel). */
 export function Hints({ state }: { state: RoomState }) {
-  if (!state.config.hints.trivia) return null;
   const t = state.trivia ?? [];
+  const box = useRef<HTMLUListElement>(null);
+  useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, [t.length]); // newest fact stays in view
+  if (!state.config.hints.trivia) return null;
   return (
-    <ul className="trivia" aria-label="Trivia">
+    <ul className="trivia" aria-label="Trivia" ref={box}>
       {t.length === 0 && <li className="muted">Trivia coming up…</li>}
       {t.map((x, i) => <li key={i}>{x}</li>)}
     </ul>

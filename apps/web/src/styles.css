@@ -435,3 +435,14 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .brand .logo { margin: 0; }
 .brand.small img { width: clamp(80px, 14vw, 120px); }
 .brand.small .logo { font-size: clamp(1.4rem, 4vw, 2rem); }
+/* phone play area: timer bar vertical on the left on narrow screens; the trivia box has room for two facts and scrolls */
+.pl-row { display: flex; gap: 12px; align-items: stretch; }
+.pl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.vbar { display: none; }
+.phone .trivia { height: 9.6em; overflow-y: auto; justify-content: flex-start; scroll-behavior: smooth; flex-shrink: 0; }
+.phone .trivia li { flex-shrink: 0; }
+@media (max-width: 700px) {
+  .hbar { display: none; }
+  .vbar { display: flex; align-items: flex-end; width: 10px; flex-shrink: 0; border-radius: 5px; background: var(--soft2); overflow: hidden; }
+  .vbar i { display: block; width: 100%; background: linear-gradient(0deg, var(--pink), var(--purple) 55%, var(--cyan)); transition: height .1s linear; }
+}
