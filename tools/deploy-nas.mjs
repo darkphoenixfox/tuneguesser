@@ -1,16 +1,20 @@
 #!/usr/bin/env node
-// Deploys TuneGuesser to the NAS: copies files to NAS_DIR (Synology share of /volume1/docker/tuneguesser)
+// Deploys TuneGuesser to the NAS: copies files to the NAS share (NAS_DIR)
 // and creates/updates the separate Portainer stack "tuneguesser".
 //   node tools/deploy-nas.mjs            build, copy files, create/update stack (or restart the server)
 //   node tools/deploy-nas.mjs --stack    also push deploy/docker-compose.yml to the stack
 //   node tools/deploy-nas.mjs --files    copy files only, no Portainer
-// Needs PORTAINER_TOKEN in the environment (never in the repo). PORTAINER_URL defaults to http://nas.local:9000.
+// Settings come from the environment or the (untracked) .env file, never from the repo:
+//   NAS_DIR (path of the NAS share), TUNEGUESSER_REDIRECT_URI (public https://host/callback), PORTAINER_URL, PORTAINER_TOKEN, SPOTIFY_CLIENT_ID
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
 const NAME = "tuneguesser";
-const NAS = "NAS_DIR";
-const REDIRECT = process.env.TUNEGUESSER_REDIRECT_URI || "https://your.public.host/callback";
+const dotenv = fs.existsSync(".env") ? fs.readFileSync(".env", "utf-8") : "";
+const setting = (k) => process.env[k] || new RegExp(`^${k}=(.+)$`, "m").exec(dotenv)?.[1]?.trim();
+const need = (k) => { const v = setting(k); if (!v) throw new Error(`${k} is not set (environment or .env)`); return v; };
+const NAS = need("NAS_DIR");
+const REDIRECT = need("TUNEGUESSER_REDIRECT_URI");
 const args = new Set(process.argv.slice(2));
 
 const sh = (cmd, a, opts = {}) => execFileSync(cmd, a, { stdio: "inherit", ...opts });
@@ -36,8 +40,8 @@ copy("deploy/nginx", `${NAS}\\nginx`, { files: ["nginx.conf"] });
 
 if (args.has("--files")) process.exit(0);
 
-const URL_ = (process.env.PORTAINER_URL || "http://nas.local:9000").replace(/\/$/, "");
-const TOKEN = process.env.PORTAINER_TOKEN;
+const URL_ = need("PORTAINER_URL").replace(/\/$/, "");
+const TOKEN = setting("PORTAINER_TOKEN");
 if (!TOKEN) {
   console.log("PORTAINER_TOKEN not set: files copied. Create/update the stack by hand in Portainer.");
   process.exit(0);
@@ -78,7 +82,7 @@ try {
     await api("POST", `/api/endpoints/${ep.Id}/docker/containers/${c.Id}/restart`);
     console.log(`> Portainer: ${NAME}-server restarted`);
   }
-  console.log(`\nDeployed. LAN: http://nas.local:8087   Public: ${new URL(REDIRECT).origin}`);
+  console.log(`\nDeployed: ${new URL(REDIRECT).origin}`);
 } catch (e) {
   console.log(`Portainer: ${e.message}\nFiles are copied; finish by hand in ${URL_}.`);
   process.exitCode = 1;

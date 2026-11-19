@@ -12,7 +12,8 @@
     "build": "npm run build --workspaces --if-present",
     "dev:server": "npm run dev -w @tuneguesser/server",
     "dev:web": "npm run dev -w @tuneguesser/web",
-    "deploy:nas": "node tools/deploy-nas.mjs"
+    "deploy:nas": "node tools/deploy-nas.mjs",
+    "build:apk": "node tools/build-apk.mjs"
   },
   "devDependencies": {
     "typescript": "^5.6.0",

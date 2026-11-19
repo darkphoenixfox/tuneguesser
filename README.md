@@ -28,6 +28,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 | Answers | **Type** / **Multiple choice** | *Multiple choice:* the guesser gets 4 options (title - artist); the 3 wrong ones are other songs from the selected playlists. A wrong pick uses an attempt and that option disappears. The right pick scores title and artist together. |
 | Hints | checkboxes: **Reveal letters**, **Trivia**, **Artwork** (none, one or several) | *Reveal letters:* underscores for each letter of title and artist; after 10 s letters fill in evenly; the last ones appear only 5 s after the timer would end, so the title is never complete during play; frozen while someone is answering or paused. *Trivia:* facts about the artist and song appear over time (genre, origin, formed/born, release year, a Wikipedia sentence with the name hidden), from MusicBrainz and Wikipedia. *Artwork:* the album cover from Spotify appears as big blocks in an area to the right of the answer panel (host screen) and sharpens step by step and is fully clear only 5 s after the timer ends (the reveal shows it in full). |
 | Timer | **seconds per song** (10-120) / **Unlimited** | Unlimited: the round lasts until the song ends; points fade over 40 s and hints unfold over 60 s. |
+| Next song | **Automatic** / **Wait for host / song end** | *Automatic:* the next song starts 5 s after the reveal. *Wait:* every round end is held so the song can be heard in full; the next round starts when the song ends or the host presses *Next song*. |
 | Attempts | 1-5 | Wrong answers a player may use per round. |
 | Score multipliers | Yes / No | See Scoring. |
 
@@ -51,11 +52,8 @@ The last chosen playlists and options are remembered on the host's device. The *
 - On phones the skip button is at the top, next to the light/dark button. Round robin: the player whose song it is decides alone to skip (and the host's skip is not counted).
 - A skipped round still shows the answer and follows the reveal rules above.
 
-### Settings during the game
-| Setting | Where | Effect |
-| :--- | :--- | :--- |
-| Next song automatically | ⚙ on the host screen (default **Yes**) | Yes: next song 5 s after the reveal. No: hold every round end until the song ends or the host continues. Changeable live. |
-| Theme | ⚙ on the host screen, ☀️/🌙 on phones | Dark or light, saved **per device**. |
+### Settings
+The **⚙ button at the top right** is the same on the Join and Host screens (theme, and the Android app download). During a game it holds the theme only. Phones also have a ☀️/🌙 button. The theme is saved **per device**. *Next song* is a gameplay option chosen before the game (below).
 
 ### Keyboard and gamepad
 | Action | Keyboard | Gamepad (Xbox / PlayStation) |
@@ -125,7 +123,7 @@ In the Spotify dashboard add the redirect URI `http://127.0.0.1:5173/callback` f
 The host screen has a **demo mode** (no Spotify, silent) for trying the flow.
 
 ## Deploying to the NAS
-`npm run deploy:nas` builds everything, copies it to the NAS share that holds the stack's folder and creates or updates the Portainer stack `tuneguesser` (separate from the another project stack). It restarts `tuneguesser-server` on later runs.
+`npm run deploy:nas` builds everything, copies it to the NAS share that holds the stack's folder and creates or updates the Portainer stack `tuneguesser`. It restarts `tuneguesser-server` on later runs.
 
 | Flag | Effect |
 | :--- | :--- |
@@ -133,9 +131,12 @@ The host screen has a **demo mode** (no Spotify, silent) for trying the flow.
 | `-- --stack` | also push `deploy/docker-compose.yml` to the stack (use when the compose file changes) |
 | `-- --files` | copy files only, no Portainer |
 
-Needs `PORTAINER_TOKEN` in the environment. The Spotify Client ID is read from `.env` and sent to the stack's environment variables, never stored in the repo. The server loses Spotify logins on restart, so the host logs in again after a deploy.
+Needs `PORTAINER_TOKEN` in the environment, and `NAS_DIR`, `TUNEGUESSER_REDIRECT_URI` and `PORTAINER_URL` in the environment or your untracked `.env` (see `.env.example`). The Spotify Client ID is read from `.env` and sent to the stack's environment variables, never stored in the repo. The server loses Spotify logins on restart, so the host logs in again after a deploy.
 
 Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneguesser-server` (Node); DSM reverse proxy (HTTPS) → `localhost:8087` with the WebSocket header enabled; the Spotify redirect URI is `https://<your public host>/callback`.
+
+## Android app
+A debug APK (a Capacitor shell around the live site, `android-app/`) is built with `npm run build:apk` and served from the web app: the **⚙ settings menu on the Join and Host screens** has a *Download the Android app* link. The APK embeds the server address, so it is git-ignored and published by `npm run deploy:nas`. Details in `android-app/README.md`.
 
 ## Project layout
 ```

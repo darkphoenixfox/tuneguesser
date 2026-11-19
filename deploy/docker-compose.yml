@@ -1,6 +1,5 @@
-# TuneGuesser stack for Portainer (own stack, separate from another project).
-# NAS folder: /volume1/docker/tuneguesser
-# tuneguesser-web    : NGINX. Serves the built client from ./www, proxies /api and /ws. LAN: http://nas.local:8087
+# TuneGuesser stack for Portainer (its own stack).
+# tuneguesser-web    : NGINX. Serves the built client from ./www, proxies /api and /ws.
 # tuneguesser-server : Node game server (a single bundled file, no node_modules needed).
 
 services:

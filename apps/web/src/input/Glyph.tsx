@@ -1,7 +1,7 @@
 import React from "react";
 import { usePad, type PadButtonName } from "./pad";
 
-/** Button glyphs: glossy Xbox domes and PlayStation symbols, as in another project. */
+/** Button glyphs: glossy Xbox domes and PlayStation symbols. */
 const PS: Partial<Record<PadButtonName, { colour: string; shape: React.ReactNode }>> = {
   a: { colour: "#7c9bd8", shape: <path d="M-7 -7 L7 7 M7 -7 L-7 7" /> },
   b: { colour: "#d9525e", shape: <circle r="7.5" /> },

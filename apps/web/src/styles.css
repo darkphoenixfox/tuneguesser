@@ -530,3 +530,7 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
   .mute { right: 152px; }
   .p2-ctrl { padding-right: 192px; }
 }
+/* main screens (join / host setup): the settings button sits in the corner, identical on both */
+.gear.solo { right: 14px; }
+.settings.solo { right: 14px; }
+.settings .btn { text-align: center; }

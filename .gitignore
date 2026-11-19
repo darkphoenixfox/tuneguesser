@@ -3,3 +3,11 @@ dist
 .env
 .env.local
 *.log
+
+# Android app: the APK embeds the server address, so it is not committed (served from the NAS)
+apps/web/public/*.apk
+android-app/android/app/src/main/assets/public
+android-app/android/app/src/main/assets/capacitor.config.json
+android-app/android/build
+android-app/android/.gradle
+android-app/android/local.properties

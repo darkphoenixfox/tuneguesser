@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
-import { HostSettings } from "./Settings";
+import { SettingsMenu } from "./Settings";
 import { useCountdown, useRoom, useScrollTop } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
@@ -92,13 +92,14 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const timed = cfg.roundSeconds !== null;
   return (
     <main className="screen setup">
-      <HostSettings autoAdvance={cfg.autoAdvance} onAutoAdvance={(v) => set({ autoAdvance: v })} />
+      <SettingsMenu apk solo />
       <Logo />
       {err && <p className="error">{err}</p>}
       {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
         <div className="card center">
           <p>Log in with the Spotify account that will play the music (Premium required).</p>
           {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
+          <p className="muted login-note">Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.</p>
           <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
         </div>
       ) : (
@@ -150,6 +151,9 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
                 ))}
               </div>
               <small className="muted">{!cfg.hints.reveal && !cfg.hints.trivia && !cfg.hints.art ? "No hints." : [cfg.hints.reveal && "Reveal: underscores, letters appear after 10 s.", cfg.hints.trivia && "Trivia: facts from MusicBrainz and Wikipedia.", cfg.hints.art && "Artwork: pixelated cover that sharpens over time."].filter(Boolean).join(" ")}</small>
+            </div>
+            <div className="opt"><span>Next song</span>
+              <Seg value={cfg.autoAdvance} options={[[true, "Automatic"], [false, "Wait for host / song end"]]} onChange={(autoAdvance) => set({ autoAdvance })} />
             </div>
             <div className="opt"><span>Timer</span>
               <Seg value={timed} options={[[true, "Seconds per song"], [false, "Unlimited"]]} onChange={(t) => set({ roundSeconds: t ? 40 : null })} />
@@ -257,7 +261,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
-      <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
+      <SettingsMenu />
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}

@@ -39,7 +39,7 @@ Authorization Code with PKCE; the server keeps tokens in memory against a sessio
 **Redirect URIs:** `https://<public host>/callback` (production) and `http://127.0.0.1:5173/callback` (local; Spotify requires `127.0.0.1`, not `localhost`).
 
 ### DEC-009 · Deployment: own Portainer stack on the NAS · 2026-11-18 · Active
-Stack `tuneguesser` with its own containers (`tuneguesser-web` nginx, `tuneguesser-server` node:22-slim), network and its own folder on the NAS, LAN port **8087**. Completely separate from the another project stack (the user asked for a different container). The deploy script follows another project's approach (copy to the NAS share with robocopy, then the Portainer API with `PORTAINER_TOKEN`).
+Stack `tuneguesser` with its own containers (`tuneguesser-web` nginx, `tuneguesser-server` node:22-slim), network and its own folder on the NAS, LAN port **8087**. Completely separate from any other stack on the NAS. The deploy script copies to the NAS share with robocopy, then uses the Portainer API with `PORTAINER_TOKEN`.
 Secrets (Spotify Client ID, redirect URI) live in Portainer's stack environment, not in the repo.
 
 ### DEC-010 · Public address · 2026-11-18 · Active
@@ -119,7 +119,7 @@ Title + artist in one answer ×1.5; streak ×(1 + 0.25 × rounds in a row, max 4
 No countdown (∞). The round ends when the song ends. Score decay uses a 40 s window and hints a 60 s window so speed still matters.
 
 ### DEC-031 · Keyboard and gamepad controls · 2026-11-18 · Active
-Enter / A = accept (buzz, and next song at the reveal, also for phone players); 1-4 or A B X Y pick multiple-choice options; Alt+S / Select skip; Alt+P / Start pause. Alt combos use the physical key code so they work with any layout. A gamepad (Gamepad API, standard mapping) shows Xbox or PlayStation glyphs (taken from the another project project's style) and an on-screen keyboard for typed answers. **Pause** is a new feature: it freezes the clock and music; any player or the host can toggle it. Open: should pause be host-only?
+Enter / A = accept (buzz, and next song at the reveal, also for phone players); 1-4 or A B X Y pick multiple-choice options; Alt+S / Select skip; Alt+P / Start pause. Alt combos use the physical key code so they work with any layout. A gamepad (Gamepad API, standard mapping) shows Xbox or PlayStation glyphs and an on-screen keyboard for typed answers. **Pause** is a new feature: it freezes the clock and music; any player or the host can toggle it. Open: should pause be host-only?
 
 ### DEC-032 · Quit stops the music · 2026-11-18 · Active
 The host's quit (and Cancel / New game) sends a `quit` message: the server pauses Spotify, ends the game for players and deletes the room. Closing the browser tab without quitting does not stop the music.
@@ -171,6 +171,9 @@ A room kept running (timers, auto-advance, `play()` calls on the host's Spotify)
 
 ### DEC-048 · Voice answers with the browser's speech recognition · 2026-11-19 · Active
 A 🎤 button on the typed answer form uses the Web Speech API (free, no server). Interim text fills the box, the final text is auto-sent after 1.5 s unless edited. Chosen over a server-side speech-to-text service (Whisper) for zero infrastructure; the answer matcher's typo tolerance absorbs most recognition errors. Not offered on the gamepad keyboard form or where the API is missing. Possible later: sound-alike matching for names, or Whisper for better accuracy.
+
+### DEC-049 · Shared settings menu, next-song setting moved, Android app, private addresses · 2026-11-19 · Active
+The ⚙ menu is one component on the Join and Host screens (theme + link to the Android APK; the APK link is hidden inside the app). *Next song automatically* is now a gameplay option on the setup page, no longer changed live during a game. The Android app is a Capacitor shell (`android-app/`, `npm run build:apk`) around the live site; its APK embeds the server address, so it is git-ignored and served from the web app. Deployment settings (NAS path, public address, Portainer URL) now come from the environment or an untracked `.env`, never from the repo, and the git history was rewritten to remove the private addresses and unrelated project names.
 
 ---
 

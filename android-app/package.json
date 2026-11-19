@@ -1,0 +1,18 @@
+{
+  "name": "tuneguesser-android",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Android client for TuneGuesser: a Capacitor shell that opens the game's web client full screen",
+  "scripts": {
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "apk": "cap sync android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}

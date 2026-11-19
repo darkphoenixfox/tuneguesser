@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
-import { ThemeButton } from "./Settings";
+import { SettingsMenu, ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
 import { MicButton, MicToggle } from "./input/Mic";
 import { PadKeyboard } from "./input/PadKeyboard";
@@ -41,7 +41,7 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
   const ok = code.length === 4 && name.trim().length > 0;
   return (
     <main className="screen phone">
-      <ThemeButton />
+      <SettingsMenu apk solo />
       <Logo />
       <form className="card" onSubmit={(e) => { e.preventDefault(); if (ok) { sfx.join(); onJoin({ code, name: name.trim() }); } }}>
         <label>Room code<input className="codein" value={code} maxLength={4} autoCapitalize="characters" autoComplete="off" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} /></label>
