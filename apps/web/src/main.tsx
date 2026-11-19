@@ -6,9 +6,13 @@ import { startPadNav } from "./input/nav";
 import { PadTextEntry } from "./input/PadTextEntry";
 import { BackHandler } from "./BackHandler";
 import { PadHintBar } from "./input/PadHintBar";
-import { useLang } from "./i18n";
+import { setLang, useLang } from "./i18n";
 import { ErrorBoundary } from "./ErrorBoundary";
 import "./styles.css";
+
+// /es and /en: pick that language and land on the main screen
+const langPath = /^\/(es|en)\/?$/.exec(location.pathname);
+if (langPath) { setLang(langPath[1] as "es" | "en"); history.replaceState(null, "", "/" + location.search); }
 
 startPadNav();
 
