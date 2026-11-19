@@ -45,7 +45,7 @@ function Seg<T extends string | number | boolean>({ value, options, onChange }: 
 
 const LAST_PLAYLISTS = "tg_playlists";
 /** YouTube mode starts with this playlist until the host changes the list */
-const DEFAULT_YT_PLAYLIST = "https://music.youtube.com/playlist?list=PLLLGHxXtD0Z4";
+const DEFAULT_YT_PLAYLISTS = ["PLLLGHxXtD0Z4", "PL7DA3D097D6FDBC02"];
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
 
@@ -66,13 +66,21 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     setYtLists((cur) => (cur.some((x) => x.id === j.id) ? cur : [...cur, j]));
     setYtInput("");
   };
-  // first time on YouTube: start with the default playlist (removing it is remembered)
+  // YouTube mode starts with the default playlists. Each default is offered once per device, so removing one sticks and a new default still shows up.
   useEffect(() => {
     if (!useYt) return;
-    let seen = false;
-    try { seen = localStorage.getItem("tg_ytinit") !== null; } catch { /* storage blocked */ }
-    if (seen) return;
-    void fetch(`/api/youtube/playlist?url=${encodeURIComponent(DEFAULT_YT_PLAYLIST)}`).then((r) => r.ok ? r.json() : null).then((j) => { if (j) { setYtLists((cur) => (cur.length ? cur : [j])); try { localStorage.setItem("tg_ytinit", "1"); } catch { /* storage blocked */ } } }).catch(() => {});
+    let offered: string[] = [];
+    try {
+      const raw = localStorage.getItem("tg_ytinit");
+      offered = raw === null ? [] : raw === "1" ? [DEFAULT_YT_PLAYLISTS[0]!] : JSON.parse(raw); // "1": written by the first version
+    } catch { /* storage blocked */ }
+    const todo = DEFAULT_YT_PLAYLISTS.filter((id) => !offered.includes(id));
+    if (!todo.length) return;
+    void Promise.all(todo.map((id) => fetch(`/api/youtube/playlist?url=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null))).then((found) => {
+      const ok = found.filter((j): j is { id: string; name: string; tracks: number; image?: string } => !!j);
+      if (ok.length) setYtLists((cur) => [...cur, ...ok.filter((j) => !cur.some((x) => x.id === j.id))]);
+      try { localStorage.setItem("tg_ytinit", JSON.stringify([...offered, ...ok.map((j) => j.id)])); } catch { /* storage blocked */ }
+    });
   }, [useYt]);
   useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_source", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
