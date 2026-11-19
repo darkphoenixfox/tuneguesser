@@ -19,7 +19,7 @@ import { Confirm } from "./input/Confirm";
 import { useYouTubePlayer } from "./YouTubePlayer";
 import { onPadButton, usePad } from "./input/pad";
 import { t } from "./i18n";
-import { banLocal, getGone, getLocal, setGone } from "./local";
+import { banLocal, getGone, getLocal, getNames, setGone } from "./local";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
@@ -100,8 +100,9 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   useEffect(() => { try { localStorage.setItem("tg_ytoff", JSON.stringify(ytOff)); } catch { /* storage blocked */ } }, [ytOff]);
   // playlists removed on this device, or for everyone by the admin, are not shown (default ones too)
   const [goneAll, setGoneAll] = useState<string[]>([]);
+  const [globalNames, setGlobalNames] = useState<Record<string, string>>({});
   const [, refresh] = useState(0);
-  const loadGone = () => fetch("/api/playlist/removed").then((r) => r.json()).then((j: unknown) => { if (Array.isArray(j)) setGoneAll(j); }).catch(() => {});
+  const loadGone = () => { void fetch("/api/playlist/names").then((r) => r.json()).then((j: unknown) => { if (j && typeof j === "object") setGlobalNames(j as Record<string, string>); }).catch(() => {}); return fetch("/api/playlist/removed").then((r) => r.json()).then((j: unknown) => { if (Array.isArray(j)) setGoneAll(j); }).catch(() => {}); };
   useEffect(() => {
     void loadGone();
     // coming back from a playlist page (the browser may restore this page as it was): re-read what changed there
@@ -302,7 +303,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
                 <div key={p.id} className="pl-wrap">
                   <button className={"pl" + (ytOff.includes(p.id) ? "" : " sel")} aria-pressed={!ytOff.includes(p.id)} onClick={() => setYtOff((cur) => (cur.includes(p.id) ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}>
                     {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                    <Marquee text={p.name} /><small>{t("{n} videos", { n: p.tracks })}</small>
+                    <Marquee text={getNames()[p.id] ?? globalNames[p.id] ?? p.name} /><small>{t("{n} videos", { n: p.tracks })}</small>
                   </button>
                   <a className="pl-cog" href={`/playlist/${encodeURIComponent(p.id)}`} aria-label={t("Songs and settings of this playlist")} title={t("Songs and settings of this playlist")}>⚙</a>
                   {!DEFAULT_YT_PLAYLISTS.includes(p.id) && <button className="pl-x" aria-label={t("Remove playlist")} title={t("Remove playlist")} onClick={() => { setYtLists((cur) => cur.filter((x) => x.id !== p.id)); setYtOff((cur) => cur.filter((x) => x !== p.id)); }}>✕</button>}

@@ -3,7 +3,7 @@ import path from "node:path";
 import type { Track } from "./music";
 
 export interface TrackEdit { title?: string; artists?: string[] }
-export interface PlaylistSettings { /** only songs by this artist are used */ artist?: string }
+export interface PlaylistSettings { /** every song is treated as by this artist */ artist?: string; /** the name shown instead of the YouTube title */ name?: string }
 interface Data { tracks: Record<string, TrackEdit>; playlists: Record<string, PlaylistSettings>; removed: string[] }
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
@@ -44,9 +44,26 @@ export class EditStore {
   setArtist(playlistId: string, artist: string | null) {
     if (!/^[\w-]{6,64}$/.test(playlistId)) return;
     const d = this.read();
-    const a = clean(artist, 80);
-    if (a) d.playlists[playlistId] = { artist: a }; else delete d.playlists[playlistId];
+    this.patch(d, playlistId, { artist: clean(artist, 80) || undefined });
     this.write(d);
+  }
+
+  setName(playlistId: string, name: string | null) {
+    if (!/^[\w-]{6,64}$/.test(playlistId)) return;
+    const d = this.read();
+    this.patch(d, playlistId, { name: clean(name, 80) || undefined });
+    this.write(d);
+  }
+
+  private patch(d: Data, id: string, change: PlaylistSettings) {
+    const next = { ...d.playlists[id], ...change };
+    if (!next.artist) delete next.artist;
+    if (!next.name) delete next.name;
+    if (Object.keys(next).length) d.playlists[id] = next; else delete d.playlists[id];
+  }
+
+  names(): Record<string, string> {
+    return Object.fromEntries(Object.entries(this.read().playlists).filter(([, p]) => p.name).map(([id, p]) => [id, p.name!]));
   }
 
   /** Playlists taken off the list for everyone. */

@@ -254,3 +254,6 @@ Supersedes the "applies to everyone" part of DEC-069 (and the global write of DE
 
 ### DEC-071 · Remove a playlist from its page (local or, with the admin password, for everyone) · 2026-11-19 · Active
 Local removal is a list of ids in localStorage (`tg_ytgone`) so default playlists can be hidden too and are not re-fetched; global removal is `removed` in `edits.json` (`GET /api/playlist/removed`, admin-only `POST /api/playlist/remove`). The setup page hides both. The page offers the opposite button to bring it back.
+
+### DEC-072 · Playlist names can be edited (local, or global with the admin password) · 2026-11-19 · Active
+Local names in localStorage (`tg_ytnames`), global names in `edits.json` (`playlists[id].name`, `GET /api/playlist/names`, admin-only `POST /api/playlist/name`). Display order: this device's name, the global name, YouTube's title. Typing the original name (or nothing) removes the custom name.

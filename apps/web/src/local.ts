@@ -22,6 +22,14 @@ export function updateLocal(f: (l: LocalEdits) => void): LocalEdits {
   return l;
 }
 
+/** Names this device gave to playlists (playlist id -> name). */
+export const getNames = (): Record<string, string> => { try { const d = JSON.parse(localStorage.getItem("tg_ytnames") ?? "{}"); return d && typeof d === "object" ? d : {}; } catch { return {}; } };
+export function setLocalName(id: string, name: string | null) {
+  const n = getNames();
+  if (name) n[id] = name; else delete n[id];
+  try { localStorage.setItem("tg_ytnames", JSON.stringify(n)); } catch { /* storage blocked */ }
+}
+
 /** Playlists this device has taken off its list. */
 export const getGone = (): string[] => { try { const d = JSON.parse(localStorage.getItem("tg_ytgone") ?? "[]"); return Array.isArray(d) ? d : []; } catch { return []; } };
 export function setGone(id: string, gone: boolean) {

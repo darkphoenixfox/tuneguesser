@@ -25,6 +25,17 @@ describe("EditStore", () => {
     expect(s.playlist("PLabcdef123")).toEqual({});
   });
 
+  it("keeps a playlist's custom name next to its artist setting", () => {
+    const s = store();
+    s.setName("PLabcdef123", " My  mix ");
+    s.setArtist("PLabcdef123", "U2");
+    s.setArtist("PLabcdef123", null);
+    expect(s.names()).toEqual({ PLabcdef123: "My mix" });
+    s.setName("PLabcdef123", null);
+    expect(s.names()).toEqual({});
+    expect(s.playlist("PLabcdef123")).toEqual({});
+  });
+
   it("one artist only: all songs get that artist and its name is taken out of the title", () => {
     const f = (title: string, artists: string[]) => forceArtist(track("a", title, artists), "U2");
     expect(f("Gloria", ["Solano"])).toMatchObject({ title: "Gloria", artists: ["U2"] });

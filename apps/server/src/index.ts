@@ -219,7 +219,7 @@ const http = createServer(async (req, res) => {
       const count = new Map<string, number>();
       for (const t of parsed) for (const a of t.artists.slice(0, 1)) count.set(a, (count.get(a) ?? 0) + 1);
       const artists = [...count].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([name, n]) => ({ name, n }));
-      return json(res, 200, { id, name: info?.name ?? id, removedForAll: edits.removed().includes(id), artist: only ?? null, artists, tracks });
+      return json(res, 200, { id, name: info?.name ?? id, defaultName: edits.names()[id] ?? null, removedForAll: edits.removed().includes(id), artist: only ?? null, artists, tracks });
     }
     if (url.pathname === "/api/admin/check" && req.method === "POST") {
       return json(res, 200, { ok: await isAdmin((await readJson(req)).password) });
@@ -232,6 +232,15 @@ const http = createServer(async (req, res) => {
       for (const [id, e] of Object.entries(l.tracks)) edits.editTrack(id, e);
       for (const id of l.banned) votes.vote(id, "playlist-page", -1);
       for (const [pid, a] of Object.entries(l.artists)) edits.setArtist(pid, a || null);
+      return json(res, 200, { ok: true });
+    }
+    if (url.pathname === "/api/playlist/names" && req.method === "GET") return json(res, 200, edits.names());
+    if (url.pathname === "/api/playlist/name" && req.method === "POST") {
+      const b = await readJson(req);
+      if (!(await isAdmin(b.password))) return json(res, 403, { error: "wrong password" });
+      const id = typeof b.id === "string" ? parsePlaylistId(b.id) : null;
+      if (!id) return json(res, 400, { error: "bad playlist" });
+      edits.setName(id, typeof b.name === "string" ? b.name : null);
       return json(res, 200, { ok: true });
     }
     if (url.pathname === "/api/playlist/removed" && req.method === "GET") return json(res, 200, edits.removed());

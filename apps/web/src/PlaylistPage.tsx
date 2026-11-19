@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Logo } from "./Logo";
 import { SettingsMenu } from "./Settings";
 import { t } from "./i18n";
-import { banLocal, getGone, getLocal, setGone, unbanLocal, updateLocal } from "./local";
+import { banLocal, getGone, getLocal, getNames, setGone, setLocalName, unbanLocal, updateLocal } from "./local";
 
 interface Song { id: string; title: string; artists: string[]; original?: { title: string; artists: string[] }; edited?: "local" | "default"; banned: boolean; defaultBanned: boolean }
-interface Data { id: string; name: string; removedForAll: boolean; artist: string | null; artists: Array<{ name: string; n: number }>; tracks: Song[] }
+interface Data { id: string; name: string; defaultName: string | null; removedForAll: boolean; artist: string | null; artists: Array<{ name: string; n: number }>; tracks: Song[] }
 
 const post = (path: string, body: unknown) => fetch(path, { method: "POST", body: JSON.stringify(body) });
 const PW = "tg_admin";
@@ -57,6 +57,17 @@ export function PlaylistPage({ id }: { id: string }) {
   /** Takes the playlist off the list on this device, or (unlocked) for everyone; the same button brings it back. */
   const removeHere = () => { setGone(id, !goneHere); setGoneHere(!goneHere); if (!goneHere) back(); };
   const removeAll = async () => { await global("/api/playlist/remove", { id, removed: !data?.removedForAll }); if (!data?.removedForAll) back(); else load(); };
+  // the playlist's name: this device's own, else the default for everyone, else YouTube's
+  const [nameText, setNameText] = useState("");
+  const shownName = getNames()[id] ?? data?.defaultName ?? data?.name ?? "";
+  useEffect(() => { if (data) setNameText(getNames()[id] ?? data.defaultName ?? data.name); }, [data, id]);
+  const saveName = async () => {
+    const n = nameText.trim();
+    const original = admin ? data?.name : data?.defaultName ?? data?.name;
+    const value = !n || n === original ? null : n; // the original name = no custom name
+    if (admin) { await global("/api/playlist/name", { id, name: value }); setLocalName(id, null); } else setLocalName(id, value);
+    load();
+  };
   const setOnly = async (artist: string | null) => {
     if (admin) { await global("/api/playlist/settings", { id, artist }); updateLocal((l) => { delete l.artists[id]; }); }
     else updateLocal((l) => { l.artists[id] = artist ?? ""; }); // "" = off on this device
@@ -104,7 +115,11 @@ export function PlaylistPage({ id }: { id: string }) {
       {data && (
         <>
           <section className="card">
-            <h2>{data.name}</h2>
+            <h2>{shownName}</h2>
+            <label className="opt"><span>{t("Playlist name")}</span>
+              <input value={nameText} maxLength={80} onChange={(e) => setNameText(e.target.value)} onBlur={saveName} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
+              <small className="muted">{admin ? t("Saved as the name for everyone.") : t("Saved on this device. Empty or the original name resets it.")}</small>
+            </label>
             <div className="song-btns">
               <button className="btn ghost" onClick={removeHere}>{goneHere ? t("Add this playlist back (this device)") : t("Remove this playlist (this device)")}</button>
               {admin && <button className="btn ghost" onClick={removeAll}>{data.removedForAll ? t("Add this playlist back for everyone") : t("Remove this playlist for everyone")}</button>}
