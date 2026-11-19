@@ -12,13 +12,26 @@ describe("Room (buzzer game)", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const cfg = (o: Partial<GameConfig> = {}): GameConfig => ({ ...DEFAULT_CONFIG, playTo: { kind: "rounds", rounds: 2 }, ...o });
+  const cfg = (o: Partial<GameConfig> = {}): GameConfig => ({ ...DEFAULT_CONFIG, start: "beginning", playTo: { kind: "rounds", rounds: 2 }, ...o });
   const make = (rounds = 2, autoAdvance = true, extra: Partial<GameConfig> = {}) => {
     const music = new DemoProvider();
     const room = new Room("ABCD", music, cfg({ playTo: { kind: "rounds", rounds }, autoAdvance, ...extra }), { guessMs: 25_000, revealMs: 5_000 });
     const song = () => SONGS[music.played.at(-1)!.id]!;
     return { music, room, song };
   };
+
+  it("songs start at the beginning, or at a random point at least 20 s before the end", async () => {
+    const a = make(1, true, { start: "beginning" });
+    a.room.addPlayer("A");
+    await a.room.start();
+    expect(a.music.played[0]!.startMs).toBe(0);
+    for (let i = 0; i < 20; i++) {
+      const b = make(1, true, { start: "random" });
+      b.room.addPlayer("A");
+      await b.room.start();
+      expect(b.music.played[0]!.startMs).toBeLessThanOrEqual(200_000 - 20_000);
+    }
+  });
 
   it("limits players to 4 and only joins in the lobby", () => {
     const { room } = make();
@@ -201,7 +214,7 @@ describe("Room (buzzer game)", () => {
   });
 
   it("with auto-advance off, every kind of round end is held, and the next round starts when the song ends", async () => {
-    const { room } = make(2, false);
+    const { room } = make(2, false, { start: "beginning" });
     const a = room.addPlayer("Ana")!;
     await room.start();
     room.voteSkip(a);

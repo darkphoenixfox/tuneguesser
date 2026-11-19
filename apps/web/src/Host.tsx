@@ -214,6 +214,9 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               </div>
               <small className="muted">{!cfg.hints.reveal && !cfg.hints.trivia && !cfg.hints.art ? "No hints." : [cfg.hints.reveal && "Reveal: underscores, letters appear after 10 s.", cfg.hints.trivia && "Trivia: facts from MusicBrainz and Wikipedia.", cfg.hints.art && "Artwork: pixelated cover that sharpens over time."].filter(Boolean).join(" ")}</small>
             </div>
+            <div className="opt"><span>Song starts</span>
+              <Seg value={cfg.start} options={[["random", "Random start"], ["beginning", "From the beginning"]]} onChange={(start) => set({ start })} />
+            </div>
             <div className="opt"><span>Next song</span>
               <Seg value={cfg.autoAdvance} options={[[true, "Automatic"], [false, "Song end / Manually skip"]]} onChange={(autoAdvance) => set({ autoAdvance })} />
             </div>

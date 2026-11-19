@@ -16,6 +16,8 @@ export interface GameConfig {
   multipliers: boolean;
   /** when a round has ended: false = hold the screen (song plays on) until the host continues or the song ends */
   autoAdvance: boolean;
+  /** where each song starts: its beginning, or a random point */
+  start: "beginning" | "random";
 }
 
 export const DEFAULT_CONFIG: GameConfig = {
@@ -28,6 +30,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   attempts: 3,
   multipliers: true,
   autoAdvance: true,
+  start: "random",
 };
 
 const num = (v: unknown, lo: number, hi: number, d: number) => {
@@ -60,5 +63,6 @@ export function sanitizeConfig(raw: unknown): GameConfig {
     attempts: num(r.attempts, 1, 5, 3),
     multipliers: r.multipliers !== false,
     autoAdvance: r.autoAdvance !== false,
+    start: pick(r.start, ["beginning", "random"] as const, "random"),
   };
 }

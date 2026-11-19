@@ -202,6 +202,9 @@ Sessions were only in server memory, so every restart/deploy logged everyone out
 ### DEC-058 · One floating status bar on every game screen · 2026-11-19 · Active
 Host, solo and player screens had a mix of fixed corner buttons and static controls that did not line up with the round/score text. They now share one sticky `.statusbar`: pause, skip, round (+ seconds on phones), scores on the left; sound, mic, device, settings, quit on the right (player: exit, name + round, theme, mic, pause, skip, score, same order as before). All buttons are the same circle (44 px, 32 px on phones); vote counts are badges. The host's round screen fills the bar's left part through a portal, so the body grid lost its header row.
 
+### DEC-059 · Song start setting: random or from the beginning · 2026-11-19 · Active
+New gameplay option `start`: `random` (default) picks any point at least 20 s before the end of the song (before: 15-65% of the song, which could clip the end); `beginning` starts at 0:00. The 20 s margin is not shown to players. Tests use `beginning` so they stay deterministic.
+
 ---
 
 ## Open questions
