@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Glyph } from "./Glyph";
 import { onPadMenuButton, setMenuMode, usePad } from "./pad";
+import { t } from "../i18n";
 
 /**
  * In-app confirmation (replaces the browser's confirm box so a gamepad can answer it): A confirms, B goes back.
  * While it is open the game ignores the pad.
  */
-export function Confirm({ message, confirmLabel, cancelLabel = "Back to game", onConfirm, onCancel }: { message: string; confirmLabel: string; cancelLabel?: string; onConfirm: () => void; onCancel: () => void }) {
+export function Confirm({ message, confirmLabel, cancelLabel = t("Back to game"), onConfirm, onCancel }: { message: string; confirmLabel: string; cancelLabel?: string; onConfirm: () => void; onCancel: () => void }) {
   const { connected } = usePad();
   const live = useRef({ onConfirm, onCancel });
   live.current = { onConfirm, onCancel };

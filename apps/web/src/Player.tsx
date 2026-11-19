@@ -13,6 +13,7 @@ import { Scoreboard } from "./Scoreboard";
 import { sfx } from "./sfx";
 import type { PlayerCommand } from "@tuneguesser/shared";
 import { useYouTubePlayer } from "./YouTubePlayer";
+import { t } from "./i18n";
 
 interface Saved { code: string; name: string; playerId?: string }
 const load = (): Saved | null => {
@@ -42,13 +43,13 @@ function Join({ onJoin, onBack }: { onJoin: (s: Saved) => void; onBack?: () => v
   const ok = code.length === 4 && name.trim().length > 0;
   return (
     <main className="screen phone">
-      {onBack && <button className="backlink" onClick={onBack}>← Menu</button>}
+      {onBack && <button className="backlink" onClick={onBack}>{t("← Menu")}</button>}
       <SettingsMenu apk solo />
       <Logo />
       <form className="card" onSubmit={(e) => { e.preventDefault(); if (ok) { sfx.join(); onJoin({ code, name: name.trim() }); } }}>
-        <label>Room code<input className="codein" value={code} maxLength={4} autoCapitalize="characters" autoComplete="off" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} /></label>
-        <label>Your name<input value={name} maxLength={16} autoComplete="nickname" onChange={(e) => setName(e.target.value)} /></label>
-        <button className="btn big" disabled={!ok}>Join<PadHint button="a" focusOnly /></button>
+        <label>{t("Room code")}<input className="codein" value={code} maxLength={4} autoCapitalize="characters" autoComplete="off" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} /></label>
+        <label>{t("Your name")}<input value={name} maxLength={16} autoComplete="nickname" onChange={(e) => setName(e.target.value)} /></label>
+        <button className="btn big" disabled={!ok}>{t("Join")}<PadHint button="a" focusOnly /></button>
       </form>
     </main>
   );
@@ -152,7 +153,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
 
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
   if (error && !state) return <ErrorPage error={error} onBack={onLeave} />;
-  if (!state || !mine) return <main className="screen phone center"><p className="muted">Joining…</p></main>;
+  if (!state || !mine) return <main className="screen phone center"><p className="muted">{t("Joining…")}</p></main>;
 
   const Wrap = embedded ? "div" : "main";
   const leaveNow = () => { send({ t: "leave" }); onLeave(); };
@@ -175,12 +176,12 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
     <Wrap className={embedded ? "embedded" : "screen phone"} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       {!embedded && (
         <header className="statusbar phone-head">
-          <button className="exit" onClick={exit} aria-label="Exit to main screen">✕</button>
-          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round}` : `Round ${state.round}/${state.totalRounds ?? state.config.playTo.rounds}`}</small>}</b><ThemeButton /><MicToggle className="skip-top mic-top" />{state.youtube && <button className={"skip-top" + (listening ? " on" : "")} onClick={toggleListen} aria-pressed={listening} aria-label="Play the music on this device too" title={listening ? "Music plays on this device too" : "Also play the music on this device"}><span style={{ opacity: listening ? 1 : .45 }}>🎧</span></button>}{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
+          <button className="exit" onClick={exit} aria-label={t("Exit to main screen")}>✕</button>
+          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? t("Round {n}", { n: state.round }) : t("Round {n}/{total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds })}</small>}</b><ThemeButton /><MicToggle className="skip-top mic-top" />{state.youtube && <button className={"skip-top" + (listening ? " on" : "")} onClick={toggleListen} aria-pressed={listening} aria-label={t("Play the music on this device too")} title={listening ? t("Music plays on this device too") : t("Also play the music on this device")}><span style={{ opacity: listening ? 1 : .45 }}>🎧</span></button>}{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label={t("Skip song")} title={t("Skip song")}>⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
         </header>
       )}
       {yt.element}
-      {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
+      {state.phase === "lobby" && <div className="card center"><h2>{t("You're in! 🎉")}</h2><p className="muted">{t("Waiting for the host to start…")}</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
 
       {state.phase === "playing" && (
         <div className="card answer">
@@ -189,7 +190,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           {!embedded && <div className="vbar" aria-hidden="true"><i style={{ height: `${state.roundMs === null ? 100 : Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
           <div className="pl-main">
           {!embedded && (<>
-          {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
+          {state.paused && <p className="paused-banner">{t("⏸ PAUSED")}</p>}
           {state.art && <div className="phone-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
           <Hints state={state} />
           <FoundChips found={found} guess={state.config.guess} hint={state.hint} />
@@ -198,7 +199,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           {iAmGuesser && state.options ? (
             <div className="guess-form">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
-              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel<PadHint button="start" /></button>
+              <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>{t("Cancel")}<PadHint button="start" /></button>
               <div className="choices">
                 {state.options.map((o, i) => <button key={o.id} className="choice" disabled={sent} onClick={() => doChoose(i)}><span className="num">{i + 1}</span>{o.label}{(["a", "b", "x", "y"] as const)[i] && <PadHint button={(["a", "b", "x", "y"] as const)[i]!} />}</button>)}
               </div>
@@ -208,30 +209,30 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               {!embedded && <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />}
               {pad.connected ? (
                 <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} onCancel={() => send({ t: "cancel" })}>
-                  <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
-                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
+                  <label>{state.config.guess === "title" ? t("What's the song?") : state.config.guess === "artist" ? t("Who is the artist?") : found?.title ? t("Who is the artist?") : found?.artist ? t("What's the song?") : t("Song, artist, or both")}
+                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? t("Song title") : state.config.guess === "artist" ? t("Artist") : found?.title ? t("Artist") : found?.artist ? t("Song title") : t("e.g. Billie Jean – Michael Jackson")} />
               </label>
                 </PadKeyboard>
               ) : (
                 <div className="gf-main">
                   <div className="answer-row">
-                  <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
-                <input ref={titleRef} value={text} onChange={(e) => { clearTimeout(autoSend.current); setText(e.target.value); }} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
+                  <label>{state.config.guess === "title" ? t("What's the song?") : state.config.guess === "artist" ? t("Who is the artist?") : found?.title ? t("Who is the artist?") : found?.artist ? t("What's the song?") : t("Song, artist, or both")}
+                <input ref={titleRef} value={text} onChange={(e) => { clearTimeout(autoSend.current); setText(e.target.value); }} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? t("Song title") : state.config.guess === "artist" ? t("Artist") : found?.title ? t("Artist") : found?.artist ? t("Song title") : t("e.g. Billie Jean – Michael Jackson")} />
               </label>
                   <MicButton disabled={sent} onText={(t) => { clearTimeout(autoSend.current); setText(t); }} onFinal={heard} />
                   </div>
                   <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
-                  <button type="button" className="btn ghost" onClick={() => { clearTimeout(autoSend.current); send({ t: "cancel" }); }}>Cancel</button>
+                  <button type="button" className="btn ghost" onClick={() => { clearTimeout(autoSend.current); send({ t: "cancel" }); }}>{t("Cancel")}</button>
                 </div>
               )}
             </form>
           ) : guessing ? (
-            <p className="guessing-msg">🎤 {state.guesser!.name} is guessing…</p>
+            <p className="guessing-msg">🎤 {t("{name} is guessing…", { name: state.guesser!.name })}</p>
           ) : state.config.order === "roundRobin" && state.activePlayerId !== mine.id ? (
-            <p className="guessing-msg">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name ?? "Someone"}'s song</p>
+            <p className="guessing-msg">🎯 {t("{name}'s song", { name: state.players.find((p) => p.id === state.activePlayerId)?.name ?? t("Someone") })}</p>
           ) : (
             <button className="answer-btn" data-pad-first disabled={mine.attemptsLeft === 0} onClick={() => send({ t: "buzz" })}>
-              {mine.attemptsLeft === 0 ? "Out of tries" : state.config.order === "roundRobin" ? "YOUR SONG: ANSWER" : "ANSWER"}
+              {mine.attemptsLeft === 0 ? t("Out of tries") : state.config.order === "roundRobin" ? t("YOUR SONG: ANSWER") : t("ANSWER")}
               {mine.attemptsLeft > 0 && <PadHint button="a" />}
             </button>
           )}
@@ -254,12 +255,12 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               <Scoreboard state={state} reveal={state.reveal} meId={mine.id} />
             </div>
           </div>
-          {state.awaitingNext && <p className="muted">The song plays on. Next round starts at its end, or when someone presses Next song.</p>}
-          <button className="btn" onClick={() => send({ t: "next" })}>Next song<PadHint button="a" /></button>
+          {state.awaitingNext && <p className="muted">{t("The song plays on. Next round starts at its end, or when someone presses Next song.")}</p>}
+          <button className="btn" onClick={() => send({ t: "next" })}>{t("Next song")}<PadHint button="a" /></button>
         </div>
       )}
-      {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}
-      {askLeave && <Confirm message="Leave the game?" confirmLabel="Leave" onCancel={() => setAskLeave(false)} onConfirm={leaveNow} />}
+      {state.phase === "finished" && <div className="card center"><h2>{t("Game over")}</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>{t("Back to main screen")}</button></div>}
+      {askLeave && <Confirm message={t("Leave the game?")} confirmLabel={t("Leave")} onCancel={() => setAskLeave(false)} onConfirm={leaveNow} />}
     </Wrap>
   );
 }

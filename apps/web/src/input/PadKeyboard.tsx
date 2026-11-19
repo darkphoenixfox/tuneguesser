@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { suggest } from "@tuneguesser/shared";
 import { Glyph } from "./Glyph";
 import { onPadButton, type PadButtonName } from "./pad";
+import { t } from "../i18n";
 
 const ROWS = ["1234567890", "qwertyuiop", "asdfghjkl'", "zxcvbnm-.&"];
 /** The action column on the right, top to bottom */
@@ -19,7 +20,7 @@ const ACT = ROWS.length; // position row of the action column
  * right. D-pad moves (right from the last letter reaches the actions), A presses, and the action buttons have their own
  * gamepad buttons: Y send, X space, B cancel, R1/RB backspace. `children` is shown above the keys (the answer field).
  */
-export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, sendLabel = "SEND", children }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; onCancel: () => void; disabled?: boolean; sendLabel?: string; children?: ReactNode }) {
+export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, sendLabel = t("SEND"), children }: { text: string; words: string[]; onText: (t: string) => void; onSend: () => void; onCancel: () => void; disabled?: boolean; sendLabel?: string; children?: ReactNode }) {
   const sugg = useMemo(() => suggest(text, words), [text, words]);
   const [pos, setPos] = useState({ r: 1, c: 0 });
   const live = useRef({ text, sugg, disabled, pos, onText, onSend, onCancel });
@@ -68,11 +69,11 @@ export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, s
   const cur = clamp(pos.r, pos.c);
   const cls = (r: number, c: number) => "pk-key" + (cur.r === r && cur.c === c ? " on" : "");
   return (
-    <div className="padkb" aria-label="On-screen keyboard">
+    <div className="padkb" aria-label={t("On-screen keyboard")}>
       <div className="pk-left">
         {children}
         <div className="pk-row pk-sugg">
-          {sugg.length === 0 && <span className="muted pk-none">Suggestions appear as you type</span>}
+          {sugg.length === 0 && <span className="muted pk-none">{t("Suggestions appear as you type")}</span>}
           {sugg.map((s, c) => <button type="button" key={s.text} className={cls(SUGG, c) + " sugg"} onClick={() => { setPos({ r: SUGG, c }); press(SUGG, c); }}>{s.label}</button>)}
         </div>
         {ROWS.map((row, r) => (
@@ -84,7 +85,7 @@ export function PadKeyboard({ text, words, onText, onSend, onCancel, disabled, s
       <div className="pk-actions">
         {ACTIONS.map((a, i) => (
           <button type="button" key={a.id} className={cls(ACT, i) + " act" + (a.id === "send" ? " send" : "")} onClick={() => { setPos({ r: ACT, c: i }); press(ACT, i); }}>
-            <Glyph button={a.button} /> {a.id === "send" ? sendLabel : a.label}
+            <Glyph button={a.button} /> {a.id === "send" ? sendLabel : t(a.label)}
           </button>
         ))}
       </div>

@@ -19,6 +19,8 @@ Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 ### YouTube mode (experimental, branch `youtube-playback`)
 With `YOUTUBE_API_KEY` set on the server, the host setup shows **Music from: Spotify / YouTube**. YouTube needs no account: paste public or unlisted playlist links and the music plays on the host screen. Each player can tap 🎧 to hear it on their own phone too.
 
+The interface is available in **English and Spanish** (⚙ Settings → Language).
+
 ### Game types (Host a game page)
 The last chosen playlists and options are remembered on the host's device. The **⚡ Quickstart** button at the top starts a game at once with those last settings.
 

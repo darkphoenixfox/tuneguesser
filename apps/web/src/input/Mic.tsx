@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getLang, t } from "../i18n";
 
 type Native = { canListen?: () => boolean; startListening?: (lang: string) => void; stopListening?: () => void; cancelListening?: () => void };
 const nativeBridge = (): Native | undefined => (typeof window === "undefined" ? undefined : (window as any).TuneGuesserApp);
@@ -44,7 +45,7 @@ export function MicToggle({ className }: { className?: string }) {
   const [on, set] = useMicDefault();
   if (!getCtor()) return null;
   return (
-    <button className={(className ?? "") + (on ? " on" : "")} onClick={() => set(!on)} aria-pressed={on} aria-label="Answer by voice by default" title={on ? "Voice answers on: the microphone opens when you press ANSWER" : "Voice answers off"}>
+    <button className={(className ?? "") + (on ? " on" : "")} onClick={() => set(!on)} aria-pressed={on} aria-label={t("Answer by voice by default")} title={on ? t("Voice answers on: the microphone opens when you press ANSWER") : t("Voice answers off")}>
       <span style={{ opacity: on ? 1 : .45 }}>🎤</span>
     </button>
   );
@@ -76,7 +77,7 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
     if (on) { rec.current?.stop(); return; }
     setErr("");
     const r = new (getCtor())();
-    r.lang = navigator.language || "en-US";
+    r.lang = getLang() === "es" ? "es-ES" : navigator.language || "en-US";
     r.interimResults = true;
     r.continuous = false;
     r.maxAlternatives = 1;
@@ -87,7 +88,7 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
       last = t.trim();
       cb.current.onText(last);
     };
-    r.onerror = (e: any) => setErr(e.error === "not-allowed" || e.error === "service-not-allowed" ? "Microphone blocked: allow it in the browser" : e.error === "no-speech" ? "Didn't hear anything" : "");
+    r.onerror = (e: any) => setErr(e.error === "not-allowed" || e.error === "service-not-allowed" ? t("Microphone blocked: allow it in the browser") : e.error === "no-speech" ? t("Didn't hear anything") : "");
     r.onend = () => { setOn(false); if (last) cb.current.onFinal(last); };
     rec.current = r;
     try { r.start(); setOn(true); } catch {

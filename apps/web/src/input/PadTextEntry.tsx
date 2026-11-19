@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PadKeyboard } from "./PadKeyboard";
 import { Glyph } from "./Glyph";
 import { onPadButton } from "./pad";
+import { t } from "../i18n";
 
 /** Gamepad text entry: pressing A on a text box (main screen, lobby) opens the on-screen keyboard for it. */
 export function PadTextEntry() {
@@ -32,14 +33,14 @@ export function PadTextEntry() {
   };
   if (!target) return null;
   const max = target.maxLength > 0 ? target.maxLength : 160;
-  const label = target.closest("label")?.firstChild?.textContent?.trim() || target.placeholder || "Type here";
+  const label = target.closest("label")?.firstChild?.textContent?.trim() || target.placeholder || t("Type here");
   return (
-    <div className="padtext" role="dialog" aria-label="On-screen keyboard" data-pad-game>
+    <div className="padtext" role="dialog" aria-label={t("On-screen keyboard")} data-pad-game>
       <div className="card">
         <h2>{label}</h2>
         <div className="padtext-value">{text || <span className="muted">…</span>}<i /></div>
-        <PadKeyboard text={text} words={[]} onText={(t) => setText(t.slice(0, max))} onSend={apply} onCancel={close} sendLabel="DONE" />
-        <button className="btn ghost" onClick={close}>Cancel <Glyph button="start" /></button>
+        <PadKeyboard text={text} words={[]} onText={(t) => setText(t.slice(0, max))} onSend={apply} onCancel={close} sendLabel={t("DONE")} />
+        <button className="btn ghost" onClick={close}>{t("Cancel")} <Glyph button="start" /></button>
       </div>
     </div>
   );

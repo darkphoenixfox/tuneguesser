@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { PlayerCommand } from "@tuneguesser/shared";
+import { t } from "./i18n";
 
 declare global {
   interface Window { YT?: any; onYouTubeIframeAPIReady?: () => void }
@@ -102,8 +103,8 @@ export function useYouTubePlayer(enabled: boolean, onError: (message: string) =>
         playerVars: { playsinline: 1, controls: 0, disablekb: 1, rel: 0, modestbranding: 1, origin: location.origin },
         events: {
           onReady: () => { for (const c of queue.current.splice(0)) apply(player.current, c); },
-          onAutoplayBlocked: () => { blocked = true; err.current("The browser blocked the sound: tap anywhere to start the music"); },
-          onError: (e: { data: number }) => err.current(e.data === 101 || e.data === 150 ? "This video cannot be played embedded" : `YouTube player error ${e.data}`),
+          onAutoplayBlocked: () => { blocked = true; err.current(t("The browser blocked the sound: tap anywhere to start the music")); },
+          onError: (e: { data: number }) => err.current(e.data === 101 || e.data === 150 ? t("This video cannot be played embedded") : t("YouTube player error {n}", { n: e.data })),
         },
       });
     });

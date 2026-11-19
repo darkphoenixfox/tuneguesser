@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "./i18n";
 import { Confirm } from "./input/Confirm";
 
 type AppBridge = { quit?: () => void };
@@ -34,5 +35,5 @@ export function BackHandler() {
   }, []);
 
   if (!askExit) return null;
-  return <Confirm message="Exit TuneGuesser?" confirmLabel="Exit" cancelLabel="Stay" onCancel={() => setAskExit(false)} onConfirm={() => { setAskExit(false); bridge()?.quit?.(); }} />;
+  return <Confirm message={t("Exit TuneGuesser?")} confirmLabel={t("Exit")} cancelLabel={t("Stay")} onCancel={() => setAskExit(false)} onConfirm={() => { setAskExit(false); bridge()?.quit?.(); }} />;
 }

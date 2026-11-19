@@ -15,6 +15,7 @@ import { MicToggle } from "./input/Mic";
 import { Confirm } from "./input/Confirm";
 import { useYouTubePlayer } from "./YouTubePlayer";
 import { onPadButton, usePad } from "./input/pad";
+import { t } from "./i18n";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
@@ -38,7 +39,7 @@ export function Host({ solo, onBack }: { solo?: boolean; onBack?: () => void }) 
 function Seg<T extends string | number | boolean>({ value, options, onChange }: { value: T; options: Array<[T, string]>; onChange: (v: T) => void }) {
   return (
     <div className="seg">
-      {options.map(([v, label]) => <button type="button" key={String(v)} className={v === value ? "on" : ""} onClick={() => onChange(v)}>{label}</button>)}
+      {options.map(([v, label]) => <button type="button" key={String(v)} className={v === value ? "on" : ""} onClick={() => onChange(v)}>{t(label)}</button>)}
     </div>
   );
 }
@@ -60,7 +61,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const [playerName, setPlayerName] = useState(() => { try { return localStorage.getItem("tg_name") || ""; } catch { return ""; } });
   const [me, setMe] = useState<{ spotify: boolean; spotifyConfigured: boolean; youtube?: boolean }>();
   // music source: Spotify (account + a playing device) or YouTube (playlist links, plays on this screen)
-  const [source, setSource] = useState<"spotify" | "youtube">(() => (readJson<string>("tg_source", "spotify") === "youtube" ? "youtube" : "spotify"));
+  const [source, setSource] = useState<"spotify" | "youtube">(() => (readJson<string>("tg_music", "youtube") === "spotify" ? "spotify" : "youtube")); // YouTube is the default
   const [ytLists, setYtLists] = useState<Array<{ id: string; name: string; tracks: number; image?: string }>>(() => readJson("tg_ytlists", []));
   const [ytInput, setYtInput] = useState("");
   const useYt = source === "youtube" && !!me?.youtube;
@@ -69,7 +70,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     setErr("");
     const r = await fetch(`/api/youtube/playlist?url=${encodeURIComponent(ytInput.trim())}`);
     const j = await r.json();
-    if (!r.ok) return setErr(j.error ?? "Could not add that playlist");
+    if (!r.ok) return setErr(j.error ?? t("Could not add that playlist"));
     setYtLists((cur) => (cur.some((x) => x.id === j.id) ? cur : [...cur, j]));
     setYtInput("");
   };
@@ -89,7 +90,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
       try { localStorage.setItem("tg_ytinit", JSON.stringify([...offered, ...ok.map((j) => j.id)])); } catch { /* storage blocked */ }
     });
   }, [useYt]);
-  useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_source", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
+  useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_music", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
@@ -97,7 +98,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const [cfg, setCfg] = useState<GameConfig>(() => sanitizeConfig({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
   const canStart = useYt ? ytLists.length > 0 : picked.length > 0 && !!deviceId;
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
-  const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
+  const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? t("Spotify login failed, try again.") : "");
   const [busy, setBusy] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const poll = useRef<ReturnType<typeof setInterval>>();
@@ -117,7 +118,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
       const { code } = await fetch(`/api/auth/pair?nonce=${nonce}`).then((x) => x.json());
       const url = `${location.origin}/api/l/${code}`;
       setPairing({ code, url, nonce, qr: await QRCode.toDataURL(url, { margin: 1, width: 300, color: { dark: "#0b0b1a", light: "#ffffff" } }) });
-    } catch { setErr("Cannot reach the server"); return; }
+    } catch { setErr(t("Cannot reach the server")); return; }
     setWaiting(true);
     clearInterval(poll.current);
     const until = Date.now() + 10 * 60_000;
@@ -135,7 +136,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   };
 
   useEffect(() => {
-    fetch("/api/me").then((r) => r.json()).then(setMe).catch(() => setErr("Cannot reach the server"));
+    fetch("/api/me").then((r) => r.json()).then(setMe).catch(() => setErr(t("Cannot reach the server")));
   }, []);
 
   const loadDevices = () => fetch("/api/devices").then((r) => r.json()).then((d: Device[]) => {
@@ -148,7 +149,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     fetch("/api/playlists").then((r) => r.json()).then((p: Playlist[]) => {
       setPlaylists(p);
       setPicked((cur) => cur.filter((id) => p.some((x) => x.id === id))); // forget playlists that are gone
-    }).catch(() => setErr("Could not load playlists"));
+    }).catch(() => setErr(t("Could not load playlists")));
     void loadDevices();
   }, [me?.spotify]);
 
@@ -158,7 +159,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     setBusy(true); setErr("");
     sfx.start(); // unlocks audio on this screen
     try { localStorage.setItem(LAST_PLAYLISTS, JSON.stringify(picked)); localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ }
-    const name = playerName.trim() || "Player";
+    const name = playerName.trim() || t("Player");
     if (solo) {
       try { localStorage.setItem("tg_name", name); } catch { /* storage blocked */ }
       sessionStorage.setItem("tg_hostplayer", JSON.stringify({ name })); // this screen plays: the lobby is skipped
@@ -169,7 +170,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     });
     const j = await r.json();
     setBusy(false);
-    if (!r.ok) return setErr(j.error ?? "Could not create room");
+    if (!r.ok) return setErr(j.error ?? t("Could not create room"));
     onCreated({ code: j.code, token: j.hostToken, youtube: useYt || undefined });
   };
 
@@ -177,60 +178,60 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const options = (
     <>
           <section className="card opts">
-            {solo && <label>Your name<input value={playerName} maxLength={16} autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} placeholder="Player" /></label>}
+            {solo && <label>{t("Your name")}<input value={playerName} maxLength={16} autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} placeholder={t("Player")} /></label>}
             {!useYt && (
-              <div className="opt"><span>Music plays on</span>
+              <div className="opt"><span>{t("Music plays on")}</span>
                 <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} onFocus={loadDevices}>
-                  {devices.length === 0 && <option value="">No device found – open Spotify somewhere</option>}
+                  {devices.length === 0 && <option value="">{t("No device found – open Spotify somewhere")}</option>}
                   {devices.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type}){d.active ? " ●" : ""}</option>)}
                 </select>
               </div>
             )}
-            <div className="opt"><span>Play to</span>
+            <div className="opt"><span>{t("Play to")}</span>
               <Seg value={cfg.playTo.kind} options={[["rounds", "Rounds"], ["score", "Score"]]} onChange={(k) => set({ playTo: k === "rounds" ? { kind: "rounds", rounds: 10 } : { kind: "score", target: 5000 } })} />
               {cfg.playTo.kind === "rounds"
-                ? <label>Rounds <input type="number" min={1} max={100} value={cfg.playTo.rounds} onChange={(e) => set({ playTo: { kind: "rounds", rounds: +e.target.value } })} /></label>
-                : <label>Target score <input type="number" min={500} max={100000} step={500} value={cfg.playTo.target} onChange={(e) => set({ playTo: { kind: "score", target: +e.target.value } })} /></label>}
+                ? <label>{t("Rounds")} <input type="number" min={1} max={100} value={cfg.playTo.rounds} onChange={(e) => set({ playTo: { kind: "rounds", rounds: +e.target.value } })} /></label>
+                : <label>{t("Target score")} <input type="number" min={500} max={100000} step={500} value={cfg.playTo.target} onChange={(e) => set({ playTo: { kind: "score", target: +e.target.value } })} /></label>}
             </div>
             {!solo && (
-              <div className="opt"><span>Play order</span>
+              <div className="opt"><span>{t("Play order")}</span>
                 <Seg value={cfg.order} options={[["buzzer", "Buzzer"], ["roundRobin", "Round robin"]]} onChange={(order) => set({ order })} />
-                <small className="muted">{cfg.order === "buzzer" ? "Everyone can buzz in; the first to press ANSWER guesses." : "Players take turns: each player gets one song to guess, or skip."}</small>
+                <small className="muted">{cfg.order === "buzzer" ? t("Everyone can buzz in; the first to press ANSWER guesses.") : t("Players take turns: each player gets one song to guess, or skip.")}</small>
               </div>
             )}
-            <div className="opt"><span>Guess</span>
+            <div className="opt"><span>{t("Guess")}</span>
               <Seg value={cfg.guess} options={[["both", "Both"], ["title", "Song"], ["artist", "Artist"]]} onChange={(guess) => set({ guess })} />
-              {cfg.guess !== "both" && <small className="muted">{cfg.guess === "title" ? "Only the song title counts. Handy when the playlist is one artist." : "Only the artist counts. Handy for mixed playlists where you only care who it is."}</small>}
+              {cfg.guess !== "both" && <small className="muted">{cfg.guess === "title" ? t("Only the song title counts. Handy when the playlist is one artist.") : t("Only the artist counts. Handy for mixed playlists where you only care who it is.")}</small>}
             </div>
-            <div className="opt"><span>Answers</span>
+            <div className="opt"><span>{t("Answers")}</span>
               <Seg value={cfg.answers} options={[["type", "Type"], ["choice", "Multiple choice"]]} onChange={(answers) => set({ answers })} />
-              {cfg.answers === "choice" && <small className="muted">4 options, the wrong ones are other songs from the playlist(s).</small>}
+              {cfg.answers === "choice" && <small className="muted">{t("4 options, the wrong ones are other songs from the playlist(s).")}</small>}
             </div>
-            <div className="opt"><span>Hints</span>
-              <div className="seg" role="group" aria-label="Hints">
+            <div className="opt"><span>{t("Hints")}</span>
+              <div className="seg" role="group" aria-label={t("Hints")}>
                 {([["reveal", "Reveal letters"], ["trivia", "Trivia"], ["art", "Artwork"]] as const).map(([k, label]) => (
-                  <button key={k} type="button" className={cfg.hints[k] ? "on" : ""} aria-pressed={cfg.hints[k]} onClick={() => set({ hints: { ...cfg.hints, [k]: !cfg.hints[k] } })}>{cfg.hints[k] ? "✓ " : ""}{label}</button>
+                  <button key={k} type="button" className={cfg.hints[k] ? "on" : ""} aria-pressed={cfg.hints[k]} onClick={() => set({ hints: { ...cfg.hints, [k]: !cfg.hints[k] } })}>{cfg.hints[k] ? "✓ " : ""}{t(label)}</button>
                 ))}
               </div>
-              <small className="muted">{!cfg.hints.reveal && !cfg.hints.trivia && !cfg.hints.art ? "No hints." : [cfg.hints.reveal && "Reveal: underscores, letters appear after 10 s.", cfg.hints.trivia && "Trivia: facts from MusicBrainz and Wikipedia.", cfg.hints.art && "Artwork: pixelated cover that sharpens over time."].filter(Boolean).join(" ")}</small>
+              <small className="muted">{!cfg.hints.reveal && !cfg.hints.trivia && !cfg.hints.art ? t("No hints.") : [cfg.hints.reveal && t("Reveal: underscores, letters appear after 10 s."), cfg.hints.trivia && t("Trivia: facts from MusicBrainz and Wikipedia."), cfg.hints.art && t("Artwork: pixelated cover that sharpens over time.")].filter(Boolean).join(" ")}</small>
             </div>
-            <div className="opt"><span>Song starts</span>
+            <div className="opt"><span>{t("Song starts")}</span>
               <Seg value={cfg.start} options={[["random", "Random start"], ["beginning", "From the beginning"]]} onChange={(start) => set({ start })} />
             </div>
-            <div className="opt"><span>Next song</span>
+            <div className="opt"><span>{t("Next song")}</span>
               <Seg value={cfg.autoAdvance} options={[[true, "Automatic"], [false, "Song end / Manually skip"]]} onChange={(autoAdvance) => set({ autoAdvance })} />
             </div>
-            <div className="opt"><span>Timer</span>
+            <div className="opt"><span>{t("Timer")}</span>
               <Seg value={timed} options={[[true, "Seconds per song"], [false, "Unlimited"]]} onChange={(t) => set({ roundSeconds: t ? 40 : null })} />
-              {timed && <label>Seconds <input type="number" min={10} max={120} value={cfg.roundSeconds ?? 40} onChange={(e) => set({ roundSeconds: +e.target.value })} /></label>}
-              {!timed && <small className="muted">The round lasts until the song ends.</small>}
+              {timed && <label>{t("Seconds")} <input type="number" min={10} max={120} value={cfg.roundSeconds ?? 40} onChange={(e) => set({ roundSeconds: +e.target.value })} /></label>}
+              {!timed && <small className="muted">{t("The round lasts until the song ends.")}</small>}
             </div>
-            <div className="opt"><span>Attempts per round</span>
+            <div className="opt"><span>{t("Attempts per round")}</span>
               <Seg value={cfg.attempts} options={[1, 2, 3, 4, 5].map((n) => [n, String(n)] as [number, string])} onChange={(attempts) => set({ attempts })} />
             </div>
-            <div className="opt"><span>Score multipliers</span>
+            <div className="opt"><span>{t("Score multipliers")}</span>
               <Seg value={cfg.multipliers} options={[[true, "Yes"], [false, "No"]]} onChange={(multipliers) => set({ multipliers })} />
-              <small className="muted">Extra points for song + artist at once, and for streaks.</small>
+              <small className="muted">{t("Extra points for song + artist at once, and for streaks.")}</small>
             </div>
           </section>
           <button className="btn big" disabled={!canStart || busy} onClick={() => create(false)}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
@@ -238,30 +239,30 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   );
   return (
     <main className="screen setup">
-      {onBack && <button className="backlink" onClick={onBack}>← Menu</button>}
+      {onBack && <button className="backlink" onClick={onBack}>{t("← Menu")}</button>}
       <SettingsMenu apk solo />
       <Logo />
       {err && <p className="error">{err}</p>}
       {me?.youtube && (
-        <div className="card source-pick"><span>Music from</span><Seg value={source} options={[["spotify", "Spotify"], ["youtube", "YouTube"]]} onChange={(v) => setSource(v)} /></div>
+        <div className="card source-pick"><span>{t("Music from")}</span><Seg value={source} options={[["youtube", "YouTube"], ["spotify", "Spotify"]]} onChange={(v) => setSource(v)} /></div>
       )}
-      {!me ? <p className="muted">Loading…</p> : useYt ? (
+      {!me ? <p className="muted">{t("Loading…")}</p> : useYt ? (
         <>
           <div className="quick">
-            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title="Play with the last settings" onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
+            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create(false)}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
-            <h2>YouTube playlists {ytLists.length > 0 && <small className="muted">({ytLists.length})</small>}</h2>
-            <p className="muted pl-note">Paste the link of a public or unlisted playlist (YouTube or YouTube Music). The music plays on this screen, no account needed.</p>
+            <h2>{t("YouTube playlists")} {ytLists.length > 0 && <small className="muted">({ytLists.length})</small>}</h2>
+            <p className="muted pl-note">{t("Paste the link of a public or unlisted playlist (YouTube or YouTube Music). The music plays on this screen, no account needed.")}</p>
             <form className="yt-add" onSubmit={(e) => { e.preventDefault(); void addYt(); }}>
-              <input value={ytInput} onChange={(e) => setYtInput(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" inputMode="url" aria-label="YouTube playlist link" />
-              <button className="btn" type="submit">Add</button>
+              <input value={ytInput} onChange={(e) => setYtInput(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" inputMode="url" aria-label={t("YouTube playlist link")} />
+              <button className="btn" type="submit">{t("Add")}</button>
             </form>
             <div className="grid">
               {ytLists.map((p) => (
-                <button key={p.id} className="pl sel" onClick={() => setYtLists((cur) => cur.filter((x) => x.id !== p.id))} title="Remove">
+                <button key={p.id} className="pl sel" onClick={() => setYtLists((cur) => cur.filter((x) => x.id !== p.id))} title={t("Remove")}>
                   {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                  <b>{p.name}</b><small>{p.tracks} videos · tap to remove</small>
+                  <b>{p.name}</b><small>{t("{n} videos · tap to remove", { n: p.tracks })}</small>
                 </button>
               ))}
             </div>
@@ -270,40 +271,40 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
         </>
       ) : !me.spotify ? (
         <div className="card center">
-          <p>Log in with the Spotify account that will play the music (Premium required).</p>
-          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
+          <p>{t("Log in with the Spotify account that will play the music (Premium required).")}</p>
+          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>{t("Log in with Spotify")}<PadHint button="a" focusOnly /></a> : <p className="error">{t("Server has no SPOTIFY_CLIENT_ID.")}</p>}
           {pairing && (
-            <div className="pairing-overlay padtext" role="dialog" aria-label="Log in on another device">
+            <div className="pairing-overlay padtext" role="dialog" aria-label={t("Log in on another device")}>
               <div className="card pairing">
-                <h2>Log in to Spotify on another device</h2>
+                <h2>{t("Log in to Spotify on another device")}</h2>
                 <div className="pairing-body">
-                  <img src={pairing.qr} alt="QR code to log in" className="qr" />
+                  <img src={pairing.qr} alt={t("QR code to log in")} className="qr" />
                   <div className="pairing-side">
-                    <p>Scan the code with your phone, or open <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
-                    <p className="muted">Log in to Spotify there (Premium). This screen continues by itself.</p>
-                    <button className="btn" data-pad-first onClick={openHere}>Use this device's browser</button>
-                    <button className="btn ghost" onClick={stopLogin}>Cancel</button>
+                    <p>{t("Scan the code with your phone, or open")} <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
+                    <p className="muted">{t("Log in to Spotify there (Premium). This screen continues by itself.")}</p>
+                    <button className="btn" data-pad-first onClick={openHere}>{t("Use this device's browser")}</button>
+                    <button className="btn ghost" onClick={stopLogin}>{t("Cancel")}</button>
                   </div>
                 </div>
               </div>
             </div>
           )}
-          <p className="muted login-note">Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.</p>
+          <p className="muted login-note">{t("Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.")}</p>
           <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
         </div>
       ) : (
         <>
           <div className="quick">
-            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title="Play with the last settings" onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
+            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create(false)}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
-            <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
-            <p className="muted pl-note">Pick the playlists for the next game. Manage your playlists on Spotify. <a className="sp-link" href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer" aria-label="Open your playlists on Spotify" title="Open Spotify"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></a></p>
+            <h2>{t("Playlists")} {picked.length > 0 && <small className="muted">({t("{n} selected", { n: picked.length })})</small>}</h2>
+            <p className="muted pl-note">{t("Pick the playlists for the next game. Manage your playlists on Spotify.")} <a className="sp-link" href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer" aria-label={t("Open your playlists on Spotify")} title={t("Open Spotify")}><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></a></p>
             <div className="grid">
               {playlists.map((p) => (
                 <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>
                   {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                  <b>{p.name}</b><small>{p.tracks} tracks</small>
+                  <b>{p.name}</b><small>{t("{n} tracks", { n: p.tracks })}</small>
                 </button>
               ))}
             </div>
@@ -363,12 +364,12 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
     const prev = prevPlayers.current;
     const msgs: string[] = [];
     const ids = new Set(state.players.map((p) => p.id));
-    for (const [id, o] of prev) if (!ids.has(id) && id !== me?.playerId) msgs.push(`${o.name} left the game`);
+    for (const [id, o] of prev) if (!ids.has(id) && id !== me?.playerId) msgs.push(t("{name} left the game", { name: o.name }));
     for (const p of state.players) {
       const o = prev.get(p.id);
       if (!o || p.id === me?.playerId) continue;
-      if (o.connected && !p.connected) msgs.push(`${p.name} left or lost connection`);
-      else if (!o.connected && p.connected) msgs.push(`${p.name} is back`);
+      if (o.connected && !p.connected) msgs.push(t("{name} left or lost connection", { name: p.name }));
+      else if (!o.connected && p.connected) msgs.push(t("{name} is back", { name: p.name }));
     }
     prevPlayers.current = new Map(state.players.map((p) => [p.id, { name: p.name, connected: p.connected }]));
     if (msgs.length) {
@@ -399,22 +400,22 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
 
   const quit = () => { send({ t: "quit" }); onLeave(); }; // also stops the music
   if (error && !state) return <ErrorPage error={error} onBack={onLeave} host />;
-  if (!state) return <main className="screen center"><p className="muted">Connecting…</p></main>;
+  if (!state) return <main className="screen center"><p className="muted">{t("Connecting…")}</p></main>;
 
   return (
     <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       <header className="statusbar">
         <div className="sb-left" ref={setSlot} />
         <div className="sb-right">
-          <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
+          <button className="mute" onClick={() => setMute(!mute)} aria-label={t("Toggle sound")}>{mute ? "🔇" : "🔊"}</button>
           <MicToggle className="micbtn" />
           {!saved.youtube && <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />}
           <SettingsMenu />
-          <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
+          <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label={t("Quit game")} title={t("Quit game")}>✕</button>
         </div>
       </header>
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
-      {state.phase === "lobby" && solo && <main className="center"><p className="muted">Starting…</p></main>}
+      {state.phase === "lobby" && solo && <main className="center"><p className="muted">{t("Starting…")}</p></main>}
       {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
       {state.phase === "playing" && <Playing slot={slot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
@@ -423,7 +424,7 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
       {notice && <p className="notice toast" role="status">{notice}</p>}
       {(error || ytError) && <p className="error toast">{error || ytError}</p>}
       {yt.element}
-      {askQuit && <Confirm message="Quit the game for everyone?" confirmLabel="Quit game" onCancel={() => setAskQuit(false)} onConfirm={quit} />}
+      {askQuit && <Confirm message={t("Quit the game for everyone?")} confirmLabel={t("Quit game")} onCancel={() => setAskQuit(false)} onConfirm={quit} />}
     </main>
   );
 }
@@ -441,19 +442,19 @@ function DevicePicker({ onPick }: { onPick: (id: string) => void }) {
   const load = () => fetch("/api/devices").then((r) => r.json()).then(setDevices).catch(() => setDevices([]));
   return (
     <>
-      <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label="Play on device" aria-expanded={open} title="Play on device"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></button>
+      <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label={t("Play on device")} aria-expanded={open} title={t("Play on device")}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></button>
       {open && (
-        <div className="settings card devices" role="dialog" aria-label="Play on">
-          <h2>Play on</h2>
-          {devices === null ? <p className="muted">Looking for devices…</p> : devices.length === 0 ? <p className="muted">No device found. Open Spotify somewhere.</p> : (
+        <div className="settings card devices" role="dialog" aria-label={t("Play on")}>
+          <h2>{t("Play on")}</h2>
+          {devices === null ? <p className="muted">{t("Looking for devices…")}</p> : devices.length === 0 ? <p className="muted">{t("No device found. Open Spotify somewhere.")}</p> : (
             <ul>
               {devices.map((d) => (
                 <li key={d.id}><button className={"btn ghost" + (d.active ? " voted" : "")} onClick={() => { onPick(d.id); setTimeout(load, 1500); }}>{d.active ? "● " : ""}{d.name} <small className="muted">({d.type})</small></button></li>
               ))}
             </ul>
           )}
-          <button className="btn ghost" onClick={load}>Refresh</button>
-          <button className="btn ghost" onClick={() => setOpen(false)}>Close</button>
+          <button className="btn ghost" onClick={load}>{t("Refresh")}</button>
+          <button className="btn ghost" onClick={() => setOpen(false)}>{t("Close")}</button>
         </div>
       )}
     </>
@@ -468,25 +469,25 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
     <div className="lobby">
       <div className="card center">
         <Logo small />
-        <p className="muted">Join at <b>{location.host}</b> with code</p>
+        <p className="muted">{t("Join at")} <b>{location.host}</b> {t("with code")}</p>
         <div className="code">{state.code.split("").map((c, i) => <span key={i} style={{ animationDelay: `${i * 80}ms` }}>{c}</span>)}</div>
-        {qr && <img className="qr" src={qr} alt="Scan to join" />}
+        {qr && <img className="qr" src={qr} alt={t("Scan to join")} />}
       </div>
       <div className="card">
-        <h2>Players {state.players.length}/4</h2>
+        <h2>{t("Players")} {state.players.length}/4</h2>
         <ul className="players">
           {state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)} style={{ opacity: p.connected ? 1 : 0.4 }}>{p.name}</li>)}
-          {state.players.length === 0 && <li className="muted">Waiting for players…</li>}
+          {state.players.length === 0 && <li className="muted">{t("Waiting for players…")}</li>}
         </ul>
         <GameSummary state={state} />
-        {me ? <p className="muted">You're playing as <b>{me.name}</b> on this screen.</p> : (
+        {me ? <p className="muted">{t("You're playing as")} <b>{me.name}</b> {t("on this screen.")}</p> : (
           <form className="hostplay" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { sfx.join(); onPlay(name.trim()); } }}>
-            <input placeholder="Play on this screen too? Your name" maxLength={16} value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn" disabled={!name.trim() || state.players.length >= 4}>Join</button>
+            <input placeholder={t("Play on this screen too? Your name")} maxLength={16} value={name} onChange={(e) => setName(e.target.value)} />
+            <button className="btn" disabled={!name.trim() || state.players.length >= 4}>{t("Join")}</button>
           </form>
         )}
-        <button className="btn big" data-pad-first disabled={state.players.length === 0} onClick={onStart}>Start game<PadHint button="a" focusOnly /></button>
-        <button className="btn ghost" onClick={onLeave}>Cancel</button>
+        <button className="btn big" data-pad-first disabled={state.players.length === 0} onClick={onStart}>{t("Start game")}<PadHint button="a" focusOnly /></button>
+        <button className="btn ghost" onClick={onLeave}>{t("Cancel")}</button>
       </div>
     </div>
   );
@@ -522,7 +523,7 @@ function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: 
           {!guessing && (
             <div className="ctl">
               <span className="icon-wrap">
-                <button className="icon-btn" onClick={onPause} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>
+                <button className="icon-btn" onClick={onPause} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>
                 <PadHint button="start" />
               </span>
               <small />
@@ -530,7 +531,7 @@ function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: 
           )}
           <div className="ctl">
             <span className="icon-wrap">
-              <button className={"icon-btn" + (state.skip?.host ? " voted" : "")} onClick={onSkip} aria-label="Skip song" title="Skip song">⏭</button>
+              <button className={"icon-btn" + (state.skip?.host ? " voted" : "")} onClick={onSkip} aria-label={t("Skip song")} title={t("Skip song")}>⏭</button>
               <PadHint button="select" />
             </span>
             <small>{state.skip && state.skip.voters > 1 && state.skip.votes > 0 ? `(${state.skip.votes}/${state.skip.voters})` : ""}</small>
@@ -545,9 +546,9 @@ function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: 
         <b>{unlimited ? "∞" : Math.ceil(left)}</b>
       </div>
       <div className="p2-hint">
-        {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
-        {guessing && <p className="guessing-line">🎤 {state.guesser!.name} is guessing…</p>}
-        {state.config.order === "roundRobin" && state.activePlayerId && !guessing && <p className="turn">🎯 {state.players.find((p) => p.id === state.activePlayerId)?.name}'s song</p>}
+        {state.paused && <p className="paused-banner">{t("⏸ PAUSED")}</p>}
+        {guessing && <p className="guessing-line">🎤 {t("{name} is guessing…", { name: state.guesser!.name })}</p>}
+        {state.config.order === "roundRobin" && state.activePlayerId && !guessing && <p className="turn">🎯 {t("{name}'s song", { name: state.players.find((p) => p.id === state.activePlayerId)?.name ?? "" })}</p>}
         <FoundChips found={state.found} guess={state.config.guess} hint={state.hint} />
         <Hints state={state} />
         <ScoreBanner state={state} />
@@ -560,8 +561,8 @@ function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: 
 
 function roundLabel(state: RoomState) {
   return state.config.playTo.kind === "score"
-    ? `Round ${state.round} · first to ${state.config.playTo.target}`
-    : `Round ${state.round} / ${state.totalRounds ?? state.config.playTo.rounds}`;
+    ? t("Round {n} · first to {target}", { n: state.round, target: state.config.playTo.target })
+    : t("Round {n} / {total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds });
 }
 
 function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
@@ -579,8 +580,8 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
           <Scoreboard state={state} reveal={r} />
         </div>
       </div>
-      {state.awaitingNext && <p className="waiting">The song keeps playing. The next round starts when it ends, or when you continue.</p>}
-      <button className="btn next-btn" onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<PadHint button="a" /></button>
+      {state.awaitingNext && <p className="waiting">{t("The song keeps playing. The next round starts when it ends, or when you continue.")}</p>}
+      <button className="btn next-btn" onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? t("Final results") : t("Next song")}<PadHint button="a" /></button>
     </div>
   );
 }
@@ -589,11 +590,11 @@ function Finished({ state, onLeave }: { state: RoomState; onLeave: () => void })
   const sorted = [...state.players].sort((a, b) => b.score - a.score);
   return (
     <div className="finished center">
-      <h1 className="logo">{sorted[0]?.name} wins! 🏆</h1>
+      <h1 className="logo">{t("{name} wins! 🏆", { name: sorted[0]?.name ?? "" })}</h1>
       <ol className="podium">
         {sorted.map((p, i) => <li key={p.id} className={"pop p" + i} style={{ animationDelay: `${(sorted.length - i) * 250}ms` }}><b>{i + 1}</b><span>{p.name}</span><em>{p.score}</em></li>)}
       </ol>
-      <button className="btn big" onClick={onLeave}>New game</button>
+      <button className="btn big" onClick={onLeave}>{t("New game")}</button>
     </div>
   );
 }

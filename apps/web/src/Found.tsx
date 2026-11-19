@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Found, RoomState } from "@tuneguesser/shared";
 import { useCountdown } from "./net";
+import { t } from "./i18n";
 
 /**
  * The answer panel: what has been found, else the letter hint (when Reveal hints are on), else "? ? ?".
@@ -30,14 +31,14 @@ export function GuessBar({ endsAt, totalMs }: { endsAt: number; totalMs: number 
 
 /** Trivia facts (the letter hints are shown inside the answer panel). */
 export function Hints({ state }: { state: RoomState }) {
-  const t = state.trivia ?? [];
+  const facts = state.trivia ?? [];
   const box = useRef<HTMLUListElement>(null);
-  useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, [t.length]); // newest fact stays in view
+  useEffect(() => { const b = box.current; if (b) b.scrollTop = b.scrollHeight; }, [facts.length]); // newest fact stays in view
   if (!state.config.hints.trivia) return null;
   return (
-    <ul className="trivia" aria-label="Trivia" ref={box}>
-      {t.length === 0 && <li className="muted">Trivia coming up…</li>}
-      {t.map((x, i) => <li key={i} title={x}>{x}</li>)}
+    <ul className="trivia" aria-label={t("Trivia")} ref={box}>
+      {facts.length === 0 && <li className="muted">{t("Trivia coming up…")}</li>}
+      {facts.map((x, i) => <li key={i} title={x}>{x}</li>)}
     </ul>
   );
 }
@@ -59,16 +60,16 @@ export function ScoreBanner({ state, bare }: { state: RoomState; bare?: boolean 
 export function GameSummary({ state }: { state: RoomState }) {
   const c = state.config;
   const items: Array<[string, string]> = [
-    ["Play to", c.playTo.kind === "rounds" ? `${c.playTo.rounds} rounds` : `${c.playTo.target} points`],
-    ["Order", c.order === "buzzer" ? "Buzzer" : "Round robin"],
-    ["Guess", c.guess === "both" ? "Song + artist" : c.guess === "title" ? "Song" : "Artist"],
-    ["Answers", c.answers === "type" ? "Type" : "Multiple choice"],
-    ["Hints", [c.hints.reveal && "Letters", c.hints.trivia && "Trivia", c.hints.art && "Artwork"].filter(Boolean).join(" + ") || "None"],
-    ["Timer", c.roundSeconds === null ? "Unlimited" : `${c.roundSeconds} s per song`],
-    ["Attempts", String(c.attempts)],
-    ["Multipliers", c.multipliers ? "Yes" : "No"],
-    ["Start", c.start === "beginning" ? "Beginning" : "Random"],
-    ["Next song", c.autoAdvance ? "Automatic" : "Song end / manually skip"],
+    [t("Play to"), c.playTo.kind === "rounds" ? t("{n} rounds", { n: c.playTo.rounds }) : t("{n} points", { n: c.playTo.target })],
+    [t("Order"), c.order === "buzzer" ? t("Buzzer") : t("Round robin")],
+    [t("Guess"), c.guess === "both" ? t("Song + artist") : c.guess === "title" ? t("Song") : t("Artist")],
+    [t("Answers"), c.answers === "type" ? t("Type") : t("Multiple choice")],
+    [t("Hints"), [c.hints.reveal && t("Letters"), c.hints.trivia && t("Trivia"), c.hints.art && t("Artwork")].filter(Boolean).join(" + ") || t("None")],
+    [t("Timer"), c.roundSeconds === null ? t("Unlimited") : t("{n} s per song", { n: c.roundSeconds })],
+    [t("Attempts"), String(c.attempts)],
+    [t("Multipliers"), c.multipliers ? t("Yes") : t("No")],
+    [t("Start"), c.start === "beginning" ? t("Beginning") : t("Random")],
+    [t("Next song"), c.autoAdvance ? t("Automatic") : t("Song end / manually skip")],
   ];
   return (
     <dl className="summary">
@@ -105,5 +106,5 @@ export function PixelArt({ url, progress }: { url: string; progress: number }) {
     ctx.imageSmoothingEnabled = false; // hard blocks
     ctx.drawImage(tmp, 0, 0, n, n, 0, 0, size, size);
   }, [img, progress]);
-  return <canvas ref={canvas} className="pixelart" aria-label="Album artwork, getting clearer" />;
+  return <canvas ref={canvas} className="pixelart" aria-label={t("Album artwork, getting clearer")} />;
 }

@@ -5,18 +5,24 @@ import { startPadNav } from "./input/nav";
 import { PadTextEntry } from "./input/PadTextEntry";
 import { BackHandler } from "./BackHandler";
 import { PadHintBar } from "./input/PadHintBar";
+import { useLang } from "./i18n";
 import "./styles.css";
 
 startPadNav();
 
 applyTheme(getTheme());
 
-createRoot(document.getElementById("root")!).render(
-  <>
-    <div className="bg" aria-hidden><i /><i /><i /></div>
-    <Home />
-    <PadTextEntry />
-    <PadHintBar />
-    <BackHandler />
-  </>,
-);
+function App() {
+  useLang(); // the whole UI re-renders when the language changes
+  return (
+    <>
+      <div className="bg" aria-hidden><i /><i /><i /></div>
+      <Home />
+      <PadTextEntry />
+      <PadHintBar />
+      <BackHandler />
+    </>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(<App />);

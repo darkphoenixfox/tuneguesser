@@ -4,6 +4,7 @@ import { Player } from "./Player";
 import { Logo } from "./Logo";
 import { SettingsMenu } from "./Settings";
 import { PadHint } from "./input/Glyph";
+import { t } from "./i18n";
 
 type View = "menu" | "solo" | "host" | "join";
 
@@ -33,14 +34,14 @@ export function Home() {
       <SettingsMenu apk solo />
       <Logo />
       <p className="menu-intro">
-        A music quiz: a song starts playing, and you race to guess its title and artist. Play alone or with friends on their phones.
+        {t("A music quiz: a song starts playing, and you race to guess its title and artist. Play alone or with friends on their phones.")}
         <br />
-        The host needs a Spotify Premium account, and Spotify open on a device to play the music.
+        {t("Music comes from YouTube (no account needed) or from Spotify (the host needs Premium and Spotify open on a device).")}
       </p>
       <div className="menu-buttons">
-        <button className="btn big" data-pad-first onClick={() => go("solo")}>Solo Play<PadHint button="a" focusOnly /></button>
-        <button className="btn big" onClick={() => go("host")}>Host a game<PadHint button="a" focusOnly /></button>
-        <button className="btn big" onClick={() => go("join")}>Join a game<PadHint button="a" focusOnly /></button>
+        <button className="btn big" data-pad-first onClick={() => go("solo")}>{t("Solo Play")}<PadHint button="a" focusOnly /></button>
+        <button className="btn big" onClick={() => go("host")}>{t("Host a game")}<PadHint button="a" focusOnly /></button>
+        <button className="btn big" onClick={() => go("join")}>{t("Join a game")}<PadHint button="a" focusOnly /></button>
       </div>
     </main>
   );

@@ -211,6 +211,10 @@ Players can opt in to hear the music on their own phone too (🎧 button in thei
 With the **Artwork** hint on, the host screen shows the **video itself, pixelated** (an SVG filter on the player, sharpening with the same steps as the artwork; scaled up and cropped so YouTube's title bar is out of frame) instead of the thumbnail. Players' phones still get the pixelated thumbnail. The filter works in Chromium and Firefox; Safari may show the video unpixelated, which would give hints away.
 Known gaps / risks: (1) the player is invisible (its picture would give the answer away), which YouTube's terms discourage, so a visible-but-masked design may be needed; (2) autoplay needs a user gesture on the host page (Create room counts; the Android WebView may need `mediaPlaybackRequiresUserGesture` off); (3) a host reload drops the current song until the next round; (4) YouTube metadata is messier than Spotify's, so some answers will be odd; (5) no way yet to skip a video that fails to play.
 
+### DEC-061 · Language selector (English / Spanish); YouTube is the default music source · 2026-11-19 · Active
+`⚙ Settings → Language`. The UI text is translated client-side with `t("English text")` (the English text is the key; a missing translation falls back to English) and `apps/web/src/es.ts`; the choice is saved per device (first visit: the browser language). A test fails if any `t("…")` or option label has no Spanish entry or loses a `{placeholder}`. Voice answers use `es-ES` when Spanish is selected. Not translated: messages that come from the server (e.g. "Music play failed"), song data and trivia (trivia comes from English sources). To add a language, add a dictionary and an entry in `LANGS`.
+In the **Music from** menu YouTube is now first and the default (devices that never chose keep it; the saved choice moved to the key `tg_music`).
+
 ---
 
 ## Open questions
