@@ -139,14 +139,17 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     fetch("/api/me").then((r) => r.json()).then(setMe).catch(() => setErr(t("Cannot reach the server")));
   }, []);
 
-  const loadDevices = () => fetch("/api/devices").then((r) => r.json()).then((d: Device[]) => {
+  const loadDevices = () => fetch("/api/devices").then((r) => r.json()).then((raw: unknown) => {
+    const d: Device[] = Array.isArray(raw) ? raw : []; // an error object (login expired, Spotify down) is not a list
     setDevices(d);
     setDeviceId((cur) => cur || d.find((x) => x.active)?.id || d[0]?.id || "");
   }).catch(() => {});
 
   useEffect(() => {
     if (!me?.spotify) return;
-    fetch("/api/playlists").then((r) => r.json()).then((p: Playlist[]) => {
+    fetch("/api/playlists").then((r) => r.json()).then((raw: unknown) => {
+      if (!Array.isArray(raw)) throw new Error("not a list");
+      const p: Playlist[] = raw;
       setPlaylists(p);
       setPicked((cur) => cur.filter((id) => p.some((x) => x.id === id))); // forget playlists that are gone
     }).catch(() => setErr(t("Could not load playlists")));
@@ -441,7 +444,7 @@ function PadMenuHint({ inGame }: { inGame: boolean }) {
 function DevicePicker({ onPick }: { onPick: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const [devices, setDevices] = useState<Device[] | null>(null);
-  const load = () => fetch("/api/devices").then((r) => r.json()).then(setDevices).catch(() => setDevices([]));
+  const load = () => fetch("/api/devices").then((r) => r.json()).then((d) => setDevices(Array.isArray(d) ? d : [])).catch(() => setDevices([]));
   return (
     <>
       <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label={t("Play on device")} aria-expanded={open} title={t("Play on device")}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></button>
