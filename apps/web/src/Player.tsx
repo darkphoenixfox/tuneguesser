@@ -11,6 +11,8 @@ import { onPadButton, usePad } from "./input/pad";
 import { useCountdown, useRoom, useScrollTop } from "./net";
 import { Scoreboard } from "./Scoreboard";
 import { sfx } from "./sfx";
+import type { PlayerCommand } from "@tuneguesser/shared";
+import { useYouTubePlayer } from "./YouTubePlayer";
 
 interface Saved { code: string; name: string; playerId?: string }
 const load = (): Saved | null => {
@@ -60,13 +62,21 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   const [sent, setSent] = useState(false);
   const [words, setWords] = useState<string[]>([]);
   const [askLeave, setAskLeave] = useState(false);
-  const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => {
+  // YouTube mode: optionally play the music on this device too (a tap is needed, browsers block sound otherwise)
+  const [listening, setListening] = useState(false);
+  const ytRun = useRef<(c: PlayerCommand) => void>();
+  const { state, error, connected, send, endsAt, guessEndsAt } = useRoom(first, (m) => {
+    if (m.t === "player") ytRun.current?.(m.cmd);
     if (m.t === "words") setWords(m.list);
     if (m.t === "joined") { setMe(m.playerId); onId(m.playerId); }
     if (m.t === "result") {
       if (m.title || m.artist) { sfx.correct(); navigator.vibrate?.(80); } else { sfx.wrong(); navigator.vibrate?.([40, 40, 40]); }
     }
   });
+  const yt = useYouTubePlayer(listening && !embedded && !!state?.youtube, () => {});
+  ytRun.current = yt.run;
+  useEffect(() => { if (connected && listening) send({ t: "listen", on: true }); }, [connected]); // the server forgets this after a reconnect
+  const toggleListen = () => { const on = !listening; setListening(on); send({ t: "listen", on }); };
   const guessing = !!state?.guesser;
   const left = useCountdown(endsAt, guessing || state?.paused ? state?.remainingMs : undefined);
   const pad = usePad();
@@ -166,9 +176,10 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
       {!embedded && (
         <header className="statusbar phone-head">
           <button className="exit" onClick={exit} aria-label="Exit to main screen">✕</button>
-          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round}` : `Round ${state.round}/${state.totalRounds ?? state.config.playTo.rounds}`}</small>}</b><ThemeButton /><MicToggle className="skip-top mic-top" />{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
+          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round}` : `Round ${state.round}/${state.totalRounds ?? state.config.playTo.rounds}`}</small>}</b><ThemeButton /><MicToggle className="skip-top mic-top" />{state.youtube && <button className={"skip-top" + (listening ? " on" : "")} onClick={toggleListen} aria-pressed={listening} aria-label="Play the music on this device too" title={listening ? "Music plays on this device too" : "Also play the music on this device"}><span style={{ opacity: listening ? 1 : .45 }}>🎧</span></button>}{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? "Continue" : "Pause"} title={state.paused ? "Continue" : "Pause"}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
         </header>
       )}
+      {yt.element}
       {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
 
       {state.phase === "playing" && (

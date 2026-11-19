@@ -48,3 +48,16 @@ describe("youtube", () => {
     expect(got).toEqual([{ op: "play", videoId: "a", startMs: 5000 }, { op: "pause" }, { op: "resume", videoId: "a", positionMs: 7000 }]);
   });
 });
+
+describe("listeners joining mid-song", () => {
+  it("snapshot continues where the song is, and is empty when paused", async () => {
+    const p = new YouTubeProvider(new YouTubeApi("k"), []);
+    const t = { id: "a", uri: "a", title: "t", artists: [], durationMs: 1 };
+    expect(p.snapshot()).toBeNull();
+    await p.play(t, 10_000);
+    expect(p.snapshot()).toMatchObject({ op: "play", videoId: "a" });
+    expect((p.snapshot() as { startMs: number }).startMs).toBeGreaterThanOrEqual(10_000);
+    await p.pause();
+    expect(p.snapshot()).toBeNull();
+  });
+});

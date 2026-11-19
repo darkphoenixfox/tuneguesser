@@ -50,11 +50,13 @@ try {
   for (const [sid, t] of Object.entries(saved)) sessions.set(sid, { client: makeClient(t) });
 } catch { /* first start */ }
 
-interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number; abandonTimer?: ReturnType<typeof setTimeout> }
+interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number; yt?: YouTubeProvider; abandonTimer?: ReturnType<typeof setTimeout> }
 const rooms = new Map<string, RoomEntry>();
 /** A room whose host screen is gone for this long is ended (otherwise it keeps playing songs on the host's Spotify). */
 const HOST_GONE_MS = 60_000;
 const hostSockets = new WeakSet<WebSocket>();
+/** YouTube mode: players who also play the music on their own device */
+const listeners = new WeakSet<WebSocket>();
 const trivia = new TriviaCache();
 
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid confusion with 1/0
@@ -203,7 +205,11 @@ const http = createServer(async (req, res) => {
       const code = newCode();
       const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Map(), createdAt: Date.now() };
-      if (music instanceof YouTubeProvider) music.emit = (cmd) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws)) send(ws, { t: "player", cmd }); };
+      if (music instanceof YouTubeProvider) {
+        room.youtube = true;
+        music.emit = (cmd) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws) || listeners.has(ws)) send(ws, { t: "player", cmd }); };
+        entry.yt = music;
+      }
       room.onChange = () => broadcast(entry);
       room.onError = (message) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws)) send(ws, { t: "error", message }); };
       rooms.set(code, entry);
@@ -250,6 +256,10 @@ wss.on("connection", (ws) => {
       const room = entry.room;
       if (role === "player" && playerId && m.t === "buzz") {
         if (room.buzz(playerId) && !wordsSent && room.state().config.answers === "type") { wordsSent = true; send(ws, { t: "words", list: room.suggestions() }); }
+      } else if (role === "player" && m.t === "listen") {
+        if (!entry.yt) return;
+        if (m.on === true) { listeners.add(ws); const cmd = entry.yt.snapshot(); if (cmd) send(ws, { t: "player", cmd }); }
+        else { listeners.delete(ws); send(ws, { t: "player", cmd: { op: "stop" } }); }
       } else if (role === "player" && playerId && m.t === "skip") {
         room.voteSkip(playerId);
       } else if (role === "player" && playerId && m.t === "padkb") {

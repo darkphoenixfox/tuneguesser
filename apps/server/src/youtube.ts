@@ -87,7 +87,15 @@ export class YouTubeApi {
 export class YouTubeProvider implements MusicProvider {
   /** set by the server: delivers a command to the host screen(s) */
   emit: (c: PlayerCommand) => void = () => {};
+  /** what is playing, so a device that starts listening mid-song can join in at the right place */
+  private now: { videoId: string; pos: number; at: number; playing: boolean } | null = null;
   constructor(private api: YouTubeApi, private playlistIds: string[]) {}
+
+  /** The command that makes a new listener play the current song from where it is, or null when nothing is playing. */
+  snapshot(): PlayerCommand | null {
+    const n = this.now;
+    return n?.playing ? { op: "play", videoId: n.videoId, startMs: n.pos + (Date.now() - n.at) } : null;
+  }
 
   async loadTracks(): Promise<Track[]> {
     const seen = new Set<string>();
@@ -95,7 +103,7 @@ export class YouTubeProvider implements MusicProvider {
     for (const id of this.playlistIds) for (const t of await this.api.tracks(id)) if (!seen.has(t.id)) { seen.add(t.id); out.push(t); }
     return out;
   }
-  async play(track: Track, startMs: number) { this.emit({ op: "play", videoId: track.uri, startMs }); }
-  async pause() { this.emit({ op: "pause" }); }
-  async resume(track: Track, positionMs: number) { this.emit({ op: "resume", videoId: track.uri, positionMs }); }
+  async play(track: Track, startMs: number) { this.now = { videoId: track.uri, pos: startMs, at: Date.now(), playing: true }; this.emit({ op: "play", videoId: track.uri, startMs }); }
+  async pause() { if (this.now?.playing) this.now = { ...this.now, pos: this.now.pos + (Date.now() - this.now.at), playing: false }; this.emit({ op: "pause" }); }
+  async resume(track: Track, positionMs: number) { this.now = { videoId: track.uri, pos: this.now?.videoId === track.uri && !this.now.playing ? this.now.pos : positionMs, at: Date.now(), playing: true }; this.emit({ op: "resume", videoId: track.uri, positionMs }); }
 }

@@ -83,6 +83,8 @@ export interface RoomState {
   awaitingNext?: boolean;
   /** skip votes this round. Voters = connected players, plus the host if the host is not also playing. */
   skip?: { votes: number; voters: number; host: boolean };
+  /** YouTube mode: players can choose to hear the music on their own device too */
+  youtube?: boolean;
 }
 
 export type ClientMessage =
@@ -99,6 +101,8 @@ export type ClientMessage =
   | { t: "leave" }
   /** host: change a game setting */
   | { t: "settings"; autoAdvance?: boolean }
+  /** player (YouTube mode): also play the music on this device */
+  | { t: "listen"; on: boolean }
   | { t: "start" }
   /** toggle a skip vote (host and players alike; the song is skipped when every voter has voted) */
   | { t: "skip" }

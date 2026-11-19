@@ -132,6 +132,8 @@ export class Room {
   onChange: () => void = () => {};
   /** music problems (e.g. Spotify refused to pause) are reported here so the host can see them */
   onError: (message: string) => void = () => {};
+  /** music is played by YouTube players in the browsers (the host's, and the players' who opted in) */
+  youtube = false;
 
   private musicError = (what: string) => (e: unknown) => {
     console.error(`music ${what} failed:`, e);
@@ -627,6 +629,7 @@ export class Room {
 
     return {
       code: this.code,
+      youtube: this.youtube || undefined,
       phase: this.phase,
       players,
       round: this.round,
