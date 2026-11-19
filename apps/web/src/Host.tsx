@@ -56,6 +56,7 @@ const DEFAULT_YT_PLAYLISTS = [
   "PLGBuKfnErZlDWlLLxjNJh6Spsn2_TppcF", // 2000s rock
   "PL0jp-uZ7a4g9FQWW5R_u0pz4yzV4RiOXu", // The Beatles 100
   "PLdHiRrMNS0D3gw0mjudLXoGYxiEpGvdUa", // Prince Greatest Hits
+  "PLD8F8D858996445F4", // U2
 ];
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
