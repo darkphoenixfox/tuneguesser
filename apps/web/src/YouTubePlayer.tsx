@@ -38,13 +38,34 @@ export function useYouTubePlayer(enabled: boolean, onError: (message: string, co
   const target = useRef<{ el: HTMLElement; progress: number } | null>(null);
   const follow = useCallback((el: HTMLElement | null, progress = 0) => { target.current = el ? { el, progress } : null; }, []);
 
+  /** what the server last asked for: while it wants music, a player that is not playing is nudged (see `apply`) */
+  const wanted = useRef<{ videoId: string; startMs: number } | null>(null);
+  const nudges = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   const apply = useCallback((p: any, c: PlayerCommand) => {
+    for (const n of nudges.current.splice(0)) clearTimeout(n);
     if (c.op === "play") p.loadVideoById({ videoId: c.videoId, startSeconds: c.startMs / 1000 });
     else if (c.op === "resume") {
       const cur = p.getVideoData?.().video_id;
       if (cur === c.videoId) p.playVideo(); else p.loadVideoById({ videoId: c.videoId, startSeconds: c.positionMs / 1000 });
     } else if (c.op === "pause") p.pauseVideo();
     else p.stopVideo();
+    wanted.current = c.op === "play" ? { videoId: c.videoId, startMs: c.startMs } : c.op === "resume" ? { videoId: c.videoId, startMs: c.positionMs } : null;
+    const w = wanted.current;
+    if (!w) return;
+    // YouTube sometimes ignores a load that comes right after another command (e.g. Enter pressed at once after the answer):
+    // if the song is still not playing a moment later, ask again instead of leaving silence
+    for (const ms of [1200, 2800]) {
+      nudges.current.push(setTimeout(() => {
+        if (wanted.current !== w) return;
+        try {
+          const state = p.getPlayerState?.(); // 1 playing, 3 buffering
+          if (state === 1 || state === 3) return;
+          if (p.getVideoData?.().video_id !== w.videoId) p.loadVideoById({ videoId: w.videoId, startSeconds: w.startMs / 1000 });
+          else p.playVideo();
+        } catch { /* player not ready */ }
+      }, ms));
+    }
   }, []);
 
   useEffect(() => {

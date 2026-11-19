@@ -269,3 +269,6 @@ The full seed (DEC-074) holds every playlist id and is long. The server now maps
 
 ### DEC-076 · Unplayable videos are skipped and banned · 2026-11-19 · Active
 When the host screen's YouTube player reports error 100, 101 or 150 (removed/private/embedding disabled) it sends `{t:"unplayable", id}`. If `id` is the running round's video the server bans it for everyone (votes store, voter `embed-error`: it is an objective fact, so no admin password), drops it from all rooms and, while the round is playing, discards it without counting a round (same path as the 👎). Other player errors (2, 5) are only shown.
+
+### DEC-077 · Music must start after a quick Next · 2026-11-19 · Active
+Two fixes for "next song silent after pressing Enter quickly": (1) client: after a play/resume command the YouTube player is checked at 1.2 s and 2.8 s and, if it is not playing/buffering while the server wants music, the load or `playVideo()` is repeated (YouTube ignores a load that follows another command too closely); (2) server: a delayed resume of the previous song is dropped once the next round has started (`epoch`), and the next play waits for a pause still on its way (Spotify). If the cause was only (1) the fix is the nudge; (2) removes the remaining server-side ordering risk.

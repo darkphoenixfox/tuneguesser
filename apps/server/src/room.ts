@@ -101,6 +101,8 @@ export class Room {
   private slowInput = new Set<string>();
   /** play time elapsed at the moment the guesser buzzed (also used for scoring) */
   private frozenElapsed = 0;
+  /** counts rounds: a delayed "resume" of an earlier song must not run once the next song has started */
+  private epoch = 0;
   /** game clock for "play to a score": started with the first round, stopped when the target is reached; pauses do not count */
   private gameStartedAt?: number;
   private pausedMs = 0;
@@ -325,6 +327,7 @@ export class Room {
       this.onChange();
       return;
     }
+    this.epoch++;
     this.current = track;
     this.played.add(track.id);
     this.round++;
@@ -349,6 +352,8 @@ export class Room {
     this.phase = "playing";
     this.roundStartedAt = this.now();
     // a refused play (device asleep, Spotify 404/502) must not crash the server: report it and let the round run
+    await this.pausing; // a pause still on its way (Spotify) must not land after this play
+    if (this.current !== track) return; // the host was even quicker: another round has started meanwhile
     await this.music.play(track, this.startMs).catch(this.musicError("play"));
     this.startClock(0);
     if (this.config.hints.reveal || this.config.hints.trivia || this.config.hints.art) this.hintTicker = setInterval(() => { if (!this.guesser) this.onChange(); }, 1000);
@@ -428,8 +433,8 @@ export class Room {
     this.startClock(this.frozenElapsed);
     this.onChange();
     this.musicPaused = false;
-    const track = this.current;
-    void this.pausing.then(() => this.music.resume(track, this.startMs + this.frozenElapsed)).catch(this.musicError("resume"));
+    const [track, e] = [this.current, this.epoch];
+    void this.pausing.then(() => (e === this.epoch ? this.music.resume(track, this.startMs + this.frozenElapsed) : undefined)).catch(this.musicError("resume"));
   }
 
   /** A player presses ANSWER. The first press wins; the music and the round clock stop. */
@@ -575,8 +580,10 @@ export class Room {
     this.startClock(this.frozenElapsed);
     this.onChange();
     this.musicPaused = false;
+    const [track, e] = [this.current, this.epoch];
     await this.pausing;
-    await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
+    if (e !== this.epoch) return;
+    await this.music.resume(track, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
   }
 
   // ---------------------------------------------------------------- reveal
@@ -608,8 +615,10 @@ export class Room {
     this.onChange();
     if (this.musicPaused) {
       this.musicPaused = false;
+      const [track, e] = [this.current, this.epoch];
       await this.pausing;
-      await this.music.resume(this.current, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
+      if (e !== this.epoch) return; // Next was pressed before the song could resume: do not bring the old song back
+      await this.music.resume(track, this.startMs + this.frozenElapsed).catch(this.musicError("resume"));
     }
   }
 
