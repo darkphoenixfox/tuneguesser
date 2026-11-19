@@ -202,6 +202,7 @@ export const ES: Record<string, string> = {
   // errors
   "Room not found": "Sala no encontrada",
   "Something went wrong": "Algo salió mal",
+  "Reload": "Recargar",
   "We couldn't find this room. The game may have ended or the server was restarted, so it is gone. Go back and create a new room.": "No encontramos esta sala. Puede que la partida haya terminado o que el servidor se haya reiniciado. Vuelve atrás y crea una sala nueva.",
   "We couldn't find that room. Check the 4-letter code, or the host may have quit the game or closed the room. Ask the host for a fresh code and try again.": "No encontramos esa sala. Revisa el código de 4 letras; puede que el anfitrión haya salido o cerrado la sala. Pídele un código nuevo e inténtalo otra vez.",
   // youtube

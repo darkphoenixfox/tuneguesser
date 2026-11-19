@@ -230,3 +230,6 @@ Trade-offs: a player who reloads mid-game gets the new client talking to the old
 
 ### DEC-063 · Demo mode removed · 2026-11-19 · Active
 The silent "Try demo mode" button and the `demo` flag of `POST /api/rooms` are gone: with YouTube as the default source nobody needs a music-less game, and its fixed placeholder fields were confusing. `DemoProvider` stays as test infrastructure only.
+
+### DEC-064 · Black-screen hardening for iPhone browsers · 2026-11-19 · Active
+A reported black screen on iPhone could not be reproduced. Likeliest cause: browsers that throw when `localStorage`/`sessionStorage` is touched (Safari with "Block All Cookies", some in-app browsers), while several screens read them unguarded during render, so React crashed and left the dark page background. Fixes: `storage.ts` swaps in an in-memory store when storage throws; an `ErrorBoundary` shows the error message and a Reload button instead of an empty page; `index.html` shows a "could not start" message (with the last script error or the user agent) if nothing has drawn after 6 s; Vite targets `safari13` so `?.`, `??` and `??=` are transpiled for older iPhones. If it happens again, the on-screen message is the clue to ask for.
