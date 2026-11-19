@@ -658,3 +658,4 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .song-edit { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .song-edit label { display: flex; flex-direction: column; gap: 2px; }
 .song-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.one-artist { min-width: 12em; }

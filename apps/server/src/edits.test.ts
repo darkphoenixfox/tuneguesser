@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { EditStore, hasArtist } from "./edits";
+import { EditStore, forceArtist } from "./edits";
 
 const track = (id: string, title: string, artists: string[]) => ({ id, uri: id, title, artists, durationMs: 1 });
 
@@ -23,6 +23,14 @@ describe("EditStore", () => {
     expect(s.playlist("PLabcdef123")).toEqual({ artist: "U2" });
     s.setArtist("PLabcdef123", null);
     expect(s.playlist("PLabcdef123")).toEqual({});
-    expect(hasArtist(track("a", "t", ["Bono", "u2"]), " U2")).toBe(true);
+  });
+
+  it("one artist only: all songs get that artist and its name is taken out of the title", () => {
+    const f = (title: string, artists: string[]) => forceArtist(track("a", title, artists), "U2");
+    expect(f("Gloria", ["Solano"])).toMatchObject({ title: "Gloria", artists: ["U2"] });
+    expect(f("U2 - Gloria", ["U2"]).title).toBe("Gloria");
+    expect(f("Gloria - U2", ["x"]).title).toBe("Gloria");
+    expect(f("U2", ["Gloria"])).toMatchObject({ title: "Gloria", artists: ["U2"] }); // swapped by the parser
+    expect(f("Bad", ["Pop"]).artists).toEqual(["U2"]);
   });
 });

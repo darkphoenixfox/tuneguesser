@@ -58,4 +58,21 @@ export class EditStore {
   }
 }
 
-export const hasArtist = (t: Track, artist: string) => t.artists.some((a) => a.trim().toLowerCase() === artist.trim().toLowerCase());
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * "One artist only": every song of the playlist is by `artist`, whatever the video title looked like.
+ * The artist's name is taken out of the title ("U2 - Gloria", "Gloria - U2"); if the title is only the artist's name,
+ * the title was parsed the wrong way round and the other part becomes the title.
+ */
+export function forceArtist(t: Track, artist: string): Track {
+  const a = artist.trim();
+  const same = (x: string) => x.trim().toLowerCase() === a.toLowerCase();
+  let title = t.title;
+  if (same(title) && t.artists[0] && !same(t.artists[0])) title = t.artists[0];
+  else {
+    const stripped = title.replace(new RegExp(`^\\s*${esc(a)}\\s*[-–—:|]\\s*`, "i"), "").replace(new RegExp(`\\s*[-–—:|]\\s*${esc(a)}\\s*$`, "i"), "").trim();
+    if (stripped) title = stripped;
+  }
+  return { ...t, title, artists: [a] };
+}

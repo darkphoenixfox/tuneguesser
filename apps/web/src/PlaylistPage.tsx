@@ -27,13 +27,17 @@ export function PlaylistPage({ id }: { id: string }) {
 
   const back = () => { if (history.length > 1) history.back(); else location.href = "/"; };
   const only = data?.artist ?? null;
-  const used = (s: Song) => !s.blacklisted && (!only || s.artists.some((a) => same(a, only)));
+  const used = (s: Song) => !s.blacklisted;
   const shown = useMemo(() => {
     const f = filter.trim().toLowerCase();
     return (data?.tracks ?? []).filter((s) => !f || `${s.title} ${s.artists.join(" ")}`.toLowerCase().includes(f));
   }, [data, filter]);
 
   const setOnly = async (artist: string | null) => { await post("/api/playlist/settings", { id, artist }); load(); };
+  // the artist's name is guessed (the most common one in the playlist) and can be typed over
+  const [artistText, setArtistText] = useState("");
+  useEffect(() => { setArtistText(data?.artist ?? ""); }, [data?.artist]);
+  const commitArtist = () => { const a = artistText.trim(); if (a && a !== only) void setOnly(a); else setArtistText(only ?? ""); };
   const ban = async (s: Song) => { await post("/api/track/ban", { id: s.id, banned: !s.blacklisted, name: `${s.artists.join(", ")} - ${s.title}` }); load(); };
   const startEdit = (s: Song) => { setEditing(s.id); setTitle(s.title); setArtists(s.artists.join(", ")); };
   const save = async (s: Song) => {
@@ -57,15 +61,15 @@ export function PlaylistPage({ id }: { id: string }) {
               <span>{t("One artist only")}</span>
               <div className="seg">
                 <button type="button" className={!only ? "on" : ""} onClick={() => setOnly(null)}>{t("No")}</button>
-                <button type="button" className={only ? "on" : ""} onClick={() => setOnly(only ?? data.artists[0]?.name ?? null)}>{t("Yes")}</button>
+                <button type="button" className={only ? "on" : ""} onClick={() => { if (!only) void setOnly(data.artists[0]?.name ?? ""); }}>{t("Yes")}</button>
               </div>
               {only && (
-                <select value={data.artists.find((a) => same(a.name, only))?.name ?? only} onChange={(e) => setOnly(e.target.value)} aria-label={t("Artist")}>
-                  {!data.artists.some((a) => same(a.name, only)) && <option value={only}>{only}</option>}
-                  {data.artists.map((a) => <option key={a.name} value={a.name}>{a.name} ({a.n})</option>)}
-                </select>
+                <>
+                  <input className="one-artist" list="pl-artists" value={artistText} maxLength={80} onChange={(e) => setArtistText(e.target.value)} onBlur={commitArtist} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} aria-label={t("Artist")} />
+                  <datalist id="pl-artists">{data.artists.map((a) => <option key={a.name} value={a.name} />)}</datalist>
+                </>
               )}
-              <small className="muted">{only ? t("Only songs by {artist} are played, and the artist does not have to be guessed.", { artist: only }) : t("Turn on for a playlist of a single artist: other artists' songs are left out.")}</small>
+              <small className="muted">{only ? t("Every song is treated as by {artist}, and the artist does not have to be guessed.", { artist: only }) : t("Turn on for a playlist of a single artist: its most common artist is assumed for all songs (you can change it).")}</small>
             </div>
           </section>
           <section className="card">
@@ -90,7 +94,7 @@ export function PlaylistPage({ id }: { id: string }) {
                       <a className="song-thumb" href={`https://www.youtube.com/watch?v=${s.id}`} target="_blank" rel="noreferrer" title={t("Open on YouTube")}>▶</a>
                       <div className="song-main">
                         <b>{s.title}{s.original && <em title={`${s.original.artists.join(", ")} - ${s.original.title}`}> ✎</em>}</b>
-                        <small>{s.artists.join(", ")}{s.blacklisted ? ` · ${t("banned")}` : only && !used(s) ? ` · ${t("other artist")}` : ""}</small>
+                        <small>{s.artists.join(", ")}{s.blacklisted ? ` · ${t("banned")}` : ""}</small>
                       </div>
                       <button className="icon-btn" onClick={() => startEdit(s)} aria-label={t("Edit title and artist")} title={t("Edit title and artist")}>✎</button>
                       <button className={"icon-btn" + (s.blacklisted ? " voted" : "")} onClick={() => ban(s)} aria-label={s.blacklisted ? t("Bring this song back") : t("Never play this song")} title={s.blacklisted ? t("Bring this song back") : t("Never play this song")}>{s.blacklisted ? "↩" : "🚫"}</button>

@@ -9,7 +9,7 @@ import { Room } from "./room";
 import { TriviaCache } from "./trivia";
 import { VoteStore } from "./votes";
 import { HighScoreStore, categoryKey } from "./highscores";
-import { EditStore, hasArtist } from "./edits";
+import { EditStore, forceArtist } from "./edits";
 import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, dropDoubtful, fixLoose, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
@@ -196,7 +196,8 @@ const http = createServer(async (req, res) => {
       const id = parsePlaylistId(url.searchParams.get("id") ?? "");
       if (!id) return json(res, 400, { error: "That is not a YouTube playlist" });
       const [info, raw] = await Promise.all([youtube.playlist(id).catch(() => null), youtube.tracks(id)]);
-      const fixed = dropDoubtful(fixLoose(raw));
+      const only = edits.playlist(id).artist;
+      const fixed = dropDoubtful(fixLoose(raw)).map((t) => (only ? forceArtist(t, only) : t));
       const ed = edits.edits();
       const bad = votes.blacklisted();
       const tracks = fixed.map((t) => ({ id: t.id, title: ed[t.id]?.title ?? t.title, artists: ed[t.id]?.artists ?? t.artists, original: ed[t.id] ? { title: t.title, artists: t.artists } : undefined, blacklisted: bad.has(t.id) }));
@@ -252,9 +253,8 @@ const http = createServer(async (req, res) => {
         const yt = new YouTubeProvider(youtube, ids);
         // corrections from the playlist pages: fixed titles/artists, and playlists limited to one artist
         yt.adjust = (pid, list) => {
-          const fixed = edits.apply(list);
           const only = edits.playlist(pid).artist;
-          return only ? fixed.filter((t) => hasArtist(t, only)) : fixed;
+          return edits.apply(only ? list.map((t) => forceArtist(t, only)) : list);
         };
         music = yt;
       } else {
