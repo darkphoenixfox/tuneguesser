@@ -162,7 +162,7 @@ function onKey(e: KeyboardEvent) {
     const sib = (dir === "right" ? t.nextElementSibling : t.previousElementSibling) as HTMLElement | null;
     if (sib instanceof HTMLButtonElement && !sib.disabled) { focus(sib); return; }
   }
-  move(dir, document.querySelector(".confirm") ?? document);
+  move(dir, document.querySelector(".confirm, .pairing-overlay") ?? document);
 }
 
 let started = false;

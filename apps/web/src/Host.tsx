@@ -134,14 +134,18 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
           <p>Log in with the Spotify account that will play the music (Premium required).</p>
           {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
           {pairing && (
-            <div className="pairing" role="dialog" aria-label="Log in on another device">
-              <h2>Log in to Spotify on another device</h2>
-              <img src={pairing.qr} alt="QR code to log in" className="qr" />
-              <p>Scan the code with your phone, or open <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
-              <p className="muted">Log in to Spotify there (Premium). This screen continues by itself.</p>
-              <div className="confirm-actions">
-                <button className="btn" data-pad-first onClick={openHere}>Use this device's browser</button>
-                <button className="btn ghost" onClick={stopLogin}>Cancel</button>
+            <div className="pairing-overlay padtext" role="dialog" aria-label="Log in on another device">
+              <div className="card pairing">
+                <h2>Log in to Spotify on another device</h2>
+                <div className="pairing-body">
+                  <img src={pairing.qr} alt="QR code to log in" className="qr" />
+                  <div className="pairing-side">
+                    <p>Scan the code with your phone, or open <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
+                    <p className="muted">Log in to Spotify there (Premium). This screen continues by itself.</p>
+                    <button className="btn" data-pad-first onClick={openHere}>Use this device's browser</button>
+                    <button className="btn ghost" onClick={stopLogin}>Cancel</button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
