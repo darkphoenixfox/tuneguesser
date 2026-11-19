@@ -660,3 +660,6 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .song-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .one-artist { min-width: 12em; }
 .recap { display: flex; gap: 18px; flex-wrap: wrap; margin: 4px 0 10px; color: var(--muted); } .recap b { color: var(--text); font-size: 1.3rem; }
+/* "Music from": one line per button when there is room; on a narrow screen the buttons wrap instead of squeezing the text */
+.source-pick .seg { flex-wrap: wrap; max-width: 100%; }
+.source-pick .seg button { flex: 1 1 auto; white-space: nowrap; }
