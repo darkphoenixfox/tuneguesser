@@ -23,12 +23,16 @@ async function getJson(url: string, f: Fetcher): Promise<any | null> {
 const norm = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim();
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/** MusicBrainz tags are free-form user input ("2008 universal fire victim", "seen live"): only keep tags that look like a genre. */
+const GENRE_WORD = /\b(rock|pop|metal|punk|jazz|blues|soul|funk|folk|country|hip[- ]?hop|rap|r&b|rnb|reggae|ska|electronic|electro|dance|house|techno|trance|disco|indie|alternative|grunge|new wave|synth|wave|classical|latin|gospel|swing|opera|ambient|industrial|hardcore|emo|psychedelic|progressive|singer-songwriter|soundtrack|world|reggaeton|salsa|flamenco|bossa nova|trap|drum and bass|dubstep|garage|britpop|shoegaze|dream pop|j-pop|k-pop)\b/i;
+export const isGenreTag = (t: string) => GENRE_WORD.test(t) && !/\d{3,}/.test(t);
+
 export async function artistFacts(name: string, f: Fetcher = fetch): Promise<{ genre?: string; origin?: string; started?: string; about?: string }> {
   const out: { genre?: string; origin?: string; started?: string; about?: string } = {};
   const mb = await getJson(`https://musicbrainz.org/ws/2/artist/?query=${encodeURIComponent(`artist:"${name}"`)}&limit=3&fmt=json`, f);
   const a = (mb?.artists ?? []).find((x: any) => x.score >= 90 && norm(x.name) === norm(name));
   if (a) {
-    const tags = [...(a.tags ?? [])].sort((p: any, q: any) => q.count - p.count).slice(0, 3).map((t: any) => t.name);
+    const tags = [...(a.tags ?? [])].sort((p: any, q: any) => q.count - p.count).map((t: any) => String(t.name)).filter(isGenreTag).slice(0, 3);
     if (tags.length) out.genre = `Genre: ${tags.join(", ")}`;
     const area = a.area?.name ?? a["begin-area"]?.name;
     if (area) out.origin = `${a.type === "Group" ? "A group" : "An artist"} from ${area}`;

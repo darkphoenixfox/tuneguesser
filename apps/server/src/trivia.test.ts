@@ -46,4 +46,10 @@ describe("trivia", () => {
     expect(c.peek(track).length).toBe(5);
     expect(calls).toBe(3); // once, not again
   });
+
+  it("keeps only genre-like MusicBrainz tags", async () => {
+    const { isGenreTag } = await import("./trivia");
+    for (const ok of ["rock", "glam rock", "new wave", "Hip Hop", "synth-pop", "r&b"]) expect(isGenreTag(ok), ok).toBe(true);
+    for (const bad of ["2008 universal fire victim", "seen live", "american", "80s", "favorites"]) expect(isGenreTag(bad), bad).toBe(false);
+  });
 });
