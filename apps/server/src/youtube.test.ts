@@ -62,4 +62,27 @@ describe("listeners joining mid-song", () => {
     await p.pause();
     expect(p.snapshot()).toBeNull();
   });
+  it("splits the messy titles found in the default playlists", () => {
+    expect(parseVideo('Numb (Official Music Video) [4K UPGRADE] – Linkin Park', 'Linkin Park')).toEqual({ title: 'Numb', artists: ['Linkin Park'] });
+    expect(parseVideo('In The End [Mellen Gi Remix] feat. Fleurie - Tommee Profitt', 'Tommee Profitt')).toEqual({ title: 'In The End [Mellen Gi Remix] feat. Fleurie', artists: ['Tommee Profitt'] });
+    expect(parseVideo('Scatman (ski-ba-bop-ba-dop-bop) Official Video HD - Scatman John', 'Scatman John Official YouTube Channel')).toEqual({ title: 'Scatman (ski-ba-bop-ba-dop-bop)', artists: ['Scatman John'] });
+    expect(parseVideo("8 Letters - Why Don't We [Official Music Video]", "Why Don't We")).toEqual({ title: '8 Letters', artists: ["Why Don't We"] });
+    expect(parseVideo('The Beatles - The Beatles - Hey Jude (Official Music Video) [Remastered 2015]', 'TheBeatlesVEVO')).toEqual({ title: 'Hey Jude', artists: ['The Beatles'] });
+    expect(parseVideo('Metallica: Enter Sandman (Official Music Video)', 'Metallica')).toEqual({ title: 'Enter Sandman', artists: ['Metallica'] });
+    expect(parseVideo('Panic! At The Disco: I Write Sins Not Tragedies [OFFICIAL VIDEO]', 'Fueled By Ramen')).toEqual({ title: 'I Write Sins Not Tragedies', artists: ['Panic! At The Disco'] });
+    expect(parseVideo('Passenger | Let Her Go (Official Video)', 'Passenger')).toEqual({ title: 'Let Her Go', artists: ['Passenger'] });
+    expect(parseVideo('Dynasty (Official Music Video) | MIIA', 'MIIA')).toEqual({ title: 'Dynasty', artists: ['MIIA'] });
+    expect(parseVideo('Limp Bizkit "Behind Blue Eyes"', 'limpbizkit')).toEqual({ title: 'Behind Blue Eyes', artists: ['Limp Bizkit'] });
+    expect(parseVideo('Neil Diamond "Sweet Caroline" on The Ed Sullivan Show', 'The Ed Sullivan Show')).toEqual({ title: 'Sweet Caroline', artists: ['Neil Diamond'] });
+    expect(parseVideo('Alok, SOMETHING ELSE– I Wonder If You Know (Official Lyric Video)', 'Alok')).toEqual({ title: 'I Wonder If You Know', artists: ['Alok', 'SOMETHING ELSE'] });
+    expect(parseVideo('MIRA - Ring, Ring | Official Video', 'MIRA')).toEqual({ title: 'Ring, Ring', artists: ['MIRA'] });
+    expect(parseVideo('Smiley - Let Me Go | Official Visualiser', 'Smiley')).toEqual({ title: 'Let Me Go', artists: ['Smiley'] });
+    expect(parseVideo('Calvin Harris ft. Rihanna - This Is What You Came For (Lyrics) HD', 'BestYoutubeVideos')).toEqual({ title: 'This Is What You Came For', artists: ['Calvin Harris', 'Rihanna'] });
+    expect(parseVideo('Mr. Big - To Be With You 4K Video', 'MrBigVEVO')).toEqual({ title: 'To Be With You', artists: ['Mr. Big'] });
+    expect(parseVideo('Marshmello & Anne-Marie - FRIENDS (Music Video) *OFFICIAL FRIENDZONE ANTHEM*', 'Marshmello')).toEqual({ title: 'FRIENDS', artists: ['Marshmello', 'Anne-Marie'] });
+    expect(parseVideo('Lynyrd Skynyrd - Simple Man - Live At The Florida Theatre / 2015', 'LynyrdSkynyrdVEVO')).toEqual({ title: 'Simple Man', artists: ['Lynyrd Skynyrd'] });
+    expect(parseVideo('Rednex - Cotton Eye Joe (Official Music Video) [HD] - RednexMusic com', 'Rednex Videos')).toEqual({ title: 'Cotton Eye Joe', artists: ['Rednex'] });
+    expect(parseVideo('BLACK SABBATH - "Paranoid" (Official Video)', 'Black Sabbath')).toEqual({ title: 'Paranoid', artists: ['BLACK SABBATH'] });
+    expect(parseVideo('Alan Walker - Lily ft. K-391 & Emelie Hollow (Official Lyric Video)', 'K-391')).toEqual({ title: 'Lily ft. K-391 & Emelie Hollow', artists: ['Alan Walker'] });
+  });
 });

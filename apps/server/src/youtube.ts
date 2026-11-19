@@ -23,23 +23,55 @@ export function parseDuration(iso: string): number {
 
 const NOISE = /\s*[\(\[][^)\]]*\b(official|lyrics?|lyric video|audio|video|music video|hd|hq|4k|remaster(ed)?|visuali[sz]er|live)\b[^)\]]*[\)\]]/gi;
 
+/** Trailing leftovers of the video title: "| Official Visualizer", "Official Video HD", "HD", "4K Video", "*OFFICIAL ANTHEM*", "Out Now!" */
+const TAIL = /\s*(?:[|*]\s*)?(?:(?:official\s+(?:(?:music|lyrics?)\s+)?|(?:music|lyrics?)\s+)(?:video|audio|visuali[sz]er)|video\s+official)(?:\s+(?:hd|hq|4k))?\s*\**\s*$|\s+(?:hd|hq|4k(?:\s+video)?)\s*$|\s+(?:nw\s+)?out now!?$|\s*\*[^*]*official[^*]*\*\s*$/i;
+/** Extra " - ..." parts that are not part of the song name */
+const JUNK_PART = /^(live\b|(explicit|clean|single|album|studio|radio)\b.*\bver|remaster|mono\b|stereo\b|.*\b(com|www)$)/i;
+const SEP = /\s+[-–—|]\s+|\s*[–—]\s+/;
+const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+const unquote = (x: string) => x.replace(/^["“”‘’']\s*([^"“”‘’]+?)\s*["“”‘’']$/, "$1").trim();
+
+function tidy(x: string): string {
+  let t = x.replace(NOISE, "").replace(/\s{2,}/g, " ").trim();
+  for (let prev = ""; prev !== t;) { prev = t; t = t.replace(TAIL, "").trim(); }
+  return t;
+}
+
 /**
  * Turns a YouTube video into a title and artist(s).
- * Auto-generated "Artist - Topic" channels carry the clean title; otherwise "Artist - Title" is split from the video title.
+ * Auto-generated "Artist - Topic" channels carry the clean title; otherwise the video title is split:
+ * "Artist - Title", "Title - Artist" (when the channel is the second part), "Artist | Title", "Artist: Title",
+ * 'Artist "Title"', '"Title" - ...' (channel = artist). "(Official Video)", "| Visualizer", "HD" and similar are removed.
  */
 export function parseVideo(videoTitle: string, channel: string): { title: string; artists: string[] } | null {
-  const clean = (t: string) => t.replace(NOISE, "").replace(/\s{2,}/g, " ").trim();
   const topic = /^(.*) - Topic$/.exec(channel.trim());
-  if (topic) return { title: clean(videoTitle), artists: topic[1]!.split(/\s*,\s*|\s*&\s*/).filter(Boolean) };
-  const cleaned = clean(videoTitle);
-  const channelName = channel.replace(/\s*(VEVO|Official)$/i, "").trim();
+  const split = (a: string) => a.split(/\s*,\s*|\s*&\s*|\s+x\s+|\s+feat\.?\s+|\s+ft\.?\s+/i).map((x) => x.trim()).filter(Boolean);
+  if (topic) return { title: tidy(videoTitle).replace(/\s+-\s+(explicit|clean)\s+ver(\.|sion)?$/i, ""), artists: topic[1]!.split(/\s*,\s*|\s*&\s*/).filter(Boolean) };
+  const channelName = channel.replace(/\s*(VEVO|Official( YouTube Channel)?|HQ)$/i, "").trim();
+  const chn = norm(channelName);
+  const cleaned = tidy(videoTitle);
   // '"Kiss Me" - "There She Goes" Version': a quoted first part is the song, the channel is the artist
   const quoted = /^["“”‘’']\s*(.+?)\s*["“”‘’']\s+[-–—]\s+/.exec(cleaned) ?? /^["“”]\s*(.+?)\s*["“”]$/.exec(cleaned);
   if (quoted && channelName) return { title: quoted[1]!.trim(), artists: [channelName] };
-  const m = /^(.+?)\s+[-–—]\s+(.+)$/.exec(cleaned);
-  if (m) return { title: m[2]!.trim(), artists: m[1]!.split(/\s*,\s*|\s*&\s*|\s+x\s+|\s+feat\.?\s+|\s+ft\.?\s+/i).filter(Boolean) };
-  const c = channel.replace(/\s*VEVO$/i, "").trim();
-  return c ? { title: clean(videoTitle), artists: [c] } : null;
+
+  let segs = cleaned.split(SEP).map((x) => tidy(x)).filter(Boolean);
+  if (segs.length === 1) {
+    const colon = /^(.{1,40}?):\s+(.+)$/.exec(cleaned);
+    const quotedTitle = /^(.+?)\s+["“](.+?)["”](?:\s+.*)?$/.exec(cleaned); // Limp Bizkit "Behind Blue Eyes"
+    if (colon) segs = [colon[1]!, colon[2]!];
+    else if (quotedTitle) segs = [quotedTitle[1]!, quotedTitle[2]!];
+  }
+  if (segs.length >= 2) {
+    if (norm(segs[0]!) === norm(segs[1]!)) segs.shift(); // "The Beatles - The Beatles - Hey Jude"
+    if (segs.length >= 2) {
+      const [a, b, ...rest] = segs as [string, string, ...string[]];
+      const title = [b, ...rest.filter((x) => !JUNK_PART.test(x))].join(" - ");
+      const isChannel = (x: string) => !!chn && (norm(x) === chn || (norm(x).length > 3 && chn.includes(norm(x))));
+      if (isChannel(b) && !isChannel(a)) return { title: unquote(a), artists: split(b) }; // "Title - Artist"
+      return { title: unquote(title), artists: split(a) };
+    }
+  }
+  return channelName ? { title: unquote(segs[0] ?? cleaned), artists: [channelName] } : null;
 }
 
 export interface YouTubePlaylist { id: string; name: string; tracks: number; image?: string }
