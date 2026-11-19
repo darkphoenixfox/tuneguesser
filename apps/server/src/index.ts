@@ -8,6 +8,7 @@ import type { MusicProvider } from "./music";
 import { Room } from "./room";
 import { TriviaCache } from "./trivia";
 import { VoteStore } from "./votes";
+import { HighScoreStore, categoryKey } from "./highscores";
 import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
@@ -35,6 +36,7 @@ const sessions = new Map<string, Session>();
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const votes = new VoteStore(path.join(DATA_DIR, "votes.json"));
+const highScores = new HighScoreStore(path.join(DATA_DIR, "highscores.json"));
 const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
 function readSavedSessions(): Record<string, Tokens> {
   try { return JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8")) as Record<string, Tokens>; } catch { return {}; }
@@ -199,22 +201,28 @@ const http = createServer(async (req, res) => {
     if (url.pathname === "/api/rooms" && req.method === "POST") {
       const body = await readJson(req);
       let music: MusicProvider;
+      let plIds: string[] = [];
       if (body.source === "youtube") {
         if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
         const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : []).map((x: unknown) => parsePlaylistId(String(x))).filter((x: string | null): x is string => !!x).slice(0, 10);
         if (!ids.length) return json(res, 400, { error: "add at least one playlist" });
+        plIds = ids;
         music = new YouTubeProvider(youtube, ids);
       } else {
         if (!s.client) return json(res, 401, { error: "not logged in" });
         const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : [body.playlistId]).filter((x: unknown): x is string => typeof x === "string" && /^[\w]+$/.test(x)).slice(0, 10);
         if (!ids.length) return json(res, 400, { error: "pick at least one playlist" });
+        plIds = ids;
         music = new SpotifyProvider(s.client, ids, typeof body.deviceId === "string" ? body.deviceId : undefined);
       }
       // songs the players voted down (more than 3 thumbs down) are never loaded
       const loadAll = music.loadTracks.bind(music);
       music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id)); };
       const code = newCode();
-      const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
+      const config = sanitizeConfig(body.config);
+      const room = new Room(code, music, config, { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
+      const tableKey = categoryKey(body.source === "youtube" ? "youtube" : "spotify", plIds, config);
+      room.onFinish = (r) => highScores.add(tableKey, config.playTo.kind, r.players.map((p) => ({ ...p, timeMs: r.timeMs })));
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Map(), createdAt: Date.now() };
       if (music instanceof YouTubeProvider) {
         room.youtube = true;

@@ -11,6 +11,7 @@ import {
   type ChoiceOption,
   type Found,
   type GameConfig,
+  type HighScores,
   type LastScore,
   type Multiplier,
   type PlayerPublic,
@@ -100,6 +101,14 @@ export class Room {
   private slowInput = new Set<string>();
   /** play time elapsed at the moment the guesser buzzed (also used for scoring) */
   private frozenElapsed = 0;
+  /** game clock for "play to a score": started with the first round, stopped when the target is reached; pauses do not count */
+  private gameStartedAt?: number;
+  private pausedMs = 0;
+  private pauseStartedAt?: number;
+  private finishMs?: number;
+  private board?: HighScores;
+  /** called once when a game ends by itself (not when the host quits): saves the results and returns the high-score table */
+  onFinish?: (r: { players: Array<{ name: string; score: number }>; timeMs?: number }) => HighScores | undefined;
   private found: Found = {};
   private lastScore?: LastScore;
   private reveal?: RevealInfo;
@@ -273,7 +282,30 @@ export class Room {
     const all = shuffle(this.pool);
     this.queue = this.config.playTo.kind === "rounds" ? all.slice(0, this.config.playTo.rounds) : all;
     this.round = 0;
+    this.gameStartedAt = this.now();
     await this.nextRound();
+  }
+
+  /** The game ended by itself: save the results (rounds: everyone's points; target score: those who got there, with the time). */
+  private saveResults() {
+    if (this.board || !this.onFinish) return;
+    const isScore = this.config.playTo.kind === "score";
+    if (isScore && !this.targetReached()) return; // the songs ran out first: not a result
+    const target = isScore ? (this.config.playTo as { target: number }).target : 0;
+    const players = [...this.players.values()].filter((p) => (isScore ? p.score >= target : p.score > 0)).map((p) => ({ name: p.name, score: p.score }));
+    try { this.board = this.onFinish({ players, timeMs: isScore ? this.gameMs() : undefined }); } catch (e) { console.warn("high scores:", (e as Error).message); }
+  }
+
+  private endPause() {
+    if (this.pauseStartedAt !== undefined) { this.pausedMs += this.now() - this.pauseStartedAt; this.pauseStartedAt = undefined; }
+  }
+
+  /** ms of play so far (the game clock) */
+  private gameMs(): number {
+    if (this.gameStartedAt === undefined) return 0;
+    if (this.finishMs !== undefined) return this.finishMs;
+    const pausedNow = this.pauseStartedAt !== undefined ? this.now() - this.pauseStartedAt : 0;
+    return Math.max(0, this.now() - this.gameStartedAt - this.pausedMs - pausedNow);
   }
 
   private targetReached(): boolean {
@@ -287,6 +319,7 @@ export class Room {
     const track = this.targetReached() ? undefined : this.queue.shift();
     if (!track) {
       this.phase = "finished";
+      this.saveResults();
       this.awaitingNext = false;
       await this.music.pause().catch(() => {});
       this.onChange();
@@ -300,6 +333,7 @@ export class Room {
     this.lastScore = undefined;
     this.guesser = undefined;
     this.paused = false;
+    this.endPause();
     this.musicPaused = false;
     for (const p of this.players.values()) { p.attemptsUsed = 0; p.skipVote = false; p.gain = { title: 0, artist: 0 }; }
     this.hostSkipVote = false;
@@ -381,6 +415,7 @@ export class Room {
     if (this.phase !== "playing" || this.guesser || this.roundStartedAt === undefined || !this.current) return;
     if (!this.paused) {
       this.paused = true;
+      this.pauseStartedAt = this.now();
       this.frozenElapsed = this.now() - this.roundStartedAt;
       clearTimeout(this.timer);
       this.musicPaused = true;
@@ -389,6 +424,7 @@ export class Room {
       return;
     }
     this.paused = false;
+    this.endPause();
     this.startClock(this.frozenElapsed);
     this.onChange();
     this.musicPaused = false;
@@ -435,6 +471,7 @@ export class Room {
       this.found.artist = { text: track.artists.join(", "), by: p.name };
     }
     p.score += points;
+    if (this.finishMs === undefined && this.gameStartedAt !== undefined && this.targetReached()) this.finishMs = this.gameMs();
     if (points > 0) this.lastScore = { name: p.name, points, multipliers };
     return { points, multipliers };
   }
@@ -557,6 +594,7 @@ export class Room {
     const elapsed = this.elapsed();
     this.guesser = undefined;
     this.paused = false;
+    this.endPause();
     this.phase = "reveal";
     // streaks: a round in which a player scored continues their streak, otherwise it resets
     for (const p of this.contenders()) p.streak = p.gain.title + p.gain.artist > 0 ? p.streak + 1 : 0;
@@ -611,6 +649,7 @@ export class Room {
   async stop() {
     this.dispose();
     this.paused = false;
+    this.endPause();
     this.guesser = undefined;
     this.awaitingNext = false;
     if (this.phase !== "lobby") this.phase = "finished";
@@ -672,6 +711,8 @@ export class Room {
       roundMs: this.limitMs,
       guessMs: g ? this.guessLimit : this.opts.guessMs,
       maxAttempts: this.config.attempts,
+      clock: this.config.playTo.kind === "score" && this.gameStartedAt !== undefined ? { ms: this.gameMs(), running: this.finishMs === undefined && this.pauseStartedAt === undefined && (this.phase === "playing" || this.phase === "reveal") } : undefined,
+      highScores: this.phase === "finished" ? this.board : undefined,
       remainingMs: playing && this.limitMs !== null ? Math.max(0, this.limitMs - elapsed) : undefined,
       paused: playing && this.paused ? true : undefined,
       guesser: g ? { id: g.id, name: g.name } : undefined,

@@ -10,6 +10,7 @@ import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
 import { useCountdown, useRoom, useScrollTop } from "./net";
 import { Scoreboard } from "./Scoreboard";
+import { HighScoreTable } from "./HighScores";
 import { sfx } from "./sfx";
 import type { PlayerCommand } from "@tuneguesser/shared";
 import { useYouTubePlayer } from "./YouTubePlayer";
@@ -259,7 +260,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <button className="btn" onClick={() => send({ t: "next" })}>{t("Next song")}<PadHint button="a" /></button>
         </div>
       )}
-      {state.phase === "finished" && <div className="card center"><h2>{t("Game over")}</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>{t("Back to main screen")}</button></div>}
+      {state.phase === "finished" && <div className="card center"><h2>{t("Game over")}</h2><Scoreboard state={state} meId={mine.id} /><HighScoreTable state={state} /><button className="btn" onClick={exit}>{t("Back to main screen")}</button></div>}
       {askLeave && <Confirm message={t("Leave the game?")} confirmLabel={t("Leave")} onCancel={() => setAskLeave(false)} onConfirm={leaveNow} />}
     </Wrap>
   );

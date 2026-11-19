@@ -218,4 +218,12 @@ export const ES: Record<string, string> = {
   "The browser blocked the sound: tap anywhere to start the music": "El navegador bloqueó el sonido: toca en cualquier sitio para iniciar la música",
   "This video cannot be played embedded": "Este vídeo no se puede reproducir incrustado",
   "YouTube player error {n}": "Error del reproductor de YouTube {n}",
+  // timer, high scores, reset
+  "Time so far": "Tiempo hasta ahora",
+  "High scores": "Mejores puntuaciones",
+  "Fastest to {n} points, same settings.": "Más rápidos en llegar a {n} puntos, con los mismos ajustes.",
+  "Most points in {n} rounds, same settings.": "Más puntos en {n} rondas, con los mismos ajustes.",
+  "This game: {time}": "Esta partida: {time}",
+  "Time: {time}": "Tiempo: {time}",
+  "Reset settings to defaults": "Restablecer los ajustes por defecto",
 };

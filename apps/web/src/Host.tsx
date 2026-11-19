@@ -1,3 +1,4 @@
+import { GameTimer, HighScoreTable, useGameClock, fmtTime } from "./HighScores";
 import { Marquee } from "./Marquee";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -186,6 +187,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const options = (
     <>
           <section className="card opts">
+            <button type="button" className="btn ghost reset-opts" onClick={() => set({ ...DEFAULT_CONFIG, hints: { ...DEFAULT_CONFIG.hints } })}>↺ {t("Reset settings to defaults")}</button>
             {solo && <label>{t("Your name")}<input value={playerName} maxLength={16} autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} placeholder={t("Player")} /></label>}
             {!useYt && (
               <div className="opt"><span>{t("Music plays on")}</span>
@@ -546,7 +548,7 @@ function Playing({ send, slot, follow, state, endsAt, guessEndsAt, onSkip, onPau
             </span>
             <small>{state.skip && state.skip.voters > 1 && state.skip.votes > 0 ? `(${state.skip.votes}/${state.skip.voters})` : ""}</small>
           </div>
-        <span className="rl">{roundLabel(state)}<b className="rl-secs">{unlimited ? "∞" : `${Math.ceil(left)}s`}</b></span>
+        <span className="rl">{roundLabel(state)}<b className="rl-secs">{unlimited ? "∞" : `${Math.ceil(left)}s`}</b><GameTimer state={state} /></span>
         <ScoreLine state={state} />
       </>, slot)}
       <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
@@ -587,6 +589,7 @@ function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void;
           <VoteButtons round={state.round} send={send} />
         </div>
         <div className="top-side">
+          <GameTimer state={state} />
           <ScoreBanner state={state} bare />
           <Scoreboard state={state} reveal={r} />
         </div>
@@ -599,12 +602,15 @@ function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void;
 
 function Finished({ state, onLeave }: { state: RoomState; onLeave: () => void }) {
   const sorted = [...state.players].sort((a, b) => b.score - a.score);
+  const ms = useGameClock(state);
   return (
     <div className="finished center">
       <h1 className="logo">{t("{name} wins! 🏆", { name: sorted[0]?.name ?? "" })}</h1>
       <ol className="podium">
         {sorted.map((p, i) => <li key={p.id} className={"pop p" + i} style={{ animationDelay: `${(sorted.length - i) * 250}ms` }}><b>{i + 1}</b><span>{p.name}</span><em>{p.score}</em></li>)}
       </ol>
+      {ms !== null && <p className="muted finish-time">{t("Time: {time}", { time: fmtTime(ms) })}</p>}
+      <HighScoreTable state={state} />
       <button className="btn big" onClick={onLeave}>{t("New game")}</button>
     </div>
   );

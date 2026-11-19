@@ -363,6 +363,40 @@ describe("Room (buzzer game)", () => {
       expect(room.state().phase).toBe("finished");
     });
 
+    it("score target: a game clock runs (not while paused) and the time of the winning answer is saved", async () => {
+      const { room, song } = make(2, true, { playTo: { kind: "score", target: 500 } });
+      const saved: any[] = [];
+      room.onFinish = (r) => { saved.push(r); return { kind: "score", entries: [], mine: [] }; };
+      const a = room.addPlayer("Ana")!;
+      expect(room.state().clock).toBeUndefined();
+      await room.start();
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(room.state().clock).toEqual({ ms: 4_000, running: true });
+      room.togglePause();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(room.state().clock).toEqual({ ms: 4_000, running: false });
+      room.togglePause();
+      await vi.advanceTimersByTimeAsync(1_000);
+      room.buzz(a);
+      await room.answer(a, `${song()[0]} ${song()[1]}`);
+      await vi.advanceTimersByTimeAsync(20_000); // reveal: the clock has stopped at the winning answer
+      expect(room.state().phase).toBe("finished");
+      expect(saved).toHaveLength(1);
+      expect(saved[0].timeMs).toBe(5_000);
+      expect(saved[0].players.map((p: any) => p.name)).toEqual(["Ana"]);
+      expect(room.state().highScores).toBeDefined();
+    });
+
+    it("a game the host quits is not saved", async () => {
+      const { room } = make(2);
+      let n = 0;
+      room.onFinish = () => { n++; return undefined; };
+      room.addPlayer("Ana");
+      await room.start();
+      await room.stop();
+      expect(n).toBe(0);
+    });
+
     it("multipliers: both at once gives x1.5 and a streak adds to it", async () => {
       const { room, song } = make(3);
       const a = room.addPlayer("Ana")!;

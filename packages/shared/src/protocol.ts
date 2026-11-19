@@ -45,6 +45,27 @@ export interface RevealInfo {
   gains: Record<string, { title: number; artist: number }>;
 }
 
+/** One saved result in a high-score table. */
+export interface HighScoreEntry {
+  id: string;
+  name: string;
+  /** points */
+  score: number;
+  /** playing to a target score: how long it took to get there */
+  timeMs?: number;
+  /** epoch ms */
+  at: number;
+}
+
+/** The table for games with exactly these settings (same playlists, scoring, hints, timer, answers, start, attempts, multipliers). */
+export interface HighScores {
+  kind: "rounds" | "score";
+  /** best first: most points (rounds) or the fastest time (target score) */
+  entries: HighScoreEntry[];
+  /** ids of the entries that this game just added */
+  mine: string[];
+}
+
 export interface RoomState {
   code: string;
   phase: Phase;
@@ -83,6 +104,10 @@ export interface RoomState {
   awaitingNext?: boolean;
   /** skip votes this round. Voters = connected players, plus the host if the host is not also playing. */
   skip?: { votes: number; voters: number; host: boolean };
+  /** playing to a target score: the game clock (excludes pauses). `running`: add the time since the state was sent. */
+  clock?: { ms: number; running: boolean };
+  /** after the game: the high-score table for these settings */
+  highScores?: HighScores;
   /** YouTube mode: players can choose to hear the music on their own device too */
   youtube?: boolean;
 }

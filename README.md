@@ -21,6 +21,9 @@ With `YOUTUBE_API_KEY` set on the server, the host setup shows **Music from: Spo
 
 The interface is available in **English and Spanish** (⚙ Settings → Language).
 
+### Timer and high scores
+Playing to a **target score** shows a game clock (⏱ m:ss, not counting pauses) and the time of the winning answer is the result. When a game ends by itself, the results are saved and a **High scores** table is shown (top 10, on the host screen and the phones). Rounds games rank by points, target-score games by the fastest time. Each table is only for games with the **same** playlists, rounds/target, hints, timer, type/choice, song start, attempts, multipliers, guess type and play order. Saved in `DATA_DIR/highscores.json`. Quit games are not saved. The top of the options has a **Reset settings to defaults** button.
+
 ### Game types (Host a game page)
 The last chosen playlists and options are remembered on the host's device. The **⚡ Quickstart** button at the top starts a game at once with those last settings.
 
