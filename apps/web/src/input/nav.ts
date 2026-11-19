@@ -83,6 +83,7 @@ function exitMenu() {
 
 /** Buttons while the corner menu is active: left/right between the corner buttons, an open panel is navigated like a menu. */
 function onMenuButton(b: PadButtonName) {
+  if (document.querySelector(".confirm")) return; // a confirmation dialog has the pad
   document.documentElement.dataset.pad = "1";
   const panel = document.querySelector<HTMLElement>(".settings");
   const el = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;

@@ -3,6 +3,7 @@ import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
 import { ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
 import { PadKeyboard } from "./input/PadKeyboard";
+import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
 import { useCountdown, useRoom } from "./net";
 import { Scoreboard } from "./Scoreboard";
@@ -48,6 +49,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
   const [words, setWords] = useState<string[]>([]);
+  const [askLeave, setAskLeave] = useState(false);
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => {
     if (m.t === "words") setWords(m.list);
     if (m.t === "joined") { setMe(m.playerId); onId(m.playerId); }
@@ -127,10 +129,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   if (!state || !mine) return <main className="screen phone center"><p className="muted">Joining…</p></main>;
 
   const Wrap = embedded ? "div" : "main";
+  const leaveNow = () => { send({ t: "leave" }); onLeave(); };
   const exit = () => {
-    if (state.phase !== "lobby" && state.phase !== "finished" && !window.confirm("Leave the game?")) return;
-    send({ t: "leave" });
-    onLeave();
+    if (state.phase !== "lobby" && state.phase !== "finished") setAskLeave(true); else leaveNow();
   };
   const found = state.found;
   const submit = (e: React.FormEvent) => {
@@ -223,6 +224,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
         </div>
       )}
       {state.phase === "finished" && <div className="card center"><h2>Game over</h2><Scoreboard state={state} meId={mine.id} /><button className="btn" onClick={exit}>Back to main screen</button></div>}
+      {askLeave && <Confirm message="Leave the game?" confirmLabel="Leave" onCancel={() => setAskLeave(false)} onConfirm={leaveNow} />}
     </Wrap>
   );
 }

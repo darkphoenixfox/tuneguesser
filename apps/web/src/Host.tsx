@@ -8,6 +8,7 @@ import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
+import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
@@ -171,6 +172,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   const first = useMemo(() => ({ t: "host" as const, code: saved.code, token: saved.token }), [saved]);
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first);
   const [mute, setMute] = useState(false);
+  const [askQuit, setAskQuit] = useState(false);
   const prev = useRef<RoomState["phase"]>();
   const joinUrl = `${location.origin}/?code=${saved.code}`;
   // optional: the host device plays too
@@ -224,7 +226,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   return (
     <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
-      <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished" || window.confirm("Quit the game for everyone?")) quit(); }} aria-label="Quit game" title="Quit game">✕</button>
+      <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
       <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
@@ -234,6 +236,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {error && <p className="error toast">{error}</p>}
+      {askQuit && <Confirm message="Quit the game for everyone?" confirmLabel="Quit game" onCancel={() => setAskQuit(false)} onConfirm={quit} />}
     </main>
   );
 }
