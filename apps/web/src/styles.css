@@ -601,7 +601,9 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .yt-player { position: fixed; left: 0; bottom: 0; width: 200px; height: 200px; opacity: 0; pointer-events: none; z-index: -1; overflow: hidden; }
 .yt-player.shown { opacity: 1; z-index: 2; border-radius: 14px; }
 /* the video is scaled up a little so YouTube's title bar and logo fall outside the visible frame */
-.yt-player iframe { width: 100%; height: 100%; border: 0; transform: scale(1.4); transform-origin: 50% 100%; }
+.yt-player iframe { width: 100%; height: 100%; border: 0; transform: scale(1.4); transform-origin: 50% 80%; filter: blur(var(--yt-blur, 0px)); }
+.yt-mosaic { position: absolute; inset: 0; display: grid; pointer-events: none; }
+.yt-mosaic i { display: block; }
 .yt-slot { width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; background: var(--card); }
 
 .pl-wrap { position: relative; display: flex; flex-direction: column; }

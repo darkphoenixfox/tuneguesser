@@ -53,6 +53,7 @@ const DEFAULT_YT_PLAYLISTS = [
   "PLGBuKfnErZlB3AThAEKz8_3kbYTocgfbB", // 2010s pop
   "PLGBuKfnErZlAG7oSbCe1DBVZsDRzBjaw5", // classic rock 60s-80s
   "PLGBuKfnErZlDWlLLxjNJh6Spsn2_TppcF", // 2000s rock
+  "PL0jp-uZ7a4g9FQWW5R_u0pz4yzV4RiOXu", // The Beatles 100
 ];
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
