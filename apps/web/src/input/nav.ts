@@ -22,6 +22,13 @@ function move(dir: "up" | "down" | "left" | "right", root: ParentNode = document
   const all = candidates(root);
   const cur = document.activeElement instanceof HTMLElement && all.includes(document.activeElement) ? document.activeElement : undefined;
   if (!cur) {
+    // main screen with tabs: left/right/up from nothing go to the tabs (right = the other tab), down to the content
+    const tabs = [...document.querySelectorAll<HTMLElement>(".tabs button")].filter((t) => all.includes(t));
+    if (tabs.length && dir !== "down") {
+      const sel = Math.max(0, tabs.findIndex((t) => t.getAttribute("aria-selected") === "true"));
+      focus(tabs[dir === "right" ? Math.min(tabs.length - 1, sel + 1) : dir === "left" ? Math.max(0, sel - 1) : sel]);
+      return;
+    }
     // the main action first (Quickstart, Start game, ANSWER), never the corner buttons (mute, settings, quit, device, theme)
     const main = all.find((e) => !e.matches(".mute, .micbtn, .gear, .quit, .devbtn, .theme-btn, .tabs button"));
     focus(all.find((e) => e.matches("[data-pad-first]")) ?? main ?? all[0]); // an enabled one: a disabled Start game must not swallow the key
