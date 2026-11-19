@@ -163,12 +163,14 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     <>
           <section className="card opts">
             {solo && <label>Your name<input value={playerName} maxLength={16} autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} placeholder="Player" /></label>}
-            <div className="opt"><span>Music plays on</span>
-              <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} onFocus={loadDevices}>
-                {devices.length === 0 && <option value="">No device found – open Spotify somewhere</option>}
-                {devices.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type}){d.active ? " ●" : ""}</option>)}
-              </select>
-            </div>
+            {!useYt && (
+              <div className="opt"><span>Music plays on</span>
+                <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} onFocus={loadDevices}>
+                  {devices.length === 0 && <option value="">No device found – open Spotify somewhere</option>}
+                  {devices.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type}){d.active ? " ●" : ""}</option>)}
+                </select>
+              </div>
+            )}
             <div className="opt"><span>Play to</span>
               <Seg value={cfg.playTo.kind} options={[["rounds", "Rounds"], ["score", "Score"]]} onChange={(k) => set({ playTo: k === "rounds" ? { kind: "rounds", rounds: 10 } : { kind: "score", target: 5000 } })} />
               {cfg.playTo.kind === "rounds"
