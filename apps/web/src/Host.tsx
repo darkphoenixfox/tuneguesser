@@ -45,7 +45,14 @@ function Seg<T extends string | number | boolean>({ value, options, onChange }: 
 
 const LAST_PLAYLISTS = "tg_playlists";
 /** YouTube mode starts with this playlist until the host changes the list */
-const DEFAULT_YT_PLAYLISTS = ["PLLLGHxXtD0Z4", "PL7DA3D097D6FDBC02"];
+const DEFAULT_YT_PLAYLISTS = [
+  "PLLLGHxXtD0Z4", // Top 100 most streamed songs
+  "PL7DA3D097D6FDBC02", // 90's hits
+  "PLGBuKfnErZlCXt8Q61VQYu9lQQruuFFoB", // DJ songs 2000-2020
+  "PLGBuKfnErZlB3AThAEKz8_3kbYTocgfbB", // 2010s pop
+  "PLGBuKfnErZlAG7oSbCe1DBVZsDRzBjaw5", // classic rock 60s-80s
+  "PLGBuKfnErZlDWlLLxjNJh6Spsn2_TppcF", // 2000s rock
+];
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
 
