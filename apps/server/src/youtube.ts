@@ -130,7 +130,7 @@ export function fixUploaderTitles(tracks: Track[]): void {
 /** Live recordings (concerts, fan videos, unplugged sessions): the sound and length do not match the studio song. */
 export function isLiveRecording(title: string): boolean {
   if (/unplugged/i.test(title)) return false; // unplugged versions are kept, even when they are filmed live
-  return /\(\s*live\b|\[\s*live\b|[-–—|]\s*live(?:\s*$|\s*[(\[\-–—|,/@]|\s+(?:at|from|in|on|version|performance|session|concert|recording|\d))|\blive\s+(at|from|in|on|@|version|performance|session|concert|tour|recording|aid|8|20\d\d|19\d\d)\b|\blive$|in concert|full concert|\bconcert\b|fan[- ]?cam|front row|\bw\/\s*fan|\bfestival\b|world tour|\btour\b|\ben vivo\b|\ben directo\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/i.test(title);
+  return /\(\s*live\b|\[\s*live\b|[-–—|]\s*live(?:\s*$|\s*[(\[\-–—|,/@]|\s+(?:at|from|in|on|version|performance|session|concert|recording|\d))|\blive\s+(at|from|in|on|@|version|performance|session|concert|tour|recording|aid|8|20\d\d|19\d\d)\b|\blive$|in concert|full concert|\bconcert\b|fan[- ]?cam|bootleg|audience (?:recording|video|footage)|soundboard|\bgig\b|backstage|rehearsal|sound ?check|interview|behind the scenes|front row|\bw\/\s*fan|\bfestival\b|world tour|\btour\b|\ben vivo\b|\ben directo\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/i.test(title);
 }
 
 /**

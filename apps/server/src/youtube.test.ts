@@ -108,7 +108,7 @@ describe("listeners joining mid-song", () => {
   });
 
   it("recognises live recordings but not songs with 'live' in the name", () => {
-    for (const live of ["Paramore - Misery Business w/fan (Live) - Front Row - Wellington, NZ 7/10/10 HD", "U2 - Miracle Drug (Live)", "Aerosmith - Dream On (Live At Capitol Center, Largo, MD / November 9, 1978)", "The Beatles - Twist And Shout (Performed Live On The Ed Sullivan Show 2/23/64)"]) expect(isLiveRecording(live), live).toBe(true);
+    for (const live of ["Paramore - Misery Business w/fan (Live) - Front Row - Wellington, NZ 7/10/10 HD", "U2 - Miracle Drug (Live)", "Aerosmith - Dream On (Live At Capitol Center, Largo, MD / November 9, 1978)", "Queen - Bootleg 1981 Montreal", "Band - Rehearsal footage", "The Beatles - Twist And Shout (Performed Live On The Ed Sullivan Show 2/23/64)"]) expect(isLiveRecording(live), live).toBe(true);
     for (const studio of ["Tears in Heaven (Acoustic) (Live at MTV Unplugged, Bray Film Studios)", "Nirvana - The Man Who Sold The World (MTV Unplugged)", "Oasis - Live Forever (Remastered)", "Wings - Live and Let Die", "Bon Jovi - Livin' on a Prayer", "Queen - Bohemian Rhapsody (Official Video Remastered)", "Alive - Pearl Jam"]) expect(isLiveRecording(studio), studio).toBe(false);
   });
 
