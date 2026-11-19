@@ -3,8 +3,6 @@
 A web game where 1 to 4 players guess the song and artist from a few seconds of music playing on Spotify.
 The host screen (TV or laptop) plays the music and shows the scoreboard; players answer from their phones.
 
-Live: <https://your.public.host> · LAN: <http://nas.local:8087>
-
 Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 
 ---
@@ -127,7 +125,7 @@ In the Spotify dashboard add the redirect URI `http://127.0.0.1:5173/callback` f
 The host screen has a **demo mode** (no Spotify, silent) for trying the flow.
 
 ## Deploying to the NAS
-`npm run deploy:nas` builds everything, copies it to `NAS_DIR` (the Synology share of `/volume1/docker/tuneguesser`) and creates or updates the Portainer stack `tuneguesser` (separate from the another project stack). It restarts `tuneguesser-server` on later runs.
+`npm run deploy:nas` builds everything, copies it to the NAS share that holds the stack's folder and creates or updates the Portainer stack `tuneguesser` (separate from the another project stack). It restarts `tuneguesser-server` on later runs.
 
 | Flag | Effect |
 | :--- | :--- |
@@ -137,7 +135,7 @@ The host screen has a **demo mode** (no Spotify, silent) for trying the flow.
 
 Needs `PORTAINER_TOKEN` in the environment. The Spotify Client ID is read from `.env` and sent to the stack's environment variables, never stored in the repo. The server loses Spotify logins on restart, so the host logs in again after a deploy.
 
-Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneguesser-server` (Node); DSM reverse proxy `https://your.public.host` → `localhost:8087` with the WebSocket header enabled; redirect URI `https://your.public.host/callback`.
+Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneguesser-server` (Node); DSM reverse proxy (HTTPS) → `localhost:8087` with the WebSocket header enabled; the Spotify redirect URI is `https://<your public host>/callback`.
 
 ## Project layout
 ```

@@ -36,14 +36,14 @@ Found when a playlist request returned 403. Per Spotify's February 2026 migratio
 ### DEC-008 · Spotify login: PKCE, no client secret · 2026-11-18 · Active
 Authorization Code with PKCE; the server keeps tokens in memory against a session cookie. Only the **Client ID** is needed.
 **Consequence:** after every server restart (including deploys) the host logs in again. Persisting sessions is on the "not done yet" list.
-**Redirect URIs:** `https://your.public.host/callback` (production) and `http://127.0.0.1:5173/callback` (local; Spotify requires `127.0.0.1`, not `localhost`).
+**Redirect URIs:** `https://<public host>/callback` (production) and `http://127.0.0.1:5173/callback` (local; Spotify requires `127.0.0.1`, not `localhost`).
 
 ### DEC-009 · Deployment: own Portainer stack on the NAS · 2026-11-18 · Active
-Stack `tuneguesser` with its own containers (`tuneguesser-web` nginx, `tuneguesser-server` node:22-slim), network and folder `/volume1/docker/tuneguesser` (Windows share `NAS_DIR`), LAN port **8087**. Completely separate from the another project stack (the user asked for a different container). The deploy script follows another project's approach (copy to `K:` with robocopy, then the Portainer API with `PORTAINER_TOKEN`).
+Stack `tuneguesser` with its own containers (`tuneguesser-web` nginx, `tuneguesser-server` node:22-slim), network and its own folder on the NAS, LAN port **8087**. Completely separate from the another project stack (the user asked for a different container). The deploy script follows another project's approach (copy to the NAS share with robocopy, then the Portainer API with `PORTAINER_TOKEN`).
 Secrets (Spotify Client ID, redirect URI) live in Portainer's stack environment, not in the repo.
 
 ### DEC-010 · Public address · 2026-11-18 · Active
-`https://your.public.host`: Porkbun DNS (CNAME to `your.public.host`) → Synology DSM reverse proxy (HTTPS 443 → `localhost:8087`, with the WebSocket custom header) using the existing wildcard `*your.public.host` certificate.
+Public address: DNS CNAME → Synology DSM reverse proxy (HTTPS 443 → `localhost:8087`, with the WebSocket custom header) using an existing wildcard certificate.
 **Gotcha found:** the first `tune` DNS record pointed at a wrong IP, and DSM served the wrong certificate until the reverse-proxy entry was bound to the wildcard certificate.
 
 ### DEC-011 · One main URL with two tabs · 2026-11-18 · Active
