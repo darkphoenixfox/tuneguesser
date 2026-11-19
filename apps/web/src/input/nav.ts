@@ -141,12 +141,32 @@ function onButton(b: PadButtonName) {
   }
 }
 
+/** A TV remote (Android TV / Nvidia Shield: the app, or a TV browser) sends arrow keys and Enter: use them like the d-pad and A. */
+const tvRemote = () =>
+  typeof window !== "undefined" && (!!(window as unknown as { TuneGuesserApp?: unknown }).TuneGuesserApp || /\b(TV|AFT\w*|SHIELD)\b/i.test(navigator.userAgent));
+
+const KEY_DIR: Record<string, "up" | "down" | "left" | "right"> = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right" };
+
+function onKey(e: KeyboardEvent) {
+  const dir = KEY_DIR[e.key];
+  if (!dir || e.altKey || e.ctrlKey || e.metaKey || !tvRemote()) return;
+  const t = e.target instanceof HTMLElement ? e.target : undefined;
+  const typing = t instanceof HTMLTextAreaElement || (t instanceof HTMLInputElement && /^(text|search|email|url|tel|password|)$/.test(t.type));
+  if (typing && (dir === "left" || dir === "right")) return; // moves the text cursor
+  e.preventDefault(); // up/down must not change a number box or a drop-down: they move the focus
+  e.stopPropagation();
+  document.documentElement.dataset.pad = "1"; // shows the focus ring
+  if (t && (dir === "left" || dir === "right") && adjust(t, dir === "right" ? 1 : -1)) return;
+  move(dir, document.querySelector(".confirm") ?? document);
+}
+
 let started = false;
 export function startPadNav() {
   if (started || typeof window === "undefined") return;
   started = true;
   onPadButton(onButton);
   onPadMenuButton(onMenuButton);
+  window.addEventListener("keydown", onKey, true); // capture: before inputs and drop-downs act on the arrows
   const off = () => { delete document.documentElement.dataset.pad; };
   window.addEventListener("pointerdown", off);
 }

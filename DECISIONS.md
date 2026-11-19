@@ -178,6 +178,9 @@ The ⚙ menu is one component on the Join and Host screens (theme + link to the 
 ### DEC-050 · Spotify login in the Android app runs in the system browser · 2026-11-19 · Active
 Inside the Capacitor WebView the login link was opened in the phone's browser by default, so the session ended up in the browser, not the app (error "Spotify login failed"), and Spotify rejects embedded web views anyway. The app now calls `TuneGuesserApp.openExternal(login URL with a random nonce)`; the server parks the finished login under that nonce (2 min, one use) and the browser page returns to the app through the `net.phoenixfox.tuneguesser://auth` link; the app polls `/api/auth/claim?nonce=` and moves the login into its own session. No user-agent spoofing. Also: a failed Spotify `play` no longer crashes the server (it used to wipe all logins).
 
+### DEC-051 · TV remote navigation · 2026-11-19 · Active
+On an Nvidia Shield remote the arrow keys changed number boxes and drop-downs instead of moving on, so the setup page could not be left. In the Android app (or a TV browser) the arrow keys are now captured and routed to the same spatial focus navigator as the gamepad d-pad: up/down always move, left/right adjust numbers and drop-downs or move, Enter clicks the focused control. Works on every screen including the game (so the corner buttons are reachable).
+
 ---
 
 ## Open questions
