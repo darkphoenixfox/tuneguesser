@@ -73,7 +73,8 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const [source, setSource] = useState<"spotify" | "youtube">(() => (readJson<string>("tg_music", "youtube") === "spotify" ? "spotify" : "youtube")); // YouTube is the default
   const [ytLists, setYtLists] = useState<Array<{ id: string; name: string; tracks: number; image?: string }>>(() => readJson("tg_ytlists", []));
   /** playlists that stay in the list but are switched off for the next game */
-  const [ytOff, setYtOff] = useState<string[]>(() => readJson<string[]>("tg_ytoff", []));
+  // first visit (nothing saved yet): every default playlist starts switched off, so the player picks what to play
+  const [ytOff, setYtOff] = useState<string[]>(() => { try { if (localStorage.getItem("tg_ytoff") === null) return [...DEFAULT_YT_PLAYLISTS]; } catch { /* storage blocked */ } return readJson<string[]>("tg_ytoff", []); });
   const [ytInput, setYtInput] = useState("");
   const useYt = source === "youtube" && !!me?.youtube;
   const addYt = async () => {
