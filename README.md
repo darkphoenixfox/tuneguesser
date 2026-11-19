@@ -101,6 +101,7 @@ Example, 40-second round, title found 10 s in: `1000 × (0.2 + 0.8 × 0.75) = 80
 ### Players, attempts, leaving
 - **Attempts per round** (default 3, host chooses 1-5); they reset every round.
 - A phone remembers the player's name for next time. Opening a QR code or link for a different room than the last one starts a fresh join (the old session is dropped).
+- The host screen shows a notice when a player leaves, loses connection or comes back.
 - A player can press **✕ Exit** on their phone to return to the main screen. In the lobby this frees their slot. Mid-game they drop out; a guess in progress ends.
 
 ---

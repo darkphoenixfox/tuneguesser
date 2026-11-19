@@ -203,6 +203,29 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
     joined.current = state.players.length;
   }, [state?.players.length]);
 
+  // tell the host when a player leaves, loses connection or comes back
+  const [notice, setNotice] = useState("");
+  const prevPlayers = useRef<Map<string, { name: string; connected: boolean }>>(new Map());
+  useEffect(() => {
+    if (!state) return;
+    const prev = prevPlayers.current;
+    const msgs: string[] = [];
+    const ids = new Set(state.players.map((p) => p.id));
+    for (const [id, o] of prev) if (!ids.has(id) && id !== me?.playerId) msgs.push(`${o.name} left the game`);
+    for (const p of state.players) {
+      const o = prev.get(p.id);
+      if (!o || p.id === me?.playerId) continue;
+      if (o.connected && !p.connected) msgs.push(`${p.name} left or lost connection`);
+      else if (!o.connected && p.connected) msgs.push(`${p.name} is back`);
+    }
+    prevPlayers.current = new Map(state.players.map((p) => [p.id, { name: p.name, connected: p.connected }]));
+    if (msgs.length) {
+      setNotice(msgs.join(" · "));
+      const t = setTimeout(() => setNotice(""), 7000);
+      return () => clearTimeout(t);
+    }
+  }, [state?.players]);
+
   // keyboard / gamepad: Alt+P or Start pause, Alt+S or Select skip, Enter or A = next song at the reveal
   const phaseRef = useRef(state?.phase);
   phaseRef.current = state?.phase;
@@ -238,6 +261,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
+      {notice && <p className="notice toast" role="status">{notice}</p>}
       {error && <p className="error toast">{error}</p>}
       {askQuit && <Confirm message="Quit the game for everyone?" confirmLabel="Quit game" onCancel={() => setAskQuit(false)} onConfirm={quit} />}
     </main>
