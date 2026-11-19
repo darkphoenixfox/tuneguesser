@@ -1,7 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 
-const Ctor: any = typeof window === "undefined" ? undefined : (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
-export const micSupported = !!Ctor;
+type Native = { canListen?: () => boolean; startListening?: (lang: string) => void; stopListening?: () => void; cancelListening?: () => void };
+const nativeBridge = (): Native | undefined => (typeof window === "undefined" ? undefined : (window as any).TuneGuesserApp);
+
+/** The Android app has no browser speech recognition: use the phone's own recognizer through the app (it asks for the microphone permission). */
+class NativeRecognition {
+  lang = ""; interimResults = true; continuous = false; maxAlternatives = 1;
+  onresult: ((e: any) => void) | null = null; onerror: ((e: any) => void) | null = null; onend: (() => void) | null = null;
+  start() {
+    (window as any).__tgSpeech = (kind: string, text: string) => {
+      if (kind === "partial" || kind === "final") this.onresult?.({ results: [[{ transcript: text }]] });
+      else if (kind === "error") this.onerror?.({ error: text });
+      else if (kind === "end") this.onend?.();
+    };
+    nativeBridge()!.startListening!(this.lang);
+  }
+  stop() { nativeBridge()?.stopListening?.(); }
+  abort() { nativeBridge()?.cancelListening?.(); }
+}
+
+/** Looked up when used (the app injects its bridge after the page script starts). */
+const getCtor = (): any => {
+  if (typeof window === "undefined") return undefined;
+  const b = nativeBridge();
+  if (b?.startListening && b.canListen?.()) return NativeRecognition;
+  return (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+};
+export const micSupported = () => !!getCtor();
 
 /** "Voice answers by default": when on, the microphone starts listening as soon as you press ANSWER. Saved per device. */
 const KEY = "tg_mic";
@@ -17,7 +42,7 @@ export function useMicDefault(): [boolean, (v: boolean) => void] {
 /** Round button for the corner row / header: turn voice answers on by default. */
 export function MicToggle({ className }: { className?: string }) {
   const [on, set] = useMicDefault();
-  if (!Ctor) return null;
+  if (!getCtor()) return null;
   return (
     <button className={(className ?? "") + (on ? " on" : "")} onClick={() => set(!on)} aria-pressed={on} aria-label="Answer by voice by default" title={on ? "Voice answers on: the microphone opens when you press ANSWER" : "Voice answers off"}>
       <span style={{ opacity: on ? 1 : .45 }}>🎤</span>
@@ -40,17 +65,17 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
   // `disabled` is still true from the previous attempt, so wait until it is enabled (once per mount).
   const auto = useRef(false);
   useEffect(() => {
-    if (!Ctor || disabled || auto.current || !getMicDefault()) return;
+    if (!getCtor() || disabled || auto.current || !getMicDefault()) return;
     auto.current = true;
     toggle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disabled]);
-  if (!Ctor) return null;
+  if (!getCtor()) return null;
 
   function toggle() {
     if (on) { rec.current?.stop(); return; }
     setErr("");
-    const r = new Ctor();
+    const r = new (getCtor())();
     r.lang = navigator.language || "en-US";
     r.interimResults = true;
     r.continuous = false;

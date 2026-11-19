@@ -19,5 +19,5 @@ and copies the result back. Set `JAVA_HOME` and `ANDROID_HOME` for it, or keep t
 Notes
 - The APK contains the server address, so `apps/web/public/*.apk` is git-ignored.
 - A debug APK is for your own devices (allow installs from the source). A Play Store release needs a signed build and a listing (not set up).
-- The WebView has no speech recognition, so the 🎤 voice answers are not available inside the app.
+- Voice answers inside the app use Android's own speech recognizer (the WebView has none): the first use asks for the microphone permission. It needs a recognition service on the device (the Google app; on Android TV/Shield it is usually there).
 - The launcher icon and splash are generated from `apps/web/public/tuneguesser.png`.

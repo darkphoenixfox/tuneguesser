@@ -190,6 +190,9 @@ When nothing was focused, the navigator picked the `data-pad-first` element even
 ### DEC-054 · Back button in the Android app · 2026-11-19 · Active
 The Android Back button closed the app at once. The web view treats Back as history navigation, so the app keeps one extra history entry and handles the `popstate` itself (`BackHandler`): close the open dialog/panel, otherwise use the screen's quit/exit button (confirmation during a game), otherwise ask to exit the app. Web-only, so no new APK was needed.
 
+### DEC-055 · Voice answers in the Android app use the native recognizer · 2026-11-19 · Active · extends DEC-048
+Android's WebView has no Web Speech API, so the 🎤 button never appeared and no permission was asked. The app now exposes `SpeechRecognizer` to the page (`TuneGuesserApp.startListening` / `window.__tgSpeech`) and requests `RECORD_AUDIO` at first use; `Mic.tsx` wraps it in the same interface as the browser API. Needs the new APK (older installs have no mic).
+
 ---
 
 ## Open questions
