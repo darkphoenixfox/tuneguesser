@@ -138,7 +138,7 @@ Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneg
 ## Project layout
 ```
 apps/server     Node game server: rooms, game engine (room.ts), Spotify (spotify.ts), WebSocket + HTTP
-apps/web        React + Vite: host screen (Host.tsx), phone controller (Player.tsx), tabs (Home.tsx)
+apps/web        React + Vite: host screen (Host.tsx), phone controller (Player.tsx), tabs (Home.tsx); logo in apps/web/public
 packages/shared answer matching, scoring and the message types shared by both
 deploy/         docker-compose.yml and nginx.conf for the NAS
 tools/          deploy-nas.mjs

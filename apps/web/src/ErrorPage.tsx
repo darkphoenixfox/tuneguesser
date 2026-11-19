@@ -1,10 +1,12 @@
+import { Logo } from "./Logo";
+
 /** Full-screen message when the room cannot be reached (wrong code, host quit, server restarted…). */
 export function ErrorPage({ error, onBack, host }: { error: string; onBack: () => void; host?: boolean }) {
   const missing = /not found/i.test(error);
   return (
     <main className="screen center errorpage">
       <div className="card center">
-        <div className="errorpage-icon" aria-hidden="true">{missing ? "🔍" : "⚠️"}</div>
+        <Logo small />
         <h1>{missing ? "Room not found" : "Something went wrong"}</h1>
         <p className="errorpage-text">
           {missing

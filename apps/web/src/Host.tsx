@@ -8,6 +8,7 @@ import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
+import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
 import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
@@ -91,7 +92,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   return (
     <main className="screen setup">
       <HostSettings autoAdvance={cfg.autoAdvance} onAutoAdvance={(v) => set({ autoAdvance: v })} />
-      <h1 className="logo">Tune<span>Guesser</span></h1>
+      <Logo />
       {err && <p className="error">{err}</p>}
       {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
         <div className="card center">
@@ -282,6 +283,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
   return (
     <div className="lobby">
       <div className="card center">
+        <Logo small />
         <p className="muted">Join at <b>{location.host}</b> with code</p>
         <div className="code">{state.code.split("").map((c, i) => <span key={i} style={{ animationDelay: `${i * 80}ms` }}>{c}</span>)}</div>
         {qr && <img className="qr" src={qr} alt="Scan to join" />}

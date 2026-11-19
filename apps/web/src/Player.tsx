@@ -3,6 +3,7 @@ import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from 
 import { ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
 import { PadKeyboard } from "./input/PadKeyboard";
+import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
 import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
@@ -33,7 +34,7 @@ function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
   return (
     <main className="screen phone">
       <ThemeButton />
-      <h1 className="logo">Tune<span>Guesser</span></h1>
+      <Logo />
       <form className="card" onSubmit={(e) => { e.preventDefault(); if (ok) { sfx.join(); onJoin({ code, name: name.trim() }); } }}>
         <label>Room code<input className="codein" value={code} maxLength={4} autoCapitalize="characters" autoComplete="off" onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} /></label>
         <label>Your name<input value={name} maxLength={16} autoComplete="nickname" onChange={(e) => setName(e.target.value)} /></label>

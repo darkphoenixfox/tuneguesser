@@ -430,3 +430,8 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .errorpage-icon { font-size: 4rem; }
 .errorpage-text { font-size: 1.15rem; line-height: 1.5; color: var(--muted); margin: 0; }
 .errorpage .next-btn { font-size: 1.3rem; padding: 16px 28px; }
+.brand { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 6px; }
+.brand img { width: clamp(120px, 28vw, 210px); height: auto; filter: drop-shadow(0 0 24px rgba(138,91,255,.45)); }
+.brand .logo { margin: 0; }
+.brand.small img { width: clamp(80px, 14vw, 120px); }
+.brand.small .logo { font-size: clamp(1.4rem, 4vw, 2rem); }
