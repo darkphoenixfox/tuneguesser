@@ -28,7 +28,7 @@ function loadApi(): Promise<void> {
  * YouTube mode: the music plays here, in YouTube's embedded player on the host screen. The server sends the commands.
  * Returns `run`, to be called for every {t:"player"} message, and a small element to render somewhere in the page.
  */
-export function useYouTubePlayer(enabled: boolean, onError: (message: string) => void) {
+export function useYouTubePlayer(enabled: boolean, onError: (message: string, code?: number, videoId?: string) => void) {
   const player = useRef<any>(null);
   const queue = useRef<PlayerCommand[]>([]);
   const err = useRef(onError);
@@ -105,7 +105,7 @@ export function useYouTubePlayer(enabled: boolean, onError: (message: string) =>
         events: {
           onReady: () => { try { player.current?.unloadModule?.("captions"); player.current?.unloadModule?.("cc"); } catch { /* optional */ } for (const c of queue.current.splice(0)) apply(player.current, c); },
           onAutoplayBlocked: () => { blocked = true; err.current(t("The browser blocked the sound: tap anywhere to start the music")); },
-          onError: (e: { data: number }) => err.current(e.data === 101 || e.data === 150 ? t("This video cannot be played embedded") : t("YouTube player error {n}", { n: e.data })),
+          onError: (e: { data: number }) => { let id: string | undefined; try { id = player.current?.getVideoData?.().video_id; } catch { /* not ready */ } err.current(e.data === 100 || e.data === 101 || e.data === 150 ? t("This video cannot be played embedded") : t("YouTube player error {n}", { n: e.data }), e.data, id); },
         },
       });
     });

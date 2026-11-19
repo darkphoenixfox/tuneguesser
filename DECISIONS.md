@@ -266,3 +266,6 @@ Local names in localStorage (`tg_ytnames`), global names in `edits.json` (`playl
 
 ### DEC-075 · Short seeds (`TG-xxxxxxxx`) · 2026-11-19 · Active
 The full seed (DEC-074) holds every playlist id and is long. The server now maps it to `TG-` + 8 characters of its SHA-256 (`POST /api/seed`, `GET /api/seed?code=`, stored in `DATA_DIR/seeds.json`, capped at 5000 entries, only valid seeds accepted). The same selection always gives the same short seed. The UI shows and links the short one (falls back to the long one if the server cannot be reached); both forms are accepted when pasted or opened as `/?seed=…`.
+
+### DEC-076 · Unplayable videos are skipped and banned · 2026-11-19 · Active
+When the host screen's YouTube player reports error 100, 101 or 150 (removed/private/embedding disabled) it sends `{t:"unplayable", id}`. If `id` is the running round's video the server bans it for everyone (votes store, voter `embed-error`: it is an objective fact, so no admin password), drops it from all rooms and, while the round is playing, discards it without counting a round (same path as the 👎). Other player errors (2, 5) are only shown.

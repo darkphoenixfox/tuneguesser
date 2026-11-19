@@ -395,6 +395,16 @@ wss.on("connection", (ws) => {
         }
         return;
       }
+      if (m.t === "unplayable") {
+        // the host's embedded player cannot play the current video: ban it (it can never work) and move on without using a round
+        const cur = role === "host" ? room.votableTrack() : undefined;
+        if (cur && cur.id === m.id) {
+          votes.vote(cur.id, "embed-error", -1, cur.name);
+          for (const e of rooms.values()) e.room.dropTrack(cur.id);
+          if (room.state().phase === "playing") await room.discardCurrent();
+        }
+        return;
+      }
       if (role === "player" && playerId && m.t === "buzz") {
         if (room.buzz(playerId) && !wordsSent && room.state().config.answers === "type") { wordsSent = true; send(ws, { t: "words", list: room.suggestions() }); }
       } else if (role === "player" && m.t === "listen") {

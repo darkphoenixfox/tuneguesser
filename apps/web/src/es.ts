@@ -274,4 +274,5 @@ export const ES: Record<string, string> = {
   "Share it: whoever plays with the same playlists and settings competes in the same high-score table.": "Compártela: quien juegue con las mismas listas y ajustes compite en la misma tabla de récords.",
   "Paste a seed or link": "Pega una semilla o un enlace",
   "Use seed": "Usar semilla",
+  "skipped": "saltada",
 };

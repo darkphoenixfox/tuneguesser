@@ -423,9 +423,15 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
 function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; solo?: boolean }) {
   const first = useMemo(() => ({ t: "host" as const, code: saved.code, token: saved.token }), [saved]);
   const ytRun = useRef<(c: PlayerCommand) => void>();
+  const sendRef = useRef<(m: ClientMessage) => unknown>(() => {});
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => { if (m.t === "player") ytRun.current?.(m.cmd); else if (m.t === "banned") banLocal(m.id); });
+  sendRef.current = send;
   const [ytError, setYtError] = useState("");
-  const yt = useYouTubePlayer(!!saved.youtube, (msg) => { setYtError(msg); setTimeout(() => setYtError(""), 7000); });
+  const yt = useYouTubePlayer(!!saved.youtube, (msg, code, id) => {
+    // removed, private or not embeddable: skip it at once (no round used) and never play it again
+    if (id && (code === 100 || code === 101 || code === 150)) { sendRef.current({ t: "unplayable", id }); setYtError(t("This video cannot be played embedded") + " – " + t("skipped")); } else setYtError(msg);
+    setTimeout(() => setYtError(""), 7000);
+  });
   ytRun.current = yt.run;
   const [mute, setMute] = useState(false);
   const [askQuit, setAskQuit] = useState(false);
