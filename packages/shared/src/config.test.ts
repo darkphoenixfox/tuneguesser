@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, commonSingleArtist, sanitizeConfig } from "./config";
+import { DEFAULT_CONFIG, commonSingleArtist, decodeSeed, encodeSeed, sanitizeConfig } from "./config";
 import { hintText, letterPositions, maskText, revealCount } from "./hints";
 import { multipliersFor, totalMultiplier } from "./scoring";
 
@@ -66,5 +66,21 @@ describe("commonSingleArtist", () => {
     expect(commonSingleArtist(["U2", "Prince"])).toBeNull();
     expect(commonSingleArtist(["U2", undefined])).toBeNull();
     expect(commonSingleArtist([])).toBeNull();
+  });
+});
+
+describe("seed", () => {
+  it("round-trips playlists and rules, whatever the order of the playlists", () => {
+    const c = sanitizeConfig({ ...DEFAULT_CONFIG, playTo: { kind: "score", target: 3000 }, hints: { reveal: false, trivia: true, art: false }, roundSeconds: null, answers: "choice", start: "beginning", attempts: 2, multipliers: false, guess: "title" });
+    const seed = encodeSeed(["PLbbbbbbbb", "PLaaaaaaaa"], c);
+    expect(seed).toBe(encodeSeed(["PLaaaaaaaa", "PLbbbbbbbb"], c));
+    const d = decodeSeed(`https://tune.example/?seed=${seed}`)!; // a pasted link works too
+    expect(d.playlists).toEqual(["PLaaaaaaaa", "PLbbbbbbbb"]);
+    expect(sanitizeConfig({ ...DEFAULT_CONFIG, ...d.config })).toEqual(c);
+  });
+  it("rejects nonsense", () => {
+    expect(decodeSeed("hello")).toBeNull();
+    expect(decodeSeed("TG1-!!!")).toBeNull();
+    expect(decodeSeed("TG1-" + btoa("[[]]"))).toBeNull();
   });
 });

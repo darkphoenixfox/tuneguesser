@@ -77,3 +77,30 @@ export function commonSingleArtist(artists: Array<string | null | undefined>): s
   const first = String(artists[0]).trim().toLowerCase();
   return artists.every((a) => String(a).trim().toLowerCase() === first) ? String(artists[0]) : null;
 }
+
+/**
+ * A seed is a short text that carries the playlists and the rules of a game. Whoever uses the same seed plays in the same
+ * category (the same high-score table). Only what the high-score table is separated by is in it.
+ */
+export function encodeSeed(playlists: string[], c: GameConfig): string {
+  const body = JSON.stringify([[...new Set(playlists)].sort(), c.playTo.kind === "rounds" ? ["r", c.playTo.rounds] : ["s", c.playTo.target], [c.hints.reveal, c.hints.trivia, c.hints.art].map(Number), c.roundSeconds, c.answers, c.start, c.attempts, Number(c.multipliers), c.guess, c.order]);
+  return "TG1-" + btoa(body).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** The playlists and settings of a seed (or of a link containing one); null when it is not valid. */
+export function decodeSeed(text: string): { playlists: string[]; config: Pick<GameConfig, "playTo" | "hints" | "roundSeconds" | "answers" | "start" | "attempts" | "multipliers" | "guess" | "order"> } | null {
+  try {
+    const m = /TG1-([\w-]+)/.exec(text.trim());
+    if (!m) return null;
+    const a = JSON.parse(atob(m[1]!.replace(/-/g, "+").replace(/_/g, "/")));
+    if (!Array.isArray(a) || !Array.isArray(a[0])) return null;
+    const playlists = (a[0] as unknown[]).filter((x): x is string => typeof x === "string" && /^[\w-]{6,64}$/.test(x)).slice(0, 10);
+    if (!playlists.length) return null;
+    const c = sanitizeConfig({
+      playTo: a[1]?.[0] === "s" ? { kind: "score", target: a[1][1] } : { kind: "rounds", rounds: a[1]?.[1] },
+      hints: { reveal: !!a[2]?.[0], trivia: !!a[2]?.[1], art: !!a[2]?.[2] },
+      roundSeconds: a[3], answers: a[4], start: a[5], attempts: a[6], multipliers: !!a[7], guess: a[8], order: a[9],
+    });
+    return { playlists, config: { playTo: c.playTo, hints: c.hints, roundSeconds: c.roundSeconds, answers: c.answers, start: c.start, attempts: c.attempts, multipliers: c.multipliers, guess: c.guess, order: c.order } };
+  } catch { return null; }
+}

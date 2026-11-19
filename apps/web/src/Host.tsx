@@ -3,7 +3,7 @@ import { Marquee } from "./Marquee";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { DEFAULT_CONFIG, commonSingleArtist, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
+import { DEFAULT_CONFIG, commonSingleArtist, decodeSeed, encodeSeed, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { SettingsMenu } from "./Settings";
@@ -131,6 +131,41 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const [cfg, setCfg] = useState<GameConfig>(() => sanitizeConfig({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
   useEffect(() => { if (oneArtist && cfg.guess !== "title") setCfg((c) => ({ ...c, guess: "title" })); }, [oneArtist, cfg.guess]);
   useEffect(() => { try { localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ } }, [cfg]); // survives a visit to a playlist page
+  // seeds: a text with the playlists and rules; the same seed = the same high-score table
+  const [seedIn, setSeedIn] = useState("");
+  const [copied, setCopied] = useState(false);
+  const seed = encodeSeed(ytPicked.map((l) => l.id), cfg);
+  const seedLink = `${location.origin}/?seed=${seed}`;
+  const applySeed = async (text: string) => {
+    const d = decodeSeed(text);
+    if (!d) { setErr(t("That is not a valid seed.")); return; }
+    setErr("");
+    const have = new Map(ytLists.map((l) => [l.id, l]));
+    for (const id of d.playlists) {
+      setGone(id, false);
+      if (have.has(id)) continue;
+      const j = await fetch(`/api/youtube/playlist?url=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (!j) { setErr(t("A playlist of this seed cannot be loaded (it must be public or unlisted).")); return; }
+      have.set(id, j);
+    }
+    const all = [...have.values()];
+    setSource("youtube");
+    setYtLists(all);
+    setYtOff(all.filter((l) => !d.playlists.includes(l.id)).map((l) => l.id));
+    setCfg((c) => sanitizeConfig({ ...c, ...d.config }));
+    setSeedIn("");
+  };
+  const fromUrl = useRef(false);
+  useEffect(() => {
+    const code = new URLSearchParams(location.search).get("seed");
+    if (!code || fromUrl.current || !me?.youtube) return;
+    fromUrl.current = true;
+    void applySeed(code).then(() => { const p = new URLSearchParams(location.search); p.delete("seed"); history.replaceState(null, "", p.toString() ? `/?${p}` : "/"); });
+  }, [me?.youtube]);
+  const copySeed = async () => {
+    try { await navigator.clipboard.writeText(seedLink); } catch { window.prompt(t("Copy this link"), seedLink); }
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
+  };
   const canStart = useYt ? ytPicked.length > 0 : picked.length > 0 && !!deviceId;
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? t("Spotify login failed, try again.") : "");
@@ -273,6 +308,19 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               <Seg value={cfg.multipliers} options={[[true, "Yes"], [false, "No"]]} onChange={(multipliers) => set({ multipliers })} />
               <small className="muted">{t("Extra points for song + artist at once, and for streaks.")}</small>
             </div>
+            {useYt && (
+              <div className="opt"><span>{t("Challenge seed")}</span>
+                <div className="yt-add">
+                  <input readOnly value={seed} onFocus={(e) => e.target.select()} aria-label={t("Challenge seed")} />
+                  <button type="button" className="btn" onClick={copySeed}>{copied ? t("Copied!") : t("Copy link")}</button>
+                </div>
+                <small className="muted">{t("Share it: whoever plays with the same playlists and settings competes in the same high-score table.")}</small>
+                <form className="yt-add" onSubmit={(e) => { e.preventDefault(); void applySeed(seedIn); }}>
+                  <input value={seedIn} onChange={(e) => setSeedIn(e.target.value)} placeholder={t("Paste a seed or link")} aria-label={t("Paste a seed or link")} />
+                  <button className="btn" type="submit" disabled={!seedIn.trim()}>{t("Use seed")}</button>
+                </form>
+              </div>
+            )}
           </section>
           <button className="btn big" disabled={!canStart || busy} onClick={() => create()}>{solo ? t("Start the game") : t("Create room")}<PadHint button="a" focusOnly /></button>
     </>

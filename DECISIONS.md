@@ -260,3 +260,6 @@ Local names in localStorage (`tg_ytnames`), global names in `edits.json` (`playl
 
 ### DEC-073 · "feat." credits move from the title to the artist field · 2026-11-19 · Active
 `cleanFeat` (server, after edits, for Spotify and YouTube, and on the playlist page): "Seven (feat. Latto)" becomes "Seven"; featured artists not already credited are appended to the artists. The artist guess already accepts any one credited artist, so the featured one is never required.
+
+### DEC-074 · Challenge seeds · 2026-11-19 · Active
+`encodeSeed`/`decodeSeed` (shared): `TG1-` + base64url of a compact JSON with the sorted playlist ids and the settings that separate high-score tables (not auto-advance). Applying a seed switches to YouTube, adds the playlists that are missing (fetched from the server), switches the others off and sets the options. `/?seed=…` opens Solo Play and applies it once. A seed from a round-robin host game has `order` set, which Solo Play ignores (solo is always buzzer), so such a table cannot be matched solo. Custom names, song edits and bans are not part of a seed, since they do not change the table.

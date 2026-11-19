@@ -265,4 +265,13 @@ export const ES: Record<string, string> = {
   "songs": "canciones",
   "blocked": "bloqueadas",
   "artists": "artistas",
+  "That is not a valid seed.": "Esa semilla no es válida.",
+  "A playlist of this seed cannot be loaded (it must be public or unlisted).": "No se puede cargar una lista de esta semilla (debe ser pública o no listada).",
+  "Copy this link": "Copia este enlace",
+  "Challenge seed": "Semilla de reto",
+  "Copied!": "¡Copiado!",
+  "Copy link": "Copiar enlace",
+  "Share it: whoever plays with the same playlists and settings competes in the same high-score table.": "Compártela: quien juegue con las mismas listas y ajustes compite en la misma tabla de récords.",
+  "Paste a seed or link": "Pega una semilla o un enlace",
+  "Use seed": "Usar semilla",
 };

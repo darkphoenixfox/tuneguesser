@@ -10,7 +10,7 @@ type View = "menu" | "solo" | "host" | "join";
 
 function initialView(): View {
   const p = new URLSearchParams(location.search);
-  const tab = p.get("tab");
+  const tab = p.get("tab") ?? (p.get("seed") ? "solo" : null); // a seed link opens Solo Play with that game ready
   if (tab === "solo") return "solo";
   if (location.pathname.startsWith("/host") || tab === "host") return "host";
   if (p.get("code") || tab === "join") return "join";
