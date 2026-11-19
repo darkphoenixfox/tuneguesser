@@ -42,6 +42,20 @@ describe("Room (buzzer game)", () => {
     }
   });
 
+  it("discarding the song (host thumbs down) starts another one without counting a round", async () => {
+    const { room, music } = make(2);
+    room.addPlayer("A");
+    await room.start();
+    const first = music.played[0]!.id;
+    expect(room.state().round).toBe(1);
+    await room.discardCurrent();
+    expect(room.state().phase).toBe("playing");
+    expect(room.state().round).toBe(1);
+    expect(room.state().totalRounds).toBe(2);
+    expect(music.played.length).toBe(2);
+    expect(music.played[1]!.id).not.toBe(first);
+  });
+
   it("limits players to 4 and only joins in the lobby", () => {
     const { room } = make();
     for (let i = 0; i < 4; i++) expect(room.addPlayer(`p${i}`)).toBeTruthy();

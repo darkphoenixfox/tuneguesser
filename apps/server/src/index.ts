@@ -7,6 +7,7 @@ import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tunegue
 import type { MusicProvider } from "./music";
 import { Room } from "./room";
 import { TriviaCache } from "./trivia";
+import { VoteStore } from "./votes";
 import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
@@ -33,6 +34,7 @@ const sessions = new Map<string, Session>();
  */
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
+const votes = new VoteStore(path.join(DATA_DIR, "votes.json"));
 const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
 function readSavedSessions(): Record<string, Tokens> {
   try { return JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8")) as Record<string, Tokens>; } catch { return {}; }
@@ -208,6 +210,9 @@ const http = createServer(async (req, res) => {
         if (!ids.length) return json(res, 400, { error: "pick at least one playlist" });
         music = new SpotifyProvider(s.client, ids, typeof body.deviceId === "string" ? body.deviceId : undefined);
       }
+      // songs the players voted down (more than 3 thumbs down) are never loaded
+      const loadAll = music.loadTracks.bind(music);
+      music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id)); };
       const code = newCode();
       const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Map(), createdAt: Date.now() };
@@ -260,6 +265,17 @@ wss.on("connection", (ws) => {
         return;
       }
       const room = entry.room;
+      if (m.t === "vote") {
+        // only the host (and a solo player, whose screen is the host) rates songs
+        const cur = role === "host" ? room.votableTrack() : undefined;
+        if (cur) {
+          const v = m.v === 1 ? 1 : m.v === -1 ? -1 : 0;
+          const r = votes.vote(cur.id, String(m.voter ?? ""), v, cur.name);
+          if (r.blacklisted) for (const e of rooms.values()) e.room.dropTrack(cur.id);
+          if (v === -1) await room.discardCurrent(); // skip it now, not counted as a round
+        }
+        return;
+      }
       if (role === "player" && playerId && m.t === "buzz") {
         if (room.buzz(playerId) && !wordsSent && room.state().config.answers === "type") { wordsSent = true; send(ws, { t: "words", list: room.suggestions() }); }
       } else if (role === "player" && m.t === "listen") {

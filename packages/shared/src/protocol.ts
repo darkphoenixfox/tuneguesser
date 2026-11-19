@@ -103,6 +103,8 @@ export type ClientMessage =
   | { t: "settings"; autoAdvance?: boolean }
   /** player (YouTube mode): also play the music on this device */
   | { t: "listen"; on: boolean }
+  /** thumbs up (1) / down (-1) / take back (0) for the song of the current round; `voter` is this browser's anonymous id */
+  | { t: "vote"; v: 1 | -1 | 0; voter: string }
   | { t: "start" }
   /** toggle a skip vote (host and players alike; the song is skipped when every voter has voted) */
   | { t: "skip" }

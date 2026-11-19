@@ -2,7 +2,7 @@ import { Marquee } from "./Marquee";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
+import { DEFAULT_CONFIG, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { SettingsMenu } from "./Settings";
@@ -12,6 +12,7 @@ import { setMuted, sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
 import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
+import { VoteButtons } from "./Vote";
 import { MicToggle } from "./input/Mic";
 import { Confirm } from "./input/Confirm";
 import { useYouTubePlayer } from "./YouTubePlayer";
@@ -426,8 +427,8 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       {state.phase === "lobby" && solo && <main className="center"><p className="muted">{t("Starting…")}</p></main>}
       {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
-      {state.phase === "playing" && <Playing slot={slot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
-      {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
+      {state.phase === "playing" && <Playing send={send} slot={slot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
+      {state.phase === "reveal" && <Reveal state={state} send={send} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {notice && <p className="notice toast" role="status">{notice}</p>}
@@ -502,7 +503,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
   );
 }
 
-function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void }) {
+function Playing({ send, slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void; send: (m: ClientMessage) => unknown }) {
   const guessing = !!state.guesser;
   const left = useCountdown(endsAt, guessing || state.paused ? state.remainingMs : undefined);
   const unlimited = state.roundMs === null;
@@ -562,7 +563,7 @@ function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: 
         <Hints state={state} />
         <ScoreBanner state={state} />
       </div>
-      {state.art && <div className="p2-art">{follow ? <div className="yt-slot" ref={videoSlot} /> : <PixelArt url={state.art.url} progress={state.art.progress} />}</div>}
+      {state.art && <div className="p2-art">{follow ? <div className="yt-slot" ref={videoSlot} /> : <PixelArt url={state.art.url} progress={state.art.progress} />}<VoteButtons round={state.round} send={send} /></div>}
       {guessing && <div className="p2-bar"><GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} /></div>}
     </div>
   );
@@ -574,7 +575,7 @@ function roundLabel(state: RoomState) {
     : t("Round {n} / {total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds });
 }
 
-function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
+function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void; send: (m: ClientMessage) => unknown }) {
   const r = state.reveal!;
   return (
     <div className="reveal">
@@ -583,6 +584,7 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
           {r.albumArt && <img className="art spin-in" src={r.albumArt} alt="" />}
           <h1 className="rv-title">{r.title}</h1>
           <h2 className="rv-artist">{r.artists.join(", ")}{r.year ? ` · ${r.year}` : ""}</h2>
+          <VoteButtons round={state.round} send={send} />
         </div>
         <div className="top-side">
           <ScoreBanner state={state} bare />

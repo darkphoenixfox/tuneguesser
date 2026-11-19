@@ -86,6 +86,8 @@ export class Room {
   private phase: RoomState["phase"] = "lobby";
   private pool: Track[] = [];
   private queue: Track[] = [];
+  /** ids of the songs already played this game */
+  private played = new Set<string>();
   private current?: Track;
   private round = 0;
   private startMs = 0;
@@ -291,6 +293,7 @@ export class Room {
       return;
     }
     this.current = track;
+    this.played.add(track.id);
     this.round++;
     this.reveal = undefined;
     this.found = {};
@@ -491,6 +494,35 @@ export class Room {
     if (this.config.order !== "roundRobin") return [...this.players.values()];
     const a = this.activeId ? this.players.get(this.activeId) : undefined;
     return a ? [a] : [];
+  }
+
+  /** The song of the running round (playing or reveal), for thumbs up/down. */
+  votableTrack(): { id: string; name: string } | undefined {
+    return this.current && (this.phase === "playing" || this.phase === "reveal") ? { id: this.current.id, name: `${this.current.artists.join(", ")} — ${this.current.title}` } : undefined;
+  }
+  /**
+   * The host rejected the song of the running round (thumbs down): drop it, queue another song in its place and start it now.
+   * The round does not count (the number of rounds stays the same); points already scored stay.
+   */
+  async discardCurrent(): Promise<void> {
+    const bad = this.current;
+    if (!bad || (this.phase !== "playing" && this.phase !== "reveal")) return;
+    this.queue = this.queue.filter((t) => t.id !== bad.id);
+    this.pool = this.pool.filter((t) => t.id !== bad.id);
+    if (this.config.playTo.kind === "rounds") {
+      const queued = new Set(this.queue.map((t) => t.id));
+      const spare = shuffle(this.pool.filter((t) => !this.played.has(t.id) && !queued.has(t.id)))[0];
+      if (spare) this.queue.unshift(spare);
+      else if (this.queue.length === 0) { /* nothing left to play: the game ends below */ }
+    }
+    this.round--; // nextRound counts it again
+    await this.nextRound();
+  }
+
+  /** A blacklisted song must not come up again in this game. */
+  dropTrack(id: string): void {
+    this.queue = this.queue.filter((t) => t.id !== id);
+    this.pool = this.pool.filter((t) => t.id !== id || t === this.current);
   }
 
   /** Ends the current guess (answered, or timed out) and either resumes the music or ends the round. */
