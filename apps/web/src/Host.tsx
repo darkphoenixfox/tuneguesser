@@ -386,7 +386,7 @@ function Reveal({ state, onNext }: { state: RoomState; onNext: () => void }) {
         </div>
       </div>
       {state.awaitingNext && <p className="waiting">The song keeps playing. The next round starts when it ends, or when you continue.</p>}
-      <button className={"btn" + (state.awaitingNext ? " big" : "")} onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<PadHint button="a" /></button>
+      <button className="btn next-btn" onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? "Final results" : "Next song"}<PadHint button="a" /></button>
     </div>
   );
 }
