@@ -22,5 +22,13 @@ export function updateLocal(f: (l: LocalEdits) => void): LocalEdits {
   return l;
 }
 
+/** Playlists this device has taken off its list. */
+export const getGone = (): string[] => { try { const d = JSON.parse(localStorage.getItem("tg_ytgone") ?? "[]"); return Array.isArray(d) ? d : []; } catch { return []; } };
+export function setGone(id: string, gone: boolean) {
+  const l = getGone().filter((x) => x !== id);
+  if (gone) l.push(id);
+  try { localStorage.setItem("tg_ytgone", JSON.stringify(l)); } catch { /* storage blocked */ }
+}
+
 export const banLocal = (id: string) => updateLocal((l) => { if (!l.banned.includes(id)) l.banned.push(id); });
 export const unbanLocal = (id: string) => updateLocal((l) => { l.banned = l.banned.filter((x) => x !== id); });

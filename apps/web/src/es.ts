@@ -255,4 +255,8 @@ export const ES: Record<string, string> = {
   "Unlock": "Desbloquear",
   "banned for everyone": "vetada para todos",
   "default fix": "corrección por defecto",
+  "Remove this playlist (this device)": "Quitar esta lista (este dispositivo)",
+  "Add this playlist back (this device)": "Volver a añadir esta lista (este dispositivo)",
+  "Remove this playlist for everyone": "Quitar esta lista para todos",
+  "Add this playlist back for everyone": "Volver a añadir esta lista para todos",
 };

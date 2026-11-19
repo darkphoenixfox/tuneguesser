@@ -4,7 +4,7 @@ import type { Track } from "./music";
 
 export interface TrackEdit { title?: string; artists?: string[] }
 export interface PlaylistSettings { /** only songs by this artist are used */ artist?: string }
-interface Data { tracks: Record<string, TrackEdit>; playlists: Record<string, PlaylistSettings> }
+interface Data { tracks: Record<string, TrackEdit>; playlists: Record<string, PlaylistSettings>; removed: string[] }
 
 const clean = (s: unknown, max: number) => (typeof s === "string" ? s.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
@@ -18,8 +18,8 @@ export class EditStore {
   private read(): Data {
     try {
       const d = JSON.parse(fs.readFileSync(this.file, "utf-8"));
-      return { tracks: d?.tracks ?? {}, playlists: d?.playlists ?? {} };
-    } catch { return { tracks: {}, playlists: {} }; }
+      return { tracks: d?.tracks ?? {}, playlists: d?.playlists ?? {}, removed: Array.isArray(d?.removed) ? d.removed : [] };
+    } catch { return { tracks: {}, playlists: {}, removed: [] }; }
   }
   private write(d: Data) {
     try {
@@ -46,6 +46,16 @@ export class EditStore {
     const d = this.read();
     const a = clean(artist, 80);
     if (a) d.playlists[playlistId] = { artist: a }; else delete d.playlists[playlistId];
+    this.write(d);
+  }
+
+  /** Playlists taken off the list for everyone. */
+  removed(): string[] { return this.read().removed; }
+  setRemoved(id: string, gone: boolean) {
+    if (!/^[\w-]{6,64}$/.test(id)) return;
+    const d = this.read();
+    d.removed = d.removed.filter((x) => x !== id);
+    if (gone) d.removed.push(id);
     this.write(d);
   }
 

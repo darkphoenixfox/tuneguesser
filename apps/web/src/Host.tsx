@@ -19,7 +19,7 @@ import { Confirm } from "./input/Confirm";
 import { useYouTubePlayer } from "./YouTubePlayer";
 import { onPadButton, usePad } from "./input/pad";
 import { t } from "./i18n";
-import { banLocal, getLocal } from "./local";
+import { banLocal, getGone, getLocal, setGone } from "./local";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
@@ -82,13 +82,14 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     const r = await fetch(`/api/youtube/playlist?url=${encodeURIComponent(ytInput.trim())}`);
     const j = await r.json();
     if (!r.ok) return setErr(j.error ?? t("Could not add that playlist"));
+    setGone(j.id, false); // pasting a removed playlist brings it back
     setYtLists((cur) => (cur.some((x) => x.id === j.id) ? cur : [...cur, j]));
     setYtInput("");
   };
   // the default playlists are always there (they cannot be removed, only switched off); any that is missing is fetched again
   useEffect(() => {
     if (!useYt) return;
-    const todo = DEFAULT_YT_PLAYLISTS.filter((id) => !ytLists.some((l) => l.id === id));
+    const todo = DEFAULT_YT_PLAYLISTS.filter((id) => !ytLists.some((l) => l.id === id) && !getGone().includes(id));
     if (!todo.length) return;
     void Promise.all(todo.map((id) => fetch(`/api/youtube/playlist?url=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null))).then((found) => {
       const ok = found.filter((j): j is { id: string; name: string; tracks: number; image?: string } => !!j);
@@ -97,7 +98,12 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   }, [useYt]);
   useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_music", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
   useEffect(() => { try { localStorage.setItem("tg_ytoff", JSON.stringify(ytOff)); } catch { /* storage blocked */ } }, [ytOff]);
-  const ytPicked = ytLists.filter((l) => !ytOff.includes(l.id));
+  // playlists removed on this device, or for everyone by the admin, are not shown (default ones too)
+  const [goneAll, setGoneAll] = useState<string[]>([]);
+  useEffect(() => { fetch("/api/playlist/removed").then((r) => r.json()).then((j: unknown) => { if (Array.isArray(j)) setGoneAll(j); }).catch(() => {}); }, []);
+  const gone = new Set([...getGone(), ...goneAll]);
+  const shownLists = ytLists.filter((l) => !gone.has(l.id));
+  const ytPicked = shownLists.filter((l) => !ytOff.includes(l.id));
   // playlists marked "one artist only" on their page: if every selected one is by the same artist, only the song can be guessed
   const [onlyArtists, setOnlyArtists] = useState<Record<string, string | null>>({});
   const pickedKey = ytPicked.map((l) => l.id).join(",");
@@ -275,14 +281,14 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
             <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create()}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
-            <h2>{t("YouTube playlists")} {ytLists.length > 0 && <small className="muted">({t("{n} selected", { n: ytPicked.length })})</small>}</h2>
+            <h2>{t("YouTube playlists")} {shownLists.length > 0 && <small className="muted">({t("{n} selected", { n: ytPicked.length })})</small>}</h2>
             <p className="muted pl-note">{t("Paste the link of a public or unlisted playlist (YouTube or YouTube Music). The music plays on this screen, no account needed.")}</p>
             <form className="yt-add" onSubmit={(e) => { e.preventDefault(); void addYt(); }}>
               <input value={ytInput} onChange={(e) => setYtInput(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" inputMode="url" aria-label={t("YouTube playlist link")} />
               <button className="btn" type="submit">{t("Add")}</button>
             </form>
             <div className="grid">
-              {ytLists.map((p) => (
+              {shownLists.map((p) => (
                 <div key={p.id} className="pl-wrap">
                   <button className={"pl" + (ytOff.includes(p.id) ? "" : " sel")} aria-pressed={!ytOff.includes(p.id)} onClick={() => setYtOff((cur) => (cur.includes(p.id) ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}>
                     {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
