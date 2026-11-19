@@ -262,4 +262,7 @@ export const ES: Record<string, string> = {
   "Playlist name": "Nombre de la lista",
   "Saved as the name for everyone.": "Se guarda como nombre para todos.",
   "Saved on this device. Empty or the original name resets it.": "Se guarda en este dispositivo. Vacío o el nombre original lo restablece.",
+  "songs": "canciones",
+  "blocked": "bloqueadas",
+  "artists": "artistas",
 };

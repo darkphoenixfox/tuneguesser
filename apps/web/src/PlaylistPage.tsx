@@ -116,6 +116,11 @@ export function PlaylistPage({ id }: { id: string }) {
         <>
           <section className="card">
             <h2>{shownName}</h2>
+            <p className="recap">
+              <span><b>{data.tracks.length}</b> {t("songs")}</span>
+              <span><b>{data.tracks.filter((s) => s.banned).length}</b> {t("blocked")}</span>
+              <span><b>{new Set(data.tracks.filter((s) => !s.banned).map((s) => (s.artists[0] ?? "").trim().toLowerCase()).filter(Boolean)).size}</b> {t("artists")}</span>
+            </p>
             <label className="opt"><span>{t("Playlist name")}</span>
               <input value={nameText} maxLength={80} onChange={(e) => setNameText(e.target.value)} onBlur={saveName} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} />
               <small className="muted">{admin ? t("Saved as the name for everyone.") : t("Saved on this device. Empty or the original name resets it.")}</small>
