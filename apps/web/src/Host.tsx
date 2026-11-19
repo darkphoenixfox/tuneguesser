@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { DEFAULT_CONFIG, type GameConfig, type RoomState } from "@tuneguesser/shared";
-import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
+import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type RoomState } from "@tuneguesser/shared";
+import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
@@ -46,7 +46,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
   const [deviceId, setDeviceId] = useState("");
-  const [cfg, setCfg] = useState<GameConfig>(() => ({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
+  const [cfg, setCfg] = useState<GameConfig>(() => sanitizeConfig({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
   const [busy, setBusy] = useState(false);
@@ -141,8 +141,11 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               {cfg.answers === "choice" && <small className="muted">4 options, the wrong ones are other songs from the playlist(s).</small>}
             </div>
             <div className="opt"><span>Hints</span>
-              <Seg value={cfg.hints} options={[["none", "None"], ["reveal", "Reveal"], ["trivia", "Trivia"]]} onChange={(hints) => set({ hints })} />
-              <small className="muted">{cfg.hints === "reveal" ? "Underscores for each letter, slowly revealed as the timer runs." : cfg.hints === "trivia" ? "Facts about the artist and song appear over time (from MusicBrainz and Wikipedia)." : ""}</small>
+              <div className="checks">
+                <label><input type="checkbox" checked={cfg.hints.reveal} onChange={(e) => set({ hints: { ...cfg.hints, reveal: e.target.checked } })} /> Reveal letters <small className="muted">(underscores, letters appear after 10 s)</small></label>
+                <label><input type="checkbox" checked={cfg.hints.trivia} onChange={(e) => set({ hints: { ...cfg.hints, trivia: e.target.checked } })} /> Trivia <small className="muted">(facts from MusicBrainz and Wikipedia)</small></label>
+                <label><input type="checkbox" checked={cfg.hints.art} onChange={(e) => set({ hints: { ...cfg.hints, art: e.target.checked } })} /> Artwork <small className="muted">(pixelated cover that sharpens over time)</small></label>
+              </div>
             </div>
             <div className="opt"><span>Timer</span>
               <Seg value={timed} options={[[true, "Seconds per song"], [false, "Unlimited"]]} onChange={(t) => set({ roundSeconds: t ? 40 : null })} />
@@ -308,7 +311,7 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
   useEffect(() => { if (foundCount > prevFound.current) sfx.correct(); prevFound.current = foundCount; }, [foundCount]);
   const R = 90, C = 2 * Math.PI * R;
   return (
-    <div className="p2">
+    <div className={"p2" + (state.art ? " with-art" : "")}>
         <div className="p2-ctrl">
           {!guessing && (
             <div className="ctl">
@@ -344,6 +347,7 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
         <Hints state={state} />
         <ScoreBanner state={state} />
       </div>
+      {state.art && <div className="p2-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
       {guessing && <div className="p2-bar"><GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} /></div>}
     </div>
   );

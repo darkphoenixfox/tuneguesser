@@ -154,6 +154,9 @@ A presses the highlighted key, **B cancels** (no attempt used), **X backspace**,
 ### DEC-042 · Letters start after 10 s · 2026-11-19 · Active
 The Reveal hint shows only underscores for the first 10 s (or half the timer if it is shorter than 20 s); the letters then appear evenly so all are visible just before time ends.
 
+### DEC-043 · Hints are checkboxes; artwork hint · 2026-11-19 · Active · supersedes the single-choice hints of DEC-023/028
+`GameConfig.hints` is now `{reveal, trivia, art}` (any combination; the old single-choice value is still accepted when loading saved settings). The **artwork** hint sends the cover URL and a progress value (elapsed / timer window, frozen on pause) to the host screen only; the canvas draws it as 3 to 96 blocks per side and the sharp image at the end. Note: the cover URL is in the room state, so a technically minded player could look at it on the network; acceptable for a party game. Tracks without cover art (demo mode) show no art area.
+
 ---
 
 ## Open questions

@@ -72,6 +72,8 @@ export interface RoomState {
   activePlayerId?: string;
   /** "Reveal" hint: the title and artist with unrevealed letters as _ */
   hint?: { title: string; artist: string };
+  /** "Artwork" hint: the cover to show pixelated; progress 0 (blocky) .. 1 (sharp) */
+  art?: { url: string; progress: number };
   /** "Trivia" hint: facts shown so far this round */
   trivia?: string[];
   /** multiple choice: the options for the guesser only (others never receive them) */

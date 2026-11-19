@@ -430,7 +430,7 @@ describe("Room (buzzer game)", () => {
     });
 
     it("reveal hint: letters appear as the timer runs and freeze while a player is guessing", async () => {
-      const { room } = make(2, true, { hints: "reveal" });
+      const { room } = make(2, true, { hints: { reveal: true, trivia: false, art: false } });
       const a = room.addPlayer("Ana")!;
       await room.start();
       const blanks = (t: string) => (t.match(/_/g) ?? []).length;
@@ -452,7 +452,7 @@ describe("Room (buzzer game)", () => {
       const music = new DemoProvider();
       const facts = ["Genre: rock", "From England", "Formed in 1970"];
       const trivia = { prefetch: () => {}, peek: () => facts };
-      const room = new Room("ABCD", music, cfg({ hints: "trivia" }), { guessMs: 25_000, revealMs: 5_000 }, trivia);
+      const room = new Room("ABCD", music, cfg({ hints: { reveal: false, trivia: true, art: false } }), { guessMs: 25_000, revealMs: 5_000 }, trivia);
       room.addPlayer("Ana");
       await room.start();
       expect(room.state().trivia).toEqual([]);
@@ -559,5 +559,20 @@ describe("Room (buzzer game)", () => {
     expect(room.state().guesser?.id).toBe(b);
     await vi.advanceTimersByTimeAsync(31_000);
     expect(room.state().guesser).toBeUndefined();
+  });
+
+  it("artwork hint: sends the cover with a progress that grows over the timer and freezes on pause", async () => {
+    const music = new DemoProvider();
+    const orig = music.loadTracks.bind(music);
+    music.loadTracks = async () => (await orig()).map((t) => ({ ...t, albumArt: `http://img/${t.id}` }));
+    const room = new Room("ABCD", music, cfg({ hints: { reveal: false, trivia: false, art: true } }), { guessMs: 25_000, revealMs: 5_000 });
+    room.addPlayer("Ana");
+    await room.start();
+    expect(room.state().art).toMatchObject({ progress: 0 });
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(room.state().art!.progress).toBeCloseTo(0.5);
+    room.togglePause();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(room.state().art!.progress).toBeCloseTo(0.5);
   });
 });

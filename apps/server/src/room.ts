@@ -309,7 +309,7 @@ export class Room {
     this.roundStartedAt = this.now();
     await this.music.play(track, this.startMs);
     this.startClock(0);
-    if (this.config.hints !== "none") this.hintTicker = setInterval(() => { if (!this.guesser) this.onChange(); }, 1000);
+    if (this.config.hints.reveal || this.config.hints.trivia || this.config.hints.art) this.hintTicker = setInterval(() => { if (!this.guesser) this.onChange(); }, 1000);
     this.onChange();
   }
 
@@ -350,7 +350,7 @@ export class Room {
     this.hintTitle = hintText(track.title);
     this.hintArtist = track.artists.join(", ");
     this.hintOrder = { title: shuffle(letterPositions(this.hintTitle)), artist: shuffle(letterPositions(this.hintArtist)) };
-    if (this.config.hints === "trivia" && this.trivia) {
+    if (this.config.hints.trivia && this.trivia) {
       this.trivia.prefetch(track);
       const upcoming = this.queue[0];
       if (upcoming) this.trivia.prefetch(upcoming);
@@ -605,17 +605,18 @@ export class Room {
     const letterProgress = Math.max(0, (elapsed - delay) / (this.hintWindowMs - delay));
 
     let hint: RoomState["hint"];
-    if (playing && this.config.hints === "reveal") {
+    if (playing && this.config.hints.reveal) {
       hint = {
         title: this.wantTitle ? maskText(this.hintTitle, this.hintOrder.title, revealCount(letterProgress, this.hintOrder.title.length)) : this.hintTitle,
         artist: this.wantArtist ? maskText(this.hintArtist, this.hintOrder.artist, revealCount(letterProgress, this.hintOrder.artist.length)) : this.hintArtist,
       };
     }
     let triviaShown: string[] | undefined;
-    if (playing && this.config.hints === "trivia" && this.current && this.trivia) {
+    if (playing && this.config.hints.trivia && this.current && this.trivia) {
       const facts = this.trivia.peek(this.current);
       triviaShown = facts.slice(0, Math.min(facts.length, Math.floor(Math.min(1, progress) * (facts.length + 1))));
     }
+    const art = playing && this.config.hints.art && this.current?.albumArt ? { url: this.current.albumArt, progress: Math.min(1, progress) } : undefined;
     let options: ChoiceOption[] | undefined;
     if (playing && g && forPlayerId === g.id && this.choices.length > 0) {
       const out = this.eliminated.get(g.id);
@@ -639,6 +640,7 @@ export class Room {
       activePlayerId: this.config.order === "roundRobin" && (playing || this.phase === "reveal") ? this.activeId : undefined,
       hint,
       trivia: triviaShown,
+      art,
       options,
       lastScore: playing || this.phase === "reveal" ? this.lastScore : undefined,
       found: this.phase === "playing" ? { ...this.found } : undefined,

@@ -9,12 +9,15 @@ describe("sanitizeConfig", () => {
     expect(sanitizeConfig("x")).toEqual(DEFAULT_CONFIG);
   });
   it("clamps numbers and rejects unknown options", () => {
-    const c = sanitizeConfig({ attempts: 99, roundSeconds: 3, order: "nope", hints: "trivia", playTo: { kind: "score", target: 10 } });
+    const c = sanitizeConfig({ attempts: 99, roundSeconds: 3, order: "nope", hints: { trivia: true, art: true, bogus: 1 }, playTo: { kind: "score", target: 10 } });
     expect(c.attempts).toBe(5);
     expect(c.roundSeconds).toBe(10);
     expect(c.order).toBe("buzzer");
-    expect(c.hints).toBe("trivia");
+    expect(c.hints).toEqual({ reveal: false, trivia: true, art: true });
     expect(c.playTo).toEqual({ kind: "score", target: 500 });
+  });
+  it("still accepts the old single-choice hint value", () => {
+    expect(sanitizeConfig({ hints: "reveal" }).hints).toEqual({ reveal: true, trivia: false, art: false });
   });
   it("supports an unlimited timer and turning options off", () => {
     const c = sanitizeConfig({ roundSeconds: null, multipliers: false, autoAdvance: false });

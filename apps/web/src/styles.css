@@ -397,3 +397,12 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .icon-wrap .pad-hint { position: absolute; right: -8px; bottom: -8px; margin: 0; pointer-events: none; }
 .icon-wrap .pad-glyph-svg, .icon-wrap .pad-glyph-text { --glyph: 1.35rem; width: 1.35rem; height: 1.35rem; }
 .ctl small { min-height: 1.2rem; font-weight: 700; }
+
+/* artwork hint: same size as the timer, right of the answer panel */
+.p2.with-art { grid-template-columns: clamp(140px, 15vw, 220px) minmax(0, 1fr) clamp(140px, 15vw, 220px); grid-template-areas: "ctrl head head" "eq hint art" "timer hint art" "bar bar bar"; }
+.p2-art { grid-area: art; align-self: start; }
+.pixelart { width: 100%; aspect-ratio: 1; border-radius: 14px; image-rendering: pixelated; background: var(--soft); display: block; }
+.checks { display: flex; flex-direction: column; gap: 8px; }
+.checks label { display: flex; align-items: center; gap: 10px; flex-direction: row; }
+.checks input { width: auto; }
+@media (max-width: 899px) { .p2.with-art { grid-template-columns: minmax(0, 1fr); grid-template-areas: "ctrl" "head" "timer" "art" "hint" "bar" "eq"; } .p2-art { width: min(46vmin, 220px); } }

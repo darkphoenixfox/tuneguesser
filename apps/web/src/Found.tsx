@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Found, RoomState } from "@tuneguesser/shared";
 import { useCountdown } from "./net";
 
@@ -29,7 +30,7 @@ export function GuessBar({ endsAt, totalMs }: { endsAt: number; totalMs: number 
 
 /** Trivia facts (the letter hints are shown inside the answer panel). */
 export function Hints({ state }: { state: RoomState }) {
-  if (state.config.hints !== "trivia") return null;
+  if (!state.config.hints.trivia) return null;
   const t = state.trivia ?? [];
   return (
     <ul className="trivia" aria-label="Trivia">
@@ -60,7 +61,7 @@ export function GameSummary({ state }: { state: RoomState }) {
     ["Order", c.order === "buzzer" ? "Buzzer" : "Round robin"],
     ["Guess", c.guess === "both" ? "Song + artist" : c.guess === "title" ? "Song" : "Artist"],
     ["Answers", c.answers === "type" ? "Type" : "Multiple choice"],
-    ["Hints", c.hints === "none" ? "None" : c.hints === "reveal" ? "Reveal letters" : "Trivia"],
+    ["Hints", [c.hints.reveal && "Letters", c.hints.trivia && "Trivia", c.hints.art && "Artwork"].filter(Boolean).join(" + ") || "None"],
     ["Timer", c.roundSeconds === null ? "Unlimited" : `${c.roundSeconds} s per song`],
     ["Attempts", String(c.attempts)],
     ["Multipliers", c.multipliers ? "Yes" : "No"],
@@ -71,4 +72,35 @@ export function GameSummary({ state }: { state: RoomState }) {
       {items.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
     </dl>
   );
+}
+
+const STEPS = [3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96];
+
+/** Album art as big blocks that get finer as `progress` goes from 0 to 1 (the last step is the sharp picture). */
+export function PixelArt({ url, progress }: { url: string; progress: number }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [img, setImg] = useState<HTMLImageElement>();
+  useEffect(() => {
+    setImg(undefined);
+    const i = new Image();
+    i.onload = () => setImg(i);
+    i.src = url;
+  }, [url]);
+  useEffect(() => {
+    const c = canvas.current;
+    if (!c || !img) return;
+    const size = 320;
+    c.width = c.height = size;
+    const ctx = c.getContext("2d")!;
+    if (progress >= 1) { ctx.imageSmoothingEnabled = true; ctx.drawImage(img, 0, 0, size, size); return; }
+    const n = STEPS[Math.min(STEPS.length - 1, Math.floor(Math.max(0, progress) * STEPS.length))]!;
+    const tmp = document.createElement("canvas");
+    tmp.width = tmp.height = n;
+    const t = tmp.getContext("2d")!;
+    t.imageSmoothingEnabled = true;
+    t.drawImage(img, 0, 0, n, n);
+    ctx.imageSmoothingEnabled = false; // hard blocks
+    ctx.drawImage(tmp, 0, 0, n, n, 0, 0, size, size);
+  }, [img, progress]);
+  return <canvas ref={canvas} className="pixelart" aria-label="Album artwork, getting clearer" />;
 }
