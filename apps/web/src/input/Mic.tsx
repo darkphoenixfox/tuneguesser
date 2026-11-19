@@ -1,12 +1,3 @@
-  // voice answers by default: start listening when the form appears (the player just pressed ANSWER). The form can mount while
-  // `disabled` is still true from the previous attempt, so wait until it is enabled (once per mount).
-  const auto = useRef(false);
-  useEffect(() => {
-    if (!Ctor || disabled || auto.current || !getMicDefault()) return;
-    auto.current = true;
-    toggle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled]);
 import { useEffect, useRef, useState } from "react";
 
 const Ctor: any = typeof window === "undefined" ? undefined : (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
@@ -45,8 +36,15 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
   const cb = useRef({ onText, onFinal });
   cb.current = { onText, onFinal };
   useEffect(() => () => { try { rec.current?.abort(); } catch { /* already stopped */ } }, []);
-  // voice answers by default: start listening when the form appears (the player just pressed ANSWER)
-  useEffect(() => { if (Ctor && !disabled && getMicDefault()) toggle(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  // voice answers by default: start listening when the form appears (the player just pressed ANSWER). The form can mount while
+  // `disabled` is still true from the previous attempt, so wait until it is enabled (once per mount).
+  const auto = useRef(false);
+  useEffect(() => {
+    if (!Ctor || disabled || auto.current || !getMicDefault()) return;
+    auto.current = true;
+    toggle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
   if (!Ctor) return null;
 
   function toggle() {
