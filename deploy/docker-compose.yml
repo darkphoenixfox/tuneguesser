@@ -30,10 +30,12 @@ services:
       - NODE_ENV=production
       - PORT=3000
       # Set these in Portainer (Stack > Environment variables), never in the repo
+      - DATA_DIR=/data
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
       - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI:-}
     volumes:
       - /volume1/docker/tuneguesser/server:/app:ro
+      - /volume1/docker/tuneguesser/data:/data # Spotify logins (refresh tokens) survive restarts
     networks:
       - tuneguesser
 

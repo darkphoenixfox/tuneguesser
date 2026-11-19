@@ -34,6 +34,8 @@ console.log("=== TuneGuesser NAS deploy ===");
 sh("npm", ["run", "build", "--workspaces", "--if-present"]);
 
 if (!fs.existsSync("/mnt/c/WINDOWS/system32/robocopy.exe")) throw new Error("robocopy not found: run from WSL on Windows");
+// the stack bind-mounts this folder (Spotify logins); Docker refuses to start if it is missing
+execFileSync("/mnt/c/WINDOWS/system32/cmd.exe", ["/c", "if not exist", `${NAS}\\data`, "mkdir", `${NAS}\\data`], { cwd: "/mnt/c", stdio: "pipe" });
 copy("apps/web/dist", `${NAS}\\www`, { mirror: true }); // build output: stale hashed files are removed
 copy("apps/server/dist", `${NAS}\\server`, { files: ["server.mjs"] });
 copy("deploy/nginx", `${NAS}\\nginx`, { files: ["nginx.conf"] });

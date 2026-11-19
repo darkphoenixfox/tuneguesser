@@ -46,7 +46,8 @@ export async function exchangeCode(clientId: string, redirectUri: string, code: 
 }
 
 export class SpotifyClient {
-  constructor(private clientId: string, private tokens: Tokens) {}
+  constructor(private clientId: string, private tokens: Tokens, private onTokens?: (t: Tokens) => void) {}
+  get current(): Tokens { return this.tokens; }
 
   private async token(): Promise<string> {
     if (Date.now() > this.tokens.expiresAt - 30_000) {
@@ -56,6 +57,7 @@ export class SpotifyClient {
         refreshToken: j.refresh_token ?? this.tokens.refreshToken,
         expiresAt: Date.now() + j.expires_in * 1000,
       };
+      this.onTokens?.(this.tokens);
     }
     return this.tokens.accessToken;
   }

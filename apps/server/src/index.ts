@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tuneguesser/shared";
@@ -19,6 +21,30 @@ interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce>; a
 const pairs = new Map<string, { nonce: string; expires: number }>();
 const handoffs = new Map<string, { client: SpotifyClient; expires: number }>();
 const sessions = new Map<string, Session>();
+
+/**
+ * Spotify logins survive restarts: the refresh tokens are kept in DATA_DIR/sessions.json (mode 600), keyed by the session cookie.
+ * Without this every deploy or restart logged everybody out.
+ */
+const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
+const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
+const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+function saveSessions() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      const out: Record<string, Tokens> = {};
+      for (const [sid, s] of sessions) if (s.client) out[sid] = s.client.current;
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+      fs.writeFileSync(SESSIONS_FILE, JSON.stringify(out), { mode: 0o600 });
+    } catch (e) { console.warn("could not save sessions:", (e as Error).message); }
+  }, 200);
+}
+try {
+  const saved = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8")) as Record<string, Tokens>;
+  for (const [sid, t] of Object.entries(saved)) sessions.set(sid, { client: makeClient(t) });
+} catch { /* first start */ }
 
 interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number; abandonTimer?: ReturnType<typeof setTimeout> }
 const rooms = new Map<string, RoomEntry>();
@@ -110,7 +136,8 @@ const http = createServer(async (req, res) => {
         return void res.end();
       }
       const tokens: Tokens = await exchangeCode(CLIENT_ID, REDIRECT_URI, code, s.pkce.verifier);
-      s.client = new SpotifyClient(CLIENT_ID, tokens);
+      s.client = makeClient(tokens);
+      saveSessions();
       s.pkce = undefined;
       if (s.appNonce) {
         // the Android app started this login: park the result for the app and send the browser back to it
@@ -130,6 +157,7 @@ const http = createServer(async (req, res) => {
       if (!h || h.expires < Date.now()) { handoffs.delete(nonce); return json(res, 200, { ok: false }); }
       handoffs.delete(nonce);
       s.client = h.client;
+      saveSessions();
       return json(res, 200, { ok: true });
     }
 
