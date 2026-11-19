@@ -439,7 +439,7 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .pl-row { display: flex; gap: 12px; align-items: stretch; }
 .pl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .vbar { display: none; }
-.phone .trivia { height: 7.6em; overflow-y: auto; justify-content: flex-start; scroll-behavior: smooth; flex-shrink: 0; }
+.phone .trivia { height: 5.6em; overflow-y: auto; justify-content: flex-start; scroll-behavior: smooth; flex-shrink: 0; }
 .phone .trivia li { flex-shrink: 0; }
 @media (max-width: 700px) {
   .hbar { display: none; }
@@ -455,3 +455,4 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .phone-head .skip-top small { font-size: .7rem; }
 .phone-head .score { font-size: 1rem; }
 .screen.phone > .card.answer { padding: 12px; gap: 10px; }
+.phone-head b .phone-round { margin-left: 8px; font-size: .8rem; font-weight: 700; color: var(--muted); }

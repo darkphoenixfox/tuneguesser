@@ -158,7 +158,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
       {!embedded && (
         <header className="phone-head">
           <button className="exit" onClick={exit} aria-label="Exit to main screen">✕ Exit</button>
-          <b>{mine.name}</b><ThemeButton />{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭ <small>{skipText}</small></button>}<span className="score">{mine.score}</span>
+          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round}` : `Round ${state.round}/${state.totalRounds ?? state.config.playTo.rounds}`}</small>}</b><ThemeButton />{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭ <small>{skipText}</small></button>}<span className="score">{mine.score}</span>
         </header>
       )}
       {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
@@ -171,7 +171,6 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           <div className="pl-main">
           {!embedded && (<>
           {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
-          <p className="muted phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round} · first to ${state.config.playTo.target}` : `Round ${state.round} / ${state.totalRounds ?? state.config.playTo.rounds}`}</p>
           {state.art && <div className="phone-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
           <Hints state={state} />
           <FoundChips found={found} guess={state.config.guess} hint={state.hint} />
