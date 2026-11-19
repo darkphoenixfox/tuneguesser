@@ -406,3 +406,4 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .checks label { display: flex; align-items: center; gap: 10px; flex-direction: row; }
 .checks input { width: auto; }
 @media (max-width: 899px) { .p2.with-art { grid-template-columns: minmax(0, 1fr); grid-template-areas: "ctrl" "head" "timer" "art" "hint" "bar" "eq"; } .p2-art { width: min(46vmin, 220px); } }
+.padmenu-hint { position: fixed; top: 64px; right: 14px; z-index: 6; display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-weight: 700; font-size: .85rem; }

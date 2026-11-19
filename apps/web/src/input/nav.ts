@@ -1,4 +1,4 @@
-import { onPadButton, type PadButtonName } from "./pad";
+import { onPadButton, onPadMenuButton, setMenuMode, type PadButtonName } from "./pad";
 
 /**
  * Gamepad navigation of ordinary screens (main screen, create-room page, lobby): the d-pad moves the focus to the nearest
@@ -7,8 +7,8 @@ import { onPadButton, type PadButtonName } from "./pad";
  */
 const FOCUSABLE = "button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), [tabindex]:not([tabindex='-1'])";
 
-function candidates(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => {
+function candidates(root: ParentNode = document): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 4 || r.height < 4) return false;
     const cs = getComputedStyle(el);
@@ -18,8 +18,8 @@ function candidates(): HTMLElement[] {
 
 const centre = (el: HTMLElement) => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, r }; };
 
-function move(dir: "up" | "down" | "left" | "right") {
-  const all = candidates();
+function move(dir: "up" | "down" | "left" | "right", root: ParentNode = document) {
+  const all = candidates(root);
   const cur = document.activeElement instanceof HTMLElement && all.includes(document.activeElement) ? document.activeElement : undefined;
   if (!cur) {
     // the main action first (Quickstart, Start game, ANSWER), never the corner buttons (mute, settings, quit, device, theme)
@@ -66,9 +66,58 @@ function adjust(el: HTMLElement, dir: 1 | -1): boolean {
   return false;
 }
 
+/** The corner buttons (device, quit, settings, mute), left to right. */
+const toolbar = () => [...document.querySelectorAll<HTMLElement>(".devbtn, .quit, .gear, .mute")].filter((e) => e.getBoundingClientRect().width > 0).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+function enterMenu() {
+  const items = toolbar();
+  if (!items.length) return false;
+  setMenuMode(true);
+  focus(items[0]);
+  return true;
+}
+function exitMenu() {
+  setMenuMode(false);
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+}
+
+/** Buttons while the corner menu is active: left/right between the corner buttons, an open panel is navigated like a menu. */
+function onMenuButton(b: PadButtonName) {
+  document.documentElement.dataset.pad = "1";
+  const panel = document.querySelector<HTMLElement>(".settings");
+  const el = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
+  if (b === "lb" || b === "select" || b === "b") {
+    if (panel) { panel.querySelector<HTMLElement>(".btn.ghost:last-of-type")?.click(); setTimeout(() => focus(toolbar().find((t) => t.matches(".gear, .devbtn")) ?? toolbar()[0]), 50); if (b === "b") return; }
+    return exitMenu();
+  }
+  if (panel) {
+    if (b === "up" || b === "down" || b === "left" || b === "right") {
+      if ((b === "left" || b === "right") && el && adjust(el, b === "right" ? 1 : -1)) return;
+      if (!panel.contains(el ?? null)) return focus(candidates(panel)[0]);
+      move(b === "left" ? "up" : b === "right" ? "down" : b, panel);
+    } else if (b === "a") {
+      if (!panel.contains(el ?? null)) return focus(candidates(panel)[0]);
+      el?.click();
+    }
+    return;
+  }
+  const items = toolbar();
+  const i = el ? items.indexOf(el) : -1;
+  if (b === "left") focus(items[Math.max(0, i - 1)]);
+  else if (b === "right") focus(items[Math.min(items.length - 1, i + 1)]);
+  else if (b === "a" && el) {
+    el.click();
+    setTimeout(() => { const pn = document.querySelector<HTMLElement>(".settings"); if (pn) focus(candidates(pn)[0]); else exitMenu(); }, 120); // a panel opened: go into it; otherwise (mute, quit) back to the game
+  }
+}
+
 function onButton(b: PadButtonName) {
   document.documentElement.dataset.pad = "1"; // shows the focus ring
-  if (document.querySelector("[data-pad-game]")) return;
+  const inGame = !!document.querySelector("[data-pad-game]");
+  const hasTabs = !!document.querySelector(".tabs");
+  // the corner menu: LB in a game or a screen without tabs, Select on menu screens
+  if ((b === "lb" && (inGame || !hasTabs)) || (b === "select" && !inGame)) { if (enterMenu()) return; }
+  if (inGame) return;
   const el = document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
   if (b === "y") {
     // Y = Quickstart wherever it is on the page
@@ -96,6 +145,7 @@ export function startPadNav() {
   if (started || typeof window === "undefined") return;
   started = true;
   onPadButton(onButton);
+  onPadMenuButton(onMenuButton);
   const off = () => { delete document.documentElement.dataset.pad; };
   window.addEventListener("pointerdown", off);
 }

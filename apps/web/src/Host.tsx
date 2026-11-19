@@ -7,8 +7,8 @@ import { HostSettings } from "./Settings";
 import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
-import { PadHint } from "./input/Glyph";
-import { onPadButton } from "./input/pad";
+import { Glyph, PadHint } from "./input/Glyph";
+import { onPadButton, usePad } from "./input/pad";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
@@ -225,6 +225,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
     <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
       <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished" || window.confirm("Quit the game for everyone?")) quit(); }} aria-label="Quit game" title="Quit game">✕</button>
+      <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
       <HostSettings autoAdvance={state.config.autoAdvance} onAutoAdvance={(v) => send({ t: "settings", autoAdvance: v })} />
       {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
@@ -235,6 +236,12 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       {error && <p className="error toast">{error}</p>}
     </main>
   );
+}
+
+/** Tells a gamepad user which button reaches the corner buttons. */
+function PadMenuHint({ inGame }: { inGame: boolean }) {
+  const { connected } = usePad();
+  return connected ? <div className="padmenu-hint"><Glyph button={inGame ? "lb" : "select"} /> Menu</div> : null;
 }
 
 /** Top-right button: choose which Spotify device plays the music, also during a game. */

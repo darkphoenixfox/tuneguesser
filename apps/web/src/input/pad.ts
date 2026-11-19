@@ -11,6 +11,12 @@ interface Snap { connected: boolean; layout: PadLayout }
 let snap: Snap = { connected: false, layout: "xbox" };
 const store = new Set<() => void>();
 const listeners = new Set<(b: PadButtonName) => void>();
+const menuListeners = new Set<(b: PadButtonName) => void>();
+/** While the corner-button menu is active, buttons go only to the menu handler (the game ignores them). */
+let menuMode = false;
+export const setMenuMode = (v: boolean) => { menuMode = v; document.documentElement.dataset.padMenu = v ? "1" : ""; };
+export const inMenuMode = () => menuMode;
+const emit = (b: PadButtonName) => (menuMode ? menuListeners : listeners).forEach((l) => l(b));
 let raf = 0;
 let down = new Set<number>();
 const nextAt = new Map<number, number>();
@@ -34,8 +40,8 @@ function poll() {
   for (const p of list) p.buttons.forEach((b, i) => { if (b.pressed && NAMES[i]) cur.add(i); });
   for (const i of cur) {
     const dir = i >= 12; // d-pad repeats while held
-    if (!down.has(i)) { nextAt.set(i, now + 380); listeners.forEach((l) => l(NAMES[i]!)); }
-    else if (dir && now >= (nextAt.get(i) ?? Infinity)) { nextAt.set(i, now + 120); listeners.forEach((l) => l(NAMES[i]!)); }
+    if (!down.has(i)) { nextAt.set(i, now + 380); emit(NAMES[i]!); }
+    else if (dir && now >= (nextAt.get(i) ?? Infinity)) { nextAt.set(i, now + 120); emit(NAMES[i]!); }
   }
   down = cur;
   raf = requestAnimationFrame(poll);
@@ -54,3 +60,4 @@ if (typeof window !== "undefined") {
 
 export const usePad = (): Snap => useSyncExternalStore((cb) => { store.add(cb); return () => void store.delete(cb); }, () => snap);
 export const onPadButton = (l: (b: PadButtonName) => void) => { listeners.add(l); return () => void listeners.delete(l); };
+export const onPadMenuButton = (l: (b: PadButtonName) => void) => { menuListeners.add(l); return () => void menuListeners.delete(l); };

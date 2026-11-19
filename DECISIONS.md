@@ -157,6 +157,9 @@ The Reveal hint shows only underscores for the first 10 s (or half the timer if 
 ### DEC-043 · Hints are checkboxes; artwork hint · 2026-11-19 · Active · supersedes the single-choice hints of DEC-023/028
 `GameConfig.hints` is now `{reveal, trivia, art}` (any combination; the old single-choice value is still accepted when loading saved settings). The **artwork** hint sends the cover URL and a progress value (elapsed / timer window, frozen on pause) to the host screen only; the canvas draws it as 3 to 96 blocks per side and the sharp image at the end. Note: the cover URL is in the room state, so a technically minded player could look at it on the network; acceptable for a party game. Tracks without cover art (demo mode) show no art area.
 
+### DEC-044 · Gamepad access to the corner buttons · 2026-11-19 · Active
+LB/L1 (in a game, or any screen without tabs) or Select/Share (menu screens) enters a "corner menu" mode: all pad buttons go only to the menu handler so the game does not react (A cannot buzz by accident); left/right pick device / quit / settings / mute, A presses, panels are navigated with the d-pad, B / LB / Select leaves. A "Menu" glyph hint sits under the buttons.
+
 ---
 
 ## Open questions
