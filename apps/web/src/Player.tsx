@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FoundChips, GameSummary, GuessBar, Hints, ScoreBanner } from "./Found";
+import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
 import { PadKeyboard } from "./input/PadKeyboard";
@@ -134,6 +134,9 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
     if (state.phase !== "lobby" && state.phase !== "finished") setAskLeave(true); else leaveNow();
   };
   const found = state.found;
+  const canSkip = !embedded && state.phase === "playing" && !iAmGuesser && (state.config.order !== "roundRobin" || state.activePlayerId === mine.id);
+  const sk = state.skip ?? { votes: 0, voters: state.players.length };
+  const skipText = state.players.length > 1 && sk.votes > 0 ? `${sk.votes}/${sk.voters}` : "";
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (sent || !text.trim()) return;
@@ -146,7 +149,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
       {!embedded && (
         <header className="phone-head">
           <button className="exit" onClick={exit} aria-label="Exit to main screen">✕ Exit</button>
-          <b>{mine.name}</b><ThemeButton /><span className="score">{mine.score}</span>
+          <b>{mine.name}</b><ThemeButton />{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label="Skip song" title="Skip song">⏭ <small>{skipText}</small></button>}<span className="score">{mine.score}</span>
         </header>
       )}
       {state.phase === "lobby" && <div className="card center"><h2>You're in! 🎉</h2><p className="muted">Waiting for the host to start…</p><ul className="players">{state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)}>{p.name}</li>)}</ul><GameSummary state={state} /></div>}
@@ -156,6 +159,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
           {!embedded && <div className="bar-time"><i style={{ width: state.roundMs === null ? "100%" : `${Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
           {!embedded && (<>
           {state.paused && <p className="paused-banner">⏸ PAUSED</p>}
+          <p className="muted phone-round">{state.config.playTo.kind === "score" ? `Round ${state.round} · first to ${state.config.playTo.target}` : `Round ${state.round} / ${state.totalRounds ?? state.config.playTo.rounds}`}</p>
+          {state.art && <div className="phone-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
           <Hints state={state} />
           <FoundChips found={found} guess={state.config.guess} hint={state.hint} />
           <ScoreBanner state={state} />
@@ -197,10 +202,6 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               {mine.attemptsLeft > 0 && <PadHint button="a" />}
             </button>
           )}
-          {!embedded && !iAmGuesser && (state.config.order !== "roundRobin" || state.activePlayerId === mine.id) && (() => {
-            const sk = state.skip ?? { votes: 0, voters: state.players.length };
-            return <button className={"btn ghost skip" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })}>{mine.skipVote ? "✓ Skip vote" : "Skip song"} ({sk.votes}/{sk.voters})<PadHint button="select" /></button>;
-          })()}
           {!embedded && !iAmGuesser && <button className="btn ghost" onClick={() => send({ t: "pause" })}>{state.paused ? "▶ Continue" : "⏸ Pause"}<PadHint button="start" /></button>}
         </div>
       )}

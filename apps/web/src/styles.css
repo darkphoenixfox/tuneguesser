@@ -420,3 +420,8 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .next-btn { min-width: min(420px, 90%); padding: 22px 40px; border: 0; border-radius: 22px; font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 900; letter-spacing: .03em; color: #fff; background: radial-gradient(circle at 30% 25%, #ff7ac0, var(--pink) 55%, #b01e6a); box-shadow: 0 7px 0 #7d1049, 0 16px 36px rgba(255,61,154,.4); }
 .next-btn:hover:not(:disabled) { transform: none; }
 .next-btn:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 1px 0 #7d1049, 0 6px 16px rgba(255,61,154,.4); }
+.skip-top { background: transparent; border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 4px 10px; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.skip-top small { font-size: .75rem; color: var(--muted); }
+.skip-top.voted { color: var(--lime); border-color: var(--lime); background: rgba(182,255,61,.08); }
+.phone-art { width: min(52vw, 240px); margin: 0 auto; }
+.phone-round { text-align: center; font-weight: 700; }

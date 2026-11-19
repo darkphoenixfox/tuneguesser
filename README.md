@@ -50,7 +50,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 
 ### Skipping
 - Buzzer: everyone has a *Skip song* button, **the host included**, and every voter gets **one vote**. The song is skipped only when **all voters** have voted: every connected player, plus the host (unless the host is also playing, in which case they have one vote, as a player). The button shows the count, e.g. `(2/4)`. A vote can be withdrawn. Players who left or lost connection are not counted; if the host screen is closed the host is not counted either.
-- Round robin: the player whose song it is decides alone to skip (and the host's skip is not counted).
+- On phones the skip button is at the top, next to the light/dark button. Round robin: the player whose song it is decides alone to skip (and the host's skip is not counted).
 - A skipped round still shows the answer and follows the reveal rules above.
 
 ### Settings during the game
