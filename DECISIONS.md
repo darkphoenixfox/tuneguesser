@@ -151,6 +151,9 @@ A device with a gamepad connected tells the server (`padkb`); its player then ha
 ### DEC-041 · On-screen keyboard buttons · 2026-11-18 · Active · supersedes the button choices in DEC-031/035
 A presses the highlighted key, **B cancels** (no attempt used), **X backspace**, **Y send**. The bottom row shows space plus labelled Cancel / Backspace / Send keys with their glyphs. Swapped later at the user's request: **X = space, R1/RB = backspace**. The same keyboard is used by the text-box pop-up (B or Start closes it, Y = Done).
 
+### DEC-042 · Letters start after 10 s · 2026-11-19 · Active
+The Reveal hint shows only underscores for the first 10 s (or half the timer if it is shorter than 20 s); the letters then appear evenly so all are visible just before time ends.
+
 ---
 
 ## Open questions

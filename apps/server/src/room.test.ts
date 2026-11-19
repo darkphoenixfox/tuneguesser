@@ -436,7 +436,10 @@ describe("Room (buzzer game)", () => {
       const blanks = (t: string) => (t.match(/_/g) ?? []).length;
       const h0 = room.state().hint!;
       expect(h0.title).toMatch(/_/);
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(9_000);
+      expect(room.state().hint!.title).toBe(h0.title); // nothing is revealed during the first 10 s
+      await vi.advanceTimersByTimeAsync(-0);
+      await vi.advanceTimersByTimeAsync(21_000);
       const h1 = room.state().hint!;
       expect(blanks(h1.title)).toBeLessThan(blanks(h0.title));
       room.buzz(a);

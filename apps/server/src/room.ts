@@ -70,6 +70,8 @@ const shuffle = <T,>(a: T[]): T[] => {
 const UNLIMITED_SCORE_WINDOW_MS = 40_000;
 /** With an unlimited timer the "Reveal"/"Trivia" hints unfold over this long. */
 const UNLIMITED_HINT_WINDOW_MS = 60_000;
+/** No letters are revealed before this much of the round has passed. */
+const HINT_DELAY_MS = 10_000;
 /** Extra time after the computed end of a song before moving on (latency, gaps). */
 const SONG_END_BUFFER_MS = 800;
 
@@ -598,12 +600,15 @@ export class Room {
     const g = this.guesser ? this.players.get(this.guesser) : undefined;
     const elapsed = playing ? this.elapsed() : 0;
     const progress = elapsed / this.hintWindowMs;
+    // letters only start to appear after a delay, then fill in evenly until the timer ends
+    const delay = Math.min(HINT_DELAY_MS, this.hintWindowMs / 2);
+    const letterProgress = Math.max(0, (elapsed - delay) / (this.hintWindowMs - delay));
 
     let hint: RoomState["hint"];
     if (playing && this.config.hints === "reveal") {
       hint = {
-        title: this.wantTitle ? maskText(this.hintTitle, this.hintOrder.title, revealCount(progress, this.hintOrder.title.length)) : this.hintTitle,
-        artist: this.wantArtist ? maskText(this.hintArtist, this.hintOrder.artist, revealCount(progress, this.hintOrder.artist.length)) : this.hintArtist,
+        title: this.wantTitle ? maskText(this.hintTitle, this.hintOrder.title, revealCount(letterProgress, this.hintOrder.title.length)) : this.hintTitle,
+        artist: this.wantArtist ? maskText(this.hintArtist, this.hintOrder.artist, revealCount(letterProgress, this.hintOrder.artist.length)) : this.hintArtist,
       };
     }
     let triviaShown: string[] | undefined;
