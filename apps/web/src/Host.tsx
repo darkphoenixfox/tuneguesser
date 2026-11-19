@@ -100,7 +100,17 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   useEffect(() => { try { localStorage.setItem("tg_ytoff", JSON.stringify(ytOff)); } catch { /* storage blocked */ } }, [ytOff]);
   // playlists removed on this device, or for everyone by the admin, are not shown (default ones too)
   const [goneAll, setGoneAll] = useState<string[]>([]);
-  useEffect(() => { fetch("/api/playlist/removed").then((r) => r.json()).then((j: unknown) => { if (Array.isArray(j)) setGoneAll(j); }).catch(() => {}); }, []);
+  const [, refresh] = useState(0);
+  const loadGone = () => fetch("/api/playlist/removed").then((r) => r.json()).then((j: unknown) => { if (Array.isArray(j)) setGoneAll(j); }).catch(() => {});
+  useEffect(() => {
+    void loadGone();
+    // coming back from a playlist page (the browser may restore this page as it was): re-read what changed there
+    const back = () => { if (document.visibilityState !== "hidden") { refresh((n) => n + 1); void loadGone(); } };
+    window.addEventListener("pageshow", back);
+    window.addEventListener("focus", back);
+    document.addEventListener("visibilitychange", back);
+    return () => { window.removeEventListener("pageshow", back); window.removeEventListener("focus", back); document.removeEventListener("visibilitychange", back); };
+  }, []);
   const gone = new Set([...getGone(), ...goneAll]);
   const shownLists = ytLists.filter((l) => !gone.has(l.id));
   const ytPicked = shownLists.filter((l) => !ytOff.includes(l.id));
