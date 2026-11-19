@@ -15,6 +15,8 @@ const APP_URL = new URL(REDIRECT_URI).origin;
 
 interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce>; appNonce?: string }
 /** Android app login: the login runs in the system browser, the app then claims the result with its secret nonce (2 min). */
+/** Short codes for logging in from another device (TV without a browser): code -> nonce, 10 min. */
+const pairs = new Map<string, { nonce: string; expires: number }>();
 const handoffs = new Map<string, { client: SpotifyClient; expires: number }>();
 const sessions = new Map<string, Session>();
 
@@ -84,6 +86,23 @@ const http = createServer(async (req, res) => {
       return;
     }
 
+    // another device (phone) opens this short link, logs in, and the TV app claims the result with its nonce
+    if (url.pathname === "/api/auth/pair") {
+      const nonce = url.searchParams.get("nonce") ?? "";
+      if (!/^[\w-]{16,64}$/.test(nonce)) return json(res, 400, { error: "bad nonce" });
+      let code = "";
+      do { code = Array.from({ length: 5 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join(""); } while (pairs.has(code));
+      pairs.set(code, { nonce, expires: Date.now() + 600_000 });
+      return json(res, 200, { code });
+    }
+    const link = /^\/api\/l\/([A-Za-z]{5})$/.exec(url.pathname);
+    if (link) {
+      const p = pairs.get(link[1]!.toUpperCase());
+      if (!p || p.expires < Date.now()) { res.writeHead(404, { "Content-Type": "text/plain" }); return void res.end("This login code has expired. Start again on the TV.\n"); }
+      res.writeHead(302, { Location: `/api/auth/login?app=${p.nonce}` });
+      return void res.end();
+    }
+
     if (url.pathname === "/callback") {
       const code = url.searchParams.get("code");
       if (!s.pkce || url.searchParams.get("state") !== s.pkce.state || !code) {
@@ -99,7 +118,7 @@ const http = createServer(async (req, res) => {
         s.appNonce = undefined;
         s.client = undefined; // the browser itself stays logged out
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        return void res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TuneGuesser</title><body style="font-family:sans-serif;background:#0b0b1a;color:#f4f4ff;text-align:center;padding:48px 20px"><h1>Logged in to Spotify ✅</h1><p>Return to the TuneGuesser app.</p><p><a style="color:#fff;background:#ff3d9a;padding:14px 28px;border-radius:14px;text-decoration:none;font-weight:700" href="net.phoenixfox.tuneguesser://auth">Open the app</a></p><script>location.href="net.phoenixfox.tuneguesser://auth"</script></body>`);
+        return void res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TuneGuesser</title><body style="font-family:sans-serif;background:#0b0b1a;color:#f4f4ff;text-align:center;padding:48px 20px"><h1>Logged in to Spotify ✅</h1><p>Return to the TuneGuesser app, or look at the TV: it continues by itself.</p><p><a style="color:#fff;background:#ff3d9a;padding:14px 28px;border-radius:14px;text-decoration:none;font-weight:700" href="net.phoenixfox.tuneguesser://auth">Open the app</a></p><script>location.href="net.phoenixfox.tuneguesser://auth"</script></body>`);
       }
       res.writeHead(302, { Location: `${APP_URL}/host` });
       return void res.end();
@@ -235,7 +254,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-setInterval(() => { for (const [k, h] of handoffs) if (h.expires < Date.now()) handoffs.delete(k); }, 60_000).unref();
+setInterval(() => { for (const [k, p] of pairs) if (p.expires < Date.now()) pairs.delete(k); for (const [k, h] of handoffs) if (h.expires < Date.now()) handoffs.delete(k); }, 60_000).unref();
 
 // Drop rooms older than 4 hours (and stop their music)
 setInterval(() => {

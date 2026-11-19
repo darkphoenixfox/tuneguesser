@@ -534,3 +534,7 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .gear.solo { right: 14px; }
 .settings.solo { right: 14px; }
 .settings .btn { text-align: center; }
+.pairing { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; background: var(--soft); border-radius: 18px; padding: 18px; }
+.pairing h2 { margin: 0; }
+.pairing .qr { width: min(60vw, 260px); border-radius: 12px; background: #fff; }
+.pairing p { margin: 0; overflow-wrap: anywhere; }

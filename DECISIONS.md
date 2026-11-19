@@ -181,6 +181,9 @@ Inside the Capacitor WebView the login link was opened in the phone's browser by
 ### DEC-051 · TV remote navigation · 2026-11-19 · Active
 On an Nvidia Shield remote the arrow keys changed number boxes and drop-downs instead of moving on, so the setup page could not be left. In the Android app (or a TV browser) the arrow keys are now captured and routed to the same spatial focus navigator as the gamepad d-pad: up/down always move, left/right adjust numbers and drop-downs or move, Enter clicks the focused control. Works on every screen including the game (so the corner buttons are reachable).
 
+### DEC-052 · Log in from another device (TV without a browser) · 2026-11-19 · Active · extends DEC-050
+Android TV / Shield has no browser, so opening the login in the system browser does nothing. The app now shows a QR code and a 5-letter short link (`/api/l/CODE`, valid 10 min) that redirect to the same nonce login on whichever device opens them; the app polls `/api/auth/claim` as before. The app's `openExternal` no longer crashes when no browser exists. The Spotify mobile app cannot do this for us: Spotify's login has to run in a browser.
+
 ---
 
 ## Open questions

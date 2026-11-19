@@ -29,7 +29,10 @@ public class MainActivity extends BridgeActivity {
       @JavascriptInterface
       public void openExternal(String url) {
         if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
-        runOnUiThread(() -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+        runOnUiThread(() -> {
+          try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
+          catch (Exception e) { /* no browser on this device (Android TV): the page offers a QR code instead */ }
+        });
       }
     }, "TuneGuesserApp");
   }

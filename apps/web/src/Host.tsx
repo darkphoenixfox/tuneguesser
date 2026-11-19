@@ -57,23 +57,36 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const [waiting, setWaiting] = useState(false);
   const poll = useRef<ReturnType<typeof setInterval>>();
   useEffect(() => () => clearInterval(poll.current), []);
-  /** Android app: Spotify login runs in the system browser (Spotify refuses embedded web views); the app then claims the result. */
-  const appLogin = (e: React.MouseEvent) => {
+  const [pairing, setPairing] = useState<{ code: string; url: string; qr: string; nonce: string }>();
+  const stopLogin = () => { clearInterval(poll.current); setWaiting(false); setPairing(undefined); };
+  /**
+   * Android app / TV: Spotify refuses logins inside an embedded web view, and a TV has no browser. So the login happens on another
+   * device (scan the QR code or open the short link on a phone) or in this device's browser; the app then claims the result.
+   */
+  const appLogin = async (e: React.MouseEvent) => {
     const app = (window as unknown as { TuneGuesserApp?: { openExternal?: (url: string) => void } }).TuneGuesserApp;
-    if (!app?.openExternal) return; // normal browsers: the plain link works
+    if (!app) return; // normal browsers: the plain link works
     e.preventDefault();
     const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
-    app.openExternal(`${location.origin}/api/auth/login?app=${nonce}`);
+    try {
+      const { code } = await fetch(`/api/auth/pair?nonce=${nonce}`).then((x) => x.json());
+      const url = `${location.origin}/api/l/${code}`;
+      setPairing({ code, url, nonce, qr: await QRCode.toDataURL(url, { margin: 1, width: 300, color: { dark: "#0b0b1a", light: "#ffffff" } }) });
+    } catch { setErr("Cannot reach the server"); return; }
     setWaiting(true);
     clearInterval(poll.current);
-    const until = Date.now() + 5 * 60_000;
+    const until = Date.now() + 10 * 60_000;
     poll.current = setInterval(async () => {
-      if (Date.now() > until) { clearInterval(poll.current); setWaiting(false); return; }
+      if (Date.now() > until) { stopLogin(); return; }
       try {
         const r = await fetch(`/api/auth/claim?nonce=${nonce}`).then((x) => x.json());
-        if (r.ok) { clearInterval(poll.current); setWaiting(false); setMe(await fetch("/api/me").then((x) => x.json())); }
+        if (r.ok) { stopLogin(); setMe(await fetch("/api/me").then((x) => x.json())); }
       } catch { /* keep trying */ }
     }, 1500);
+  };
+  const openHere = () => {
+    const app = (window as unknown as { TuneGuesserApp?: { openExternal?: (url: string) => void } }).TuneGuesserApp;
+    if (pairing) app?.openExternal?.(`${location.origin}/api/auth/login?app=${pairing.nonce}`);
   };
 
   useEffect(() => {
@@ -120,7 +133,18 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
         <div className="card center">
           <p>Log in with the Spotify account that will play the music (Premium required).</p>
           {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
-          {waiting && <p className="muted">Finish logging in in the browser, then come back to the app…</p>}
+          {pairing && (
+            <div className="pairing" role="dialog" aria-label="Log in on another device">
+              <h2>Log in to Spotify on another device</h2>
+              <img src={pairing.qr} alt="QR code to log in" className="qr" />
+              <p>Scan the code with your phone, or open <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
+              <p className="muted">Log in to Spotify there (Premium). This screen continues by itself.</p>
+              <div className="confirm-actions">
+                <button className="btn" data-pad-first onClick={openHere}>Use this device's browser</button>
+                <button className="btn ghost" onClick={stopLogin}>Cancel</button>
+              </div>
+            </div>
+          )}
           <p className="muted login-note">Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.</p>
           <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
         </div>
