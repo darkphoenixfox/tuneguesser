@@ -3,6 +3,7 @@ import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from 
 import { ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
 import { PadKeyboard } from "./input/PadKeyboard";
+import { ErrorPage } from "./ErrorPage";
 import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
 import { useCountdown, useRoom } from "./net";
@@ -125,7 +126,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   useEffect(() => { if (mine) send({ t: "padkb", on: pad.connected }); }, [pad.connected, !!mine]);
 
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
-  if (error && !state) return <main className="screen phone center"><p className="error">{error}</p><button className="btn" onClick={onLeave}>Back</button></main>;
+  if (error && !state) return <ErrorPage error={error} onBack={onLeave} />;
   if (!state || !mine) return <main className="screen phone center"><p className="muted">Joining…</p></main>;
 
   const Wrap = embedded ? "div" : "main";

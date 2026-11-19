@@ -8,6 +8,7 @@ import { useCountdown, useRoom } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
+import { ErrorPage } from "./ErrorPage";
 import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
 
@@ -221,7 +222,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   }, [send]);
 
   const quit = () => { send({ t: "quit" }); onLeave(); }; // also stops the music
-  if (error && !state) return <main className="screen center"><p className="error">{error}</p><button className="btn" onClick={onLeave}>Back</button></main>;
+  if (error && !state) return <ErrorPage error={error} onBack={onLeave} host />;
   if (!state) return <main className="screen center"><p className="muted">Connecting…</p></main>;
 
   return (

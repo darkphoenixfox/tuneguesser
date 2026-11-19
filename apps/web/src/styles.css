@@ -425,3 +425,8 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .skip-top.voted { color: var(--lime); border-color: var(--lime); background: rgba(182,255,61,.08); }
 .phone-art { width: min(52vw, 240px); margin: 0 auto; }
 .phone-round { text-align: center; font-weight: 700; }
+.errorpage .card { max-width: 520px; padding: 36px 28px; gap: 14px; }
+.errorpage h1 { font-size: clamp(2rem, 7vw, 3rem); margin: 0; }
+.errorpage-icon { font-size: 4rem; }
+.errorpage-text { font-size: 1.15rem; line-height: 1.5; color: var(--muted); margin: 0; }
+.errorpage .next-btn { font-size: 1.3rem; padding: 16px 28px; }
