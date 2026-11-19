@@ -1,3 +1,12 @@
+  // voice answers by default: start listening when the form appears (the player just pressed ANSWER). The form can mount while
+  // `disabled` is still true from the previous attempt, so wait until it is enabled (once per mount).
+  const auto = useRef(false);
+  useEffect(() => {
+    if (!Ctor || disabled || auto.current || !getMicDefault()) return;
+    auto.current = true;
+    toggle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
 import { useEffect, useRef, useState } from "react";
 
 const Ctor: any = typeof window === "undefined" ? undefined : (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
@@ -58,7 +67,11 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
     r.onerror = (e: any) => setErr(e.error === "not-allowed" || e.error === "service-not-allowed" ? "Microphone blocked: allow it in the browser" : e.error === "no-speech" ? "Didn't hear anything" : "");
     r.onend = () => { setOn(false); if (last) cb.current.onFinal(last); };
     rec.current = r;
-    try { r.start(); setOn(true); } catch { setOn(false); }
+    try { r.start(); setOn(true); } catch {
+      // the previous session is still shutting down (second attempt on the same song): try once more shortly
+      setOn(false);
+      setTimeout(() => { try { r.start(); setOn(true); } catch { /* give up: the player can tap the mic */ } }, 400);
+    }
   }
 
   return (
