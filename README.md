@@ -23,7 +23,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 | Option | Choices | Meaning |
 | :--- | :--- | :--- |
 | Playlist | one or more | Songs from all selected playlists are mixed (duplicates removed). |
-| Play on | device | The Spotify device that plays the music. |
+| Music plays on | device | The Spotify device that plays the music. |
 | Play to | **Rounds** (1-100) / **Score** (target 500-100000) | Fixed number of songs, or play until someone reaches the target score (the round in progress is finished). |
 | Play order | **Buzzer** / **Round robin** | *Buzzer:* anyone can press ANSWER, the first wins. *Round robin:* players take turns; each song belongs to one player, who must guess it or skip (only they can press ANSWER or skip; the round ends when they have used their attempts). |
 | Guess | **Both** / **Song** / **Artist** | What has to be guessed. *Song* or *Artist* only is handy for single-artist playlists. The round ends when the wanted part(s) are found; an artist-only guess is worth the full 1000 points; with *Reveal* hints the part you don't guess is shown in full; multiple choice offers only that part. The *at once* multiplier needs *Both*. |

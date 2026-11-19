@@ -103,12 +103,11 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
       ) : (
         <>
           <div className="quick">
-            <button className="btn big" data-pad-first data-pad-quick disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
-            <small className="muted">{picked.length === 0 ? "Choose playlists below once; Quickstart then reuses your last playlists and settings." : `Starts a game with your last settings (${picked.length} playlist${picked.length > 1 ? "s" : ""}) and creates the room.`}</small>
+            <button className="btn big" data-pad-first data-pad-quick disabled={picked.length === 0 || !deviceId || busy} title="Play with the last settings" onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
           </div>
           <section className="card">
             <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
-            <p className="muted">Pick one or more. Only playlists you own or collaborate on can be used (a Spotify rule). To use someone else's or an editorial playlist, copy its songs into one of your own.</p>
+            <p className="muted">Pick the playlists for the next game. <a href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer">Manage your playlists on Spotify.</a></p>
             <div className="grid">
               {playlists.map((p) => (
                 <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>
@@ -119,12 +118,12 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
             </div>
           </section>
           <section className="card opts">
-            <label>Play on
+            <div className="opt"><span>Music plays on</span>
               <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} onFocus={loadDevices}>
                 {devices.length === 0 && <option value="">No device found – open Spotify somewhere</option>}
                 {devices.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.type}){d.active ? " ●" : ""}</option>)}
               </select>
-            </label>
+            </div>
             <div className="opt"><span>Play to</span>
               <Seg value={cfg.playTo.kind} options={[["rounds", "Rounds"], ["score", "Score"]]} onChange={(k) => set({ playTo: k === "rounds" ? { kind: "rounds", rounds: 10 } : { kind: "score", target: 5000 } })} />
               {cfg.playTo.kind === "rounds"
