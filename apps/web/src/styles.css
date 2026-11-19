@@ -456,3 +456,7 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .phone-head .score { font-size: 1rem; }
 .screen.phone > .card.answer { padding: 12px; gap: 10px; }
 .phone-head b .phone-round { margin-left: 8px; font-size: .8rem; font-weight: 700; color: var(--muted); }
+@media (max-width: 700px) {
+  .screen.phone .answer-btn { min-height: 12.7vh; font-size: clamp(1.4rem, 6vw, 1.9rem); border-radius: 20px; box-shadow: 0 6px 0 #7d1049, 0 14px 30px rgba(255,61,154,.4); }
+  .screen.phone .answer-btn:disabled { min-height: 8vh; font-size: 1.05rem; box-shadow: none; }
+}
