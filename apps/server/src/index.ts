@@ -9,6 +9,7 @@ import { Room } from "./room";
 import { TriviaCache } from "./trivia";
 import { VoteStore } from "./votes";
 import { HighScoreStore, categoryKey } from "./highscores";
+import { cleanFeat } from "./feat";
 import { EditStore, effectiveArtist, forceArtist, sanitizeLocal } from "./edits";
 import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, dropDoubtful, fixLoose, parsePlaylistId } from "./youtube";
@@ -214,7 +215,8 @@ const http = createServer(async (req, res) => {
       const tracks = parsed.map((p) => {
         const t = only ? forceArtist(p, only) : p;
         const e = local.tracks[t.id] ?? gEdits[t.id];
-        return { id: t.id, title: e?.title ?? t.title, artists: e?.artists ?? t.artists, original: e ? { title: t.title, artists: t.artists } : undefined, edited: local.tracks[t.id] ? "local" : gEdits[t.id] ? "default" : undefined, banned: gBad.has(t.id) || local.banned.has(t.id), defaultBanned: gBad.has(t.id) };
+        const c = cleanFeat({ ...t, title: e?.title ?? t.title, artists: e?.artists ?? t.artists }); // as the game will show it
+        return { id: t.id, title: c.title, artists: c.artists, original: e ? { title: t.title, artists: t.artists } : undefined, edited: local.tracks[t.id] ? "local" : gEdits[t.id] ? "default" : undefined, banned: gBad.has(t.id) || local.banned.has(t.id), defaultBanned: gBad.has(t.id) };
       });
       const count = new Map<string, number>();
       for (const t of parsed) for (const a of t.artists.slice(0, 1)) count.set(a, (count.get(a) ?? 0) + 1);
@@ -316,7 +318,7 @@ const http = createServer(async (req, res) => {
       // songs the players voted down (more than 3 thumbs down) are never loaded
       const local = sanitizeLocal(body.local); // this browser's own corrections and bans
       const loadAll = music.loadTracks.bind(music);
-      music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id) && !local.banned.has(t.id)); };
+      music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id) && !local.banned.has(t.id)).map(cleanFeat); };
       const code = newCode();
       const config = sanitizeConfig(body.config);
       if (body.source === "youtube" && commonSingleArtist(plIds.map((id) => effectiveArtist(local, id, edits.playlist(id).artist))) ) config.guess = "title"; // one artist only: guessing the artist would be pointless

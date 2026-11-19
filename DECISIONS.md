@@ -257,3 +257,6 @@ Local removal is a list of ids in localStorage (`tg_ytgone`) so default playlist
 
 ### DEC-072 · Playlist names can be edited (local, or global with the admin password) · 2026-11-19 · Active
 Local names in localStorage (`tg_ytnames`), global names in `edits.json` (`playlists[id].name`, `GET /api/playlist/names`, admin-only `POST /api/playlist/name`). Display order: this device's name, the global name, YouTube's title. Typing the original name (or nothing) removes the custom name.
+
+### DEC-073 · "feat." credits move from the title to the artist field · 2026-11-19 · Active
+`cleanFeat` (server, after edits, for Spotify and YouTube, and on the playlist page): "Seven (feat. Latto)" becomes "Seven"; featured artists not already credited are appended to the artists. The artist guess already accepts any one credited artist, so the featured one is never required.
