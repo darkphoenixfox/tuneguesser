@@ -3,6 +3,7 @@ import { Home } from "./Home";
 import { applyTheme, getTheme } from "./theme";
 import { startPadNav } from "./input/nav";
 import { PadTextEntry } from "./input/PadTextEntry";
+import { BackHandler } from "./BackHandler";
 import { PadHintBar } from "./input/PadHintBar";
 import "./styles.css";
 
@@ -16,5 +17,6 @@ createRoot(document.getElementById("root")!).render(
     <Home />
     <PadTextEntry />
     <PadHintBar />
+    <BackHandler />
   </>,
 );

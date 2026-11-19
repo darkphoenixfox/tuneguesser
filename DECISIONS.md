@@ -187,6 +187,9 @@ Android TV / Shield has no browser, so opening the login in the system browser d
 ### DEC-053 · Remote/pad navigation fixes · 2026-11-19 · Active
 When nothing was focused, the navigator picked the `data-pad-first` element even if it was disabled (Start game with no players, Quickstart before a playlist is chosen), so focusing silently failed and every arrow key did nothing: the lobby looked dead. It now picks the first enabled one. Left/right inside a row of option buttons (the `.seg` groups, e.g. the Hints toggles) step through the row before leaving it, and focus scrolling is instant instead of smooth so quick key repeats are not measured mid-animation.
 
+### DEC-054 · Back button in the Android app · 2026-11-19 · Active
+The Android Back button closed the app at once. The web view treats Back as history navigation, so the app keeps one extra history entry and handles the `popstate` itself (`BackHandler`): close the open dialog/panel, otherwise use the screen's quit/exit button (confirmation during a game), otherwise ask to exit the app. Web-only, so no new APK was needed.
+
 ---
 
 ## Open questions
