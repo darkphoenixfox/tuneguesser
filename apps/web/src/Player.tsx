@@ -13,9 +13,16 @@ import { sfx } from "./sfx";
 
 interface Saved { code: string; name: string; playerId?: string }
 const load = (): Saved | null => {
-  try { return JSON.parse(localStorage.getItem("tg_player") ?? "null"); } catch { return null; }
+  try {
+    const s: Saved | null = JSON.parse(localStorage.getItem("tg_player") ?? "null");
+    // opened with a room code (QR code / link) for another room than the saved one: forget the old session
+    const url = (new URLSearchParams(location.search).get("code") ?? "").toUpperCase();
+    if (s && url && url !== s.code) { localStorage.removeItem("tg_player"); return null; }
+    return s;
+  } catch { return null; }
 };
-const save = (s: Saved) => localStorage.setItem("tg_player", JSON.stringify(s));
+const save = (s: Saved) => { try { localStorage.setItem("tg_player", JSON.stringify(s)); if (s.name) localStorage.setItem("tg_name", s.name); } catch { /* private mode */ } };
+const savedName = () => { try { return localStorage.getItem("tg_name") ?? ""; } catch { return ""; } };
 
 export function Player({ onInGame }: { onInGame?: (v: boolean) => void }) {
   const [saved, setSaved] = useState<Saved | null>(load);
@@ -29,7 +36,7 @@ export function Player({ onInGame }: { onInGame?: (v: boolean) => void }) {
 
 function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
   const [code, setCode] = useState((new URLSearchParams(location.search).get("code") ?? "").toUpperCase());
-  const [name, setName] = useState("");
+  const [name, setName] = useState(savedName);
   const ok = code.length === 4 && name.trim().length > 0;
   return (
     <main className="screen phone">
