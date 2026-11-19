@@ -22,6 +22,7 @@ describe("youtube", () => {
     expect(parseVideo("Shape of You", "Ed Sheeran VEVO")).toEqual({ title: "Shape of You", artists: ["Ed Sheeran"] });
     expect(parseVideo('" Kiss Me " - " There She Goes " Version (Official)', "Sixpence None The Richer")).toEqual({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
     expect(parseVideo('"Kiss Me"', "Sixpence None The Richer")).toEqual({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
+    expect(parseVideo("Cheap Trick-I Want You To Want Me Lyrics", "x")).toMatchObject({ title: "I Want You To Want Me", artists: ["Cheap Trick"] });
     expect(parseVideo("Something", "")).toBeNull();
   });
   it("loads embeddable tracks and skips the rest", async () => {

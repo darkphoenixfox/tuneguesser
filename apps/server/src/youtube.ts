@@ -24,7 +24,7 @@ export function parseDuration(iso: string): number {
 const NOISE = /\s*[\(\[][^)\]]*\b(official|lyrics?|lyric video|audio|video|music video|hd|hq|4k|remaster(ed)?|visuali[sz]er|live)\b[^)\]]*[\)\]]/gi;
 
 /** Trailing leftovers of the video title: "| Official Visualizer", "Official Video HD", "HD", "4K Video", "*OFFICIAL ANTHEM*", "Out Now!" */
-const TAIL = /\s*(?:[|*]\s*)?(?:(?:official\s+(?:(?:music|lyrics?)\s+)?|(?:music|lyrics?)\s+)(?:video|audio|visuali[sz]er)|video\s+official)(?:\s+(?:hd|hq|4k))?\s*\**\s*$|\s+(?:hd|hq|4k(?:\s+video)?)\s*$|\s+(?:nw\s+)?out now!?$|\s*\*[^*]*official[^*]*\*\s*$/i;
+const TAIL = /\s*(?:[|*]\s*)?(?:(?:official\s+(?:(?:music|lyrics?)\s+)?|(?:music|lyrics?)\s+)(?:video|audio|visuali[sz]er)|video\s+official)(?:\s+(?:hd|hq|4k))?\s*\**\s*$|\s+(?:hd|hq|4k(?:\s+video)?)\s*$|\s+lyrics?$|\s+(?:nw\s+)?out now!?$|\s*\*[^*]*official[^*]*\*\s*$/i;
 /** Extra " - ..." parts that are not part of the song name */
 const JUNK_PART = /^(live\b|(explicit|clean|single|album|studio|radio)\b.*\bver|remaster|mono\b|stereo\b|.*\b(com|www)$)/i;
 const SEP = /\s+[-–—|]\s+|\s*[–—]\s+/;
@@ -43,7 +43,7 @@ function tidy(x: string): string {
  * "Artist - Title", "Title - Artist" (when the channel is the second part), "Artist | Title", "Artist: Title",
  * 'Artist "Title"', '"Title" - ...' (channel = artist). "(Official Video)", "| Visualizer", "HD" and similar are removed.
  */
-export function parseVideo(videoTitle: string, channel: string): { title: string; artists: string[] } | null {
+export function parseVideo(videoTitle: string, channel: string): { title: string; artists: string[]; loose?: boolean } | null {
   const topic = /^(.*) - Topic$/.exec(channel.trim());
   const split = (a: string) => a.split(/\s*,\s*|\s*&\s*|\s+x\s+|\s+feat\.?\s+|\s+ft\.?\s+/i).map((x) => x.trim()).filter(Boolean);
   if (topic) return { title: tidy(videoTitle).replace(/\s+-\s+(explicit|clean)\s+ver(\.|sion)?$/i, ""), artists: topic[1]!.split(/\s*,\s*|\s*&\s*/).filter(Boolean) };
@@ -58,8 +58,11 @@ export function parseVideo(videoTitle: string, channel: string): { title: string
   if (segs.length === 1) {
     const colon = /^(.{1,40}?):\s+(.+)$/.exec(cleaned);
     const quotedTitle = /^(.+?)\s+["“](.+?)["”](?:\s+.*)?$/.exec(cleaned); // Limp Bizkit "Behind Blue Eyes"
+    // "Artist-Title" / "title-artist" with a hyphen and no spaces: the order is a guess (see fixLoose)
+    const tight = cleaned.match(/\S-\S/g)?.length === 1 ? /^(.{3,}?)-(.{3,})$/.exec(cleaned) : null;
     if (colon) segs = [colon[1]!, colon[2]!];
     else if (quotedTitle) segs = [quotedTitle[1]!, quotedTitle[2]!];
+    else if (tight && cleaned.split(/\s+/).length >= 3) { const r = parseVideo(`${tight[1]!.trim()} - ${tight[2]!.trim()}`, channel); return r && { ...r, loose: true }; }
   }
   if (segs.length >= 2) {
     if (norm(segs[0]!) === norm(segs[1]!)) segs.shift(); // "The Beatles - The Beatles - Hey Jude"
@@ -73,6 +76,30 @@ export function parseVideo(videoTitle: string, channel: string): { title: string
   }
   return channelName ? { title: unquote(segs[0] ?? cleaned), artists: [channelName] } : null;
 }
+
+/** Tracks whose artist/title order was only guessed (unspaced hyphen: "somebody to love-jefferson airplane"). */
+export const loose = new WeakSet<Track>();
+
+/**
+ * The order of a "x-y" title is ambiguous. Artists seen in confident titles (same playlists) settle it:
+ * if only the second part is a known artist, swap.
+ */
+export function fixLoose(tracks: Track[]): Track[] {
+  const key = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const known = new Set<string>();
+  for (const t of tracks) if (!loose.has(t)) for (const a of t.artists) known.add(key(a));
+  for (const t of tracks) {
+    if (!loose.has(t) || t.artists.length !== 1) continue;
+    const [a, ti] = [key(t.artists[0]!), key(t.title)];
+    if (known.has(ti) && !known.has(a)) { const old = t.title; t.title = t.artists[0]!; t.artists = [old]; }
+  }
+  return tracks;
+}
+
+/** Hand-corrected songs (video id -> title/artists) for uploads whose title cannot be parsed reliably. */
+const OVERRIDES: Record<string, { title: string; artists: string[] }> = {
+  JUbMWtUyIIE: { title: "Somebody to Love", artists: ["Jefferson Airplane"] }, // uploaded as "somebody to love-jefferson airplane"
+};
 
 export interface YouTubePlaylist { id: string; name: string; tracks: number; image?: string }
 
@@ -106,14 +133,16 @@ export class YouTubeApi {
       const j = await this.get("videos", { part: "snippet,contentDetails,status", id: ids.slice(i, i + 50).join(",") });
       for (const v of j.items ?? []) {
         if (v.status?.embeddable === false || v.snippet?.liveBroadcastContent !== "none") continue;
-        const meta = parseVideo(v.snippet.title, v.snippet.channelTitle ?? "");
+        const meta = OVERRIDES[v.id] ?? parseVideo(v.snippet.title, v.snippet.channelTitle ?? "");
         const durationMs = parseDuration(v.contentDetails?.duration ?? "");
         if (!meta || durationMs < 45_000 || durationMs > 15 * 60_000) continue; // clips and mixes make poor rounds
-        out.push({
+        const track: Track = {
           id: v.id, uri: v.id, title: meta.title, artists: meta.artists, durationMs,
           albumArt: v.snippet.thumbnails?.high?.url ?? v.snippet.thumbnails?.medium?.url,
           year: v.snippet.publishedAt?.slice(0, 4),
-        });
+        };
+        if ("loose" in meta && meta.loose) loose.add(track);
+        out.push(track);
       }
     }
     return out;
@@ -138,7 +167,7 @@ export class YouTubeProvider implements MusicProvider {
     const seen = new Set<string>();
     const out: Track[] = [];
     for (const id of this.playlistIds) for (const t of await this.api.tracks(id)) if (!seen.has(t.id)) { seen.add(t.id); out.push(t); }
-    return out;
+    return fixLoose(out);
   }
   async play(track: Track, startMs: number) { this.now = { videoId: track.uri, pos: startMs, at: Date.now(), playing: true }; this.emit({ op: "play", videoId: track.uri, startMs }); }
   async pause() { if (this.now?.playing) this.now = { ...this.now, pos: this.now.pos + (Date.now() - this.now.at), playing: false }; this.emit({ op: "pause" }); }
