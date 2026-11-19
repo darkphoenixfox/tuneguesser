@@ -16,8 +16,10 @@ const APP_URL = new URL(REDIRECT_URI).origin;
 interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce> }
 const sessions = new Map<string, Session>();
 
-interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number }
+interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number; abandonTimer?: ReturnType<typeof setTimeout> }
 const rooms = new Map<string, RoomEntry>();
+/** A room whose host screen is gone for this long is ended (otherwise it keeps playing songs on the host's Spotify). */
+const HOST_GONE_MS = 60_000;
 const hostSockets = new WeakSet<WebSocket>();
 const trivia = new TriviaCache();
 
@@ -146,7 +148,7 @@ wss.on("connection", (ws) => {
         if (!e) return send(ws, { t: "error", message: "Room not found" });
         if (m.t === "host") {
           if (m.token !== e.hostToken) return send(ws, { t: "error", message: "Bad host token" });
-          entry = e; role = "host"; hostSockets.add(ws); e.room.setHostConnected(true);
+          entry = e; role = "host"; hostSockets.add(ws); clearTimeout(e.abandonTimer); e.room.setHostConnected(true);
         } else if (m.t === "join") {
           const id = e.room.addPlayer(String(m.name ?? ""), m.playerId);
           if (!id) return send(ws, { t: "error", message: "Room is full or already started" });
@@ -200,13 +202,21 @@ wss.on("connection", (ws) => {
     if (!entry) return;
     entry.sockets.delete(ws);
     if (role === "player" && playerId) entry.room.setConnected(playerId, false);
-    if (role === "host") entry.room.setHostConnected(false);
+    if (role === "host" && ![...entry.sockets.keys()].some((s) => hostSockets.has(s))) {
+      entry.room.setHostConnected(false);
+      const e = entry;
+      clearTimeout(e.abandonTimer);
+      e.abandonTimer = setTimeout(() => {
+        console.log(`room ${e.room.code}: host gone, ending the game`);
+        void (e.room.state().phase === "lobby" ? Promise.resolve(e.room.dispose()) : e.room.stop()).finally(() => { if (rooms.get(e.room.code) === e) rooms.delete(e.room.code); });
+      }, HOST_GONE_MS);
+    }
   });
 });
 
-// Drop rooms older than 4 hours
+// Drop rooms older than 4 hours (and stop their music)
 setInterval(() => {
-  for (const [code, e] of rooms) if (Date.now() - e.createdAt > 4 * 3600_000) { e.room.dispose(); rooms.delete(code); }
+  for (const [code, e] of rooms) if (Date.now() - e.createdAt > 4 * 3600_000) { void e.room.stop(); rooms.delete(code); }
 }, 600_000).unref();
 
 http.listen(PORT, () => console.log(`TuneGuesser server on :${PORT} (redirect ${REDIRECT_URI})`));

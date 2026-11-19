@@ -166,6 +166,9 @@ Quit (host) and Exit (player) used the browser's `window.confirm`, which a gamep
 ### DEC-046 · Hints never complete before the timer ends · 2026-11-19 · Active · supersedes the end point in DEC-042/043
 The revealed letters and the pixelated artwork are scaled to finish 5 s after the timer (`HINT_GRACE_MS`), so at timeout they are close to, but not at, 100%; the reveal screen then shows the full answer. The artwork progress is capped below 1 during play.
 
+### DEC-047 · Abandoned rooms are ended · 2026-11-19 · Active
+A room kept running (timers, auto-advance, `play()` calls on the host's Spotify) after the host closed the tab, so songs kept changing on the host's account. Now, when the host screen has been disconnected for 60 s (reloads reconnect in time), the server ends the game and stops the music (a lobby is just dropped). Rooms older than 4 h also stop their music.
+
 ---
 
 ## Open questions
