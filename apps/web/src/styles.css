@@ -470,3 +470,23 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .p2.with-art { grid-template-areas: "ctrl head head" "eq hint ." "timer hint art" "bar bar bar"; }
 .p2-art { align-self: start; width: 100%; }
 @media (max-width: 899px) { .p2.with-art { grid-template-areas: "ctrl" "head" "timer" "art" "hint" "bar" "eq"; } }
+/* host game on a phone: copy the player layout (compact top row, vertical timer bar on the left, hints/art to its right) */
+.rl-secs { display: none; }
+.p2 .vbar { grid-area: vbar; }
+@media (max-width: 700px) {
+  .screen.game { padding: max(10px, env(safe-area-inset-top)) 10px 70px; gap: 8px; }
+  .p2, .p2.with-art { grid-template-columns: 10px minmax(0, 1fr); grid-template-areas: "ctrl ctrl" "head head" "vbar art" "vbar hint" "bar bar"; gap: 8px 10px; justify-items: stretch; }
+  .p2-eq, .p2-timer { display: none; }
+  .p2-ctrl { justify-content: flex-start; gap: 8px; margin: 0; min-height: 44px; align-items: center; }
+  .p2-ctrl .icon-btn { width: 40px; height: 40px; font-size: 1.15rem; }
+  .p2-ctrl .ctl small { display: none; }
+  .p2-head { padding-right: 0; min-height: 0; gap: 4px 12px; }
+  .p2-head .rl { font-size: .9rem; }
+  .rl-secs { display: inline; font-weight: 900; color: var(--cyan); font-variant-numeric: tabular-nums; }
+  .p2-art { width: min(46vw, 200px); margin: 0 auto; align-self: center; }
+  .p2-hint { padding: 12px; gap: 8px; }
+  .p2-hint .chip b { font-size: clamp(1.1rem, 5.5vw, 1.6rem); }
+  .p2-hint .chip { grid-template-columns: 4.6rem minmax(0, 1fr) auto; }
+  .p2-hint .chip small { font-size: .85rem; }
+  .p2 .vbar { width: 10px; }
+}

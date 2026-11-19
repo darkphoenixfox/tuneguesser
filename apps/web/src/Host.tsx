@@ -370,8 +370,10 @@ function Playing({ state, endsAt, guessEndsAt, onSkip, onPause }: { state: RoomS
       <div className="p2-eq" aria-hidden>{Array.from({ length: 16 }, (_, i) => <i key={i} className={guessing || state.paused ? "still" : ""} style={{ animationDelay: `${(i * 97) % 600}ms` }} />)}</div>
       <div className="p2-head">
         <span className="rl">{roundLabel(state)}</span>
+        <span className="rl-secs">{unlimited ? "∞" : `${Math.ceil(left)}s`}</span>
         <ScoreLine state={state} />
       </div>
+      <div className="vbar" aria-hidden="true"><i style={{ height: `${frac * 100}%` }} /></div>
       <div className={"timer p2-timer" + (!unlimited && left <= 5 && !guessing ? " hot" : "") + (guessing ? " frozen" : "")}>
         <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r={R} className="track" /><circle cx="100" cy="100" r={R} className="bar" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} /></svg>
         <b>{unlimited ? "∞" : Math.ceil(left)}</b>
