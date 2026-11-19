@@ -247,7 +247,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
       <Logo />
       {err && <p className="error">{err}</p>}
       {me?.youtube && (
-        <div className="card source-pick"><span>{t("Music from")}</span><Seg value={source} options={[["youtube", "YouTube"], ["spotify", "Spotify"]]} onChange={(v) => setSource(v)} /></div>
+        <div className="card source-pick"><span>{t("Music from")}</span><Seg value={source} options={[["youtube", "YouTube (No account needed)"], ["spotify", "Spotify (Premium)"]]} onChange={(v) => setSource(v)} /></div>
       )}
       {!me ? <p className="muted">{t("Loading…")}</p> : useYt ? (
         <>

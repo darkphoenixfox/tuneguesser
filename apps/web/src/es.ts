@@ -29,6 +29,8 @@ export const ES: Record<string, string> = {
   "Music from": "Música de",
   "Spotify": "Spotify",
   "YouTube": "YouTube",
+  "YouTube (No account needed)": "YouTube (sin cuenta)",
+  "Spotify (Premium)": "Spotify (Premium)",
   "YouTube playlists": "Listas de YouTube",
   "YouTube playlist link": "Enlace de lista de YouTube",
   "Paste the link of a public or unlisted playlist (YouTube or YouTube Music). The music plays on this screen, no account needed.": "Pega el enlace de una lista pública o no listada (YouTube o YouTube Music). La música suena en esta pantalla, sin necesidad de cuenta.",
