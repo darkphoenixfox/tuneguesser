@@ -1,3 +1,4 @@
+import { Marquee } from "./Marquee";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
@@ -262,7 +263,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
                 <div key={p.id} className="pl-wrap">
                   <button className={"pl" + (ytOff.includes(p.id) ? "" : " sel")} aria-pressed={!ytOff.includes(p.id)} onClick={() => setYtOff((cur) => (cur.includes(p.id) ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}>
                     {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                    <b>{p.name}</b><small>{t("{n} videos", { n: p.tracks })}</small>
+                    <Marquee text={p.name} /><small>{t("{n} videos", { n: p.tracks })}</small>
                   </button>
                   {!DEFAULT_YT_PLAYLISTS.includes(p.id) && <button className="pl-x" aria-label={t("Remove playlist")} title={t("Remove playlist")} onClick={() => { setYtLists((cur) => cur.filter((x) => x.id !== p.id)); setYtOff((cur) => cur.filter((x) => x !== p.id)); }}>✕</button>}
                 </div>
@@ -306,7 +307,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               {playlists.map((p) => (
                 <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>
                   {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                  <b>{p.name}</b><small>{t("{n} tracks", { n: p.tracks })}</small>
+                  <Marquee text={p.name} /><small>{t("{n} tracks", { n: p.tracks })}</small>
                 </button>
               ))}
             </div>

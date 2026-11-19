@@ -52,6 +52,11 @@ input:disabled { color: var(--lime); font-weight: 800; background: rgba(182,255,
 .pl img, .pl .ph { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--grad); }
 .pl b { font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pl small { color: var(--muted); }
+.marquee { display: block; overflow: hidden; white-space: nowrap; font-size: .9rem; }
+.marquee > span { display: inline-block; }
+.marquee.scrolls > span { animation: marquee var(--dur, 6s) ease-in-out infinite alternate; }
+@keyframes marquee { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(var(--over)); } }
+@media (prefers-reduced-motion: reduce) { .marquee.scrolls > span { animation: none; } .marquee { text-overflow: ellipsis; } }
 
 .mute { position: fixed; top: 14px; right: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 50%; width: 44px; height: 44px; cursor: pointer; font-size: 1.2rem; z-index: 5; }
 
