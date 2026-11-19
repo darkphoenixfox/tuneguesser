@@ -219,4 +219,7 @@ setInterval(() => {
   for (const [code, e] of rooms) if (Date.now() - e.createdAt > 4 * 3600_000) { void e.room.stop(); rooms.delete(code); }
 }, 600_000).unref();
 
+// never let a stray failed promise (e.g. a Spotify call) take the whole server down: Spotify logins live in memory
+process.on("unhandledRejection", (e) => console.error("unhandled rejection:", e));
+
 http.listen(PORT, () => console.log(`TuneGuesser server on :${PORT} (redirect ${REDIRECT_URI})`));

@@ -578,4 +578,16 @@ describe("Room (buzzer game)", () => {
     await vi.advanceTimersByTimeAsync(10_000);
     expect(room.state().art!.progress).toBeCloseTo(frozen);
   });
+
+  it("a failed play call does not throw out of start (the round still runs)", async () => {
+    const music = new DemoProvider();
+    music.play = async () => { throw new Error("Spotify 404"); };
+    const room = new Room("ABCD", music, cfg({}), { guessMs: 25_000, revealMs: 5_000 });
+    const errors: string[] = [];
+    room.onError = (m) => errors.push(m);
+    room.addPlayer("Ana");
+    await expect(room.start()).resolves.toBeUndefined();
+    expect(room.state().phase).toBe("playing");
+    expect(errors[0]).toMatch(/play failed/);
+  });
 });

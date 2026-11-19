@@ -308,7 +308,8 @@ export class Room {
     this.startMs = Math.floor((0.15 + Math.random() * 0.5) * maxStart);
     this.phase = "playing";
     this.roundStartedAt = this.now();
-    await this.music.play(track, this.startMs);
+    // a refused play (device asleep, Spotify 404/502) must not crash the server: report it and let the round run
+    await this.music.play(track, this.startMs).catch(this.musicError("play"));
     this.startClock(0);
     if (this.config.hints.reveal || this.config.hints.trivia || this.config.hints.art) this.hintTicker = setInterval(() => { if (!this.guesser) this.onChange(); }, 1000);
     this.onChange();
