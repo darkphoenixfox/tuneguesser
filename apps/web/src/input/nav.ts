@@ -24,7 +24,7 @@ function move(dir: "up" | "down" | "left" | "right", root: ParentNode = document
   if (!cur) {
     // the main action first (Quickstart, Start game, ANSWER), never the corner buttons (mute, settings, quit, device, theme)
     const main = all.find((e) => !e.matches(".mute, .micbtn, .gear, .quit, .devbtn, .theme-btn, .tabs button"));
-    focus(document.querySelector<HTMLElement>("[data-pad-first]") ?? main ?? all[0]);
+    focus(all.find((e) => e.matches("[data-pad-first]")) ?? main ?? all[0]); // an enabled one: a disabled Start game must not swallow the key
     return;
   }
   const c = centre(cur);
@@ -46,7 +46,7 @@ function move(dir: "up" | "down" | "left" | "right", root: ParentNode = document
 function focus(el?: HTMLElement) {
   if (!el) return;
   el.focus({ preventScroll: true });
-  el.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+  el.scrollIntoView({ block: "center", inline: "nearest" });
 }
 
 /** left/right on a number box or drop-down changes its value */
@@ -157,6 +157,11 @@ function onKey(e: KeyboardEvent) {
   e.stopPropagation();
   document.documentElement.dataset.pad = "1"; // shows the focus ring
   if (t && (dir === "left" || dir === "right") && adjust(t, dir === "right" ? 1 : -1)) return;
+  if (t && (dir === "left" || dir === "right") && t.parentElement?.matches(".seg")) {
+    // a row of option buttons (Rounds | Score ...): left/right step through the row, then leave it
+    const sib = (dir === "right" ? t.nextElementSibling : t.previousElementSibling) as HTMLElement | null;
+    if (sib instanceof HTMLButtonElement && !sib.disabled) { focus(sib); return; }
+  }
   move(dir, document.querySelector(".confirm") ?? document);
 }
 

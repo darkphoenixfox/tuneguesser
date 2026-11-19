@@ -184,6 +184,9 @@ On an Nvidia Shield remote the arrow keys changed number boxes and drop-downs in
 ### DEC-052 · Log in from another device (TV without a browser) · 2026-11-19 · Active · extends DEC-050
 Android TV / Shield has no browser, so opening the login in the system browser does nothing. The app now shows a QR code and a 5-letter short link (`/api/l/CODE`, valid 10 min) that redirect to the same nonce login on whichever device opens them; the app polls `/api/auth/claim` as before. The app's `openExternal` no longer crashes when no browser exists. The Spotify mobile app cannot do this for us: Spotify's login has to run in a browser.
 
+### DEC-053 · Remote/pad navigation fixes · 2026-11-19 · Active
+When nothing was focused, the navigator picked the `data-pad-first` element even if it was disabled (Start game with no players, Quickstart before a playlist is chosen), so focusing silently failed and every arrow key did nothing: the lobby looked dead. It now picks the first enabled one. Left/right inside a row of option buttons (the `.seg` groups, e.g. the Hints toggles) step through the row before leaving it, and focus scrolling is instant instead of smooth so quick key repeats are not measured mid-animation.
+
 ---
 
 ## Open questions
