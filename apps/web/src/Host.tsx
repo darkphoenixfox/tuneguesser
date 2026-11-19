@@ -107,7 +107,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
           </div>
           <section className="card">
             <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
-            <p className="muted">Pick the playlists for the next game. <a href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer">Manage your playlists on Spotify.</a></p>
+            <p className="muted pl-note">Pick the playlists for the next game. Manage your playlists on Spotify. <a className="sp-link" href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer" aria-label="Open your playlists on Spotify" title="Open Spotify"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></a></p>
             <div className="grid">
               {playlists.map((p) => (
                 <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>

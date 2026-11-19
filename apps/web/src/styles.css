@@ -464,3 +464,5 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .phone .trivia { height: 2.2em; gap: 0; scroll-snap-type: y mandatory; }
 .phone .trivia li { height: 2.2em; box-sizing: border-box; padding: 0 12px; line-height: 2.2em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; scroll-snap-align: end; border-radius: 10px; font-size: .9rem; }
 .notice.toast { background: var(--card); border: 1px solid var(--amber); color: var(--amber); border-radius: 14px; padding: 12px 20px; font-weight: 800; font-size: 1.15rem; z-index: 40; margin: 0; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.pl-note { color: var(--text); display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.sp-link { display: inline-flex; line-height: 0; text-decoration: none; }
