@@ -23,7 +23,7 @@ function move(dir: "up" | "down" | "left" | "right", root: ParentNode = document
   const cur = document.activeElement instanceof HTMLElement && all.includes(document.activeElement) ? document.activeElement : undefined;
   if (!cur) {
     // the main action first (Quickstart, Start game, ANSWER), never the corner buttons (mute, settings, quit, device, theme)
-    const main = all.find((e) => !e.matches(".mute, .gear, .quit, .devbtn, .theme-btn, .tabs button"));
+    const main = all.find((e) => !e.matches(".mute, .micbtn, .gear, .quit, .devbtn, .theme-btn, .tabs button"));
     focus(document.querySelector<HTMLElement>("[data-pad-first]") ?? main ?? all[0]);
     return;
   }
@@ -67,7 +67,7 @@ function adjust(el: HTMLElement, dir: 1 | -1): boolean {
 }
 
 /** The corner buttons (mute, device, settings, quit), left to right. */
-const toolbar = () => [...document.querySelectorAll<HTMLElement>(".mute, .devbtn, .gear, .quit")].filter((e) => e.getBoundingClientRect().width > 0).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+const toolbar = () => [...document.querySelectorAll<HTMLElement>(".mute, .micbtn, .devbtn, .gear, .quit")].filter((e) => e.getBoundingClientRect().width > 0).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
 
 function enterMenu() {
   const items = toolbar();

@@ -10,6 +10,7 @@ import { setMuted, sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
 import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
+import { MicToggle } from "./input/Mic";
 import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
 
@@ -251,6 +252,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
 
   return (
     <main className="screen game" data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
+      <MicToggle className="micbtn" />
       <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
       <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />

@@ -3,6 +3,28 @@ import { useEffect, useRef, useState } from "react";
 const Ctor: any = typeof window === "undefined" ? undefined : (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
 export const micSupported = !!Ctor;
 
+/** "Voice answers by default": when on, the microphone starts listening as soon as you press ANSWER. Saved per device. */
+const KEY = "tg_mic";
+const listeners = new Set<() => void>();
+export const getMicDefault = () => { try { return localStorage.getItem(KEY) === "1"; } catch { return false; } };
+const setMicDefault = (v: boolean) => { try { localStorage.setItem(KEY, v ? "1" : "0"); } catch { /* private mode */ } listeners.forEach((f) => f()); };
+export function useMicDefault(): [boolean, (v: boolean) => void] {
+  const [v, setV] = useState(getMicDefault);
+  useEffect(() => { const f = () => setV(getMicDefault()); listeners.add(f); return () => { listeners.delete(f); }; }, []);
+  return [v, setMicDefault];
+}
+
+/** Round button for the corner row / header: turn voice answers on by default. */
+export function MicToggle({ className }: { className?: string }) {
+  const [on, set] = useMicDefault();
+  if (!Ctor) return null;
+  return (
+    <button className={(className ?? "") + (on ? " on" : "")} onClick={() => set(!on)} aria-pressed={on} aria-label="Answer by voice by default" title={on ? "Voice answers on: the microphone opens when you press ANSWER" : "Voice answers off"}>
+      <span style={{ opacity: on ? 1 : .45 }}>🎤</span>
+    </button>
+  );
+}
+
 /**
  * Speak the answer (browser speech recognition). Interim words fill the answer box while talking; when the browser has the
  * final text `onFinal` is called. Hidden where the browser has no speech recognition (Firefox).
@@ -14,9 +36,11 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
   const cb = useRef({ onText, onFinal });
   cb.current = { onText, onFinal };
   useEffect(() => () => { try { rec.current?.abort(); } catch { /* already stopped */ } }, []);
+  // voice answers by default: start listening when the form appears (the player just pressed ANSWER)
+  useEffect(() => { if (Ctor && !disabled && getMicDefault()) toggle(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
   if (!Ctor) return null;
 
-  const toggle = () => {
+  function toggle() {
     if (on) { rec.current?.stop(); return; }
     setErr("");
     const r = new Ctor();
@@ -35,7 +59,7 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
     r.onend = () => { setOn(false); if (last) cb.current.onFinal(last); };
     rec.current = r;
     try { r.start(); setOn(true); } catch { setOn(false); }
-  };
+  }
 
   return (
     <div className="mic-wrap">
