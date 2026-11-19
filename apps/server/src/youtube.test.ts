@@ -20,6 +20,8 @@ describe("youtube", () => {
     expect(parseVideo("Queen - Bohemian Rhapsody (Official Video Remastered)", "Queen Official")).toEqual({ title: "Bohemian Rhapsody", artists: ["Queen"] });
     expect(parseVideo("Daft Punk – Get Lucky [Lyrics]", "x")).toEqual({ title: "Get Lucky", artists: ["Daft Punk"] });
     expect(parseVideo("Shape of You", "Ed Sheeran VEVO")).toEqual({ title: "Shape of You", artists: ["Ed Sheeran"] });
+    expect(parseVideo('" Kiss Me " - " There She Goes " Version (Official)', "Sixpence None The Richer")).toEqual({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
+    expect(parseVideo('"Kiss Me"', "Sixpence None The Richer")).toEqual({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
     expect(parseVideo("Something", "")).toBeNull();
   });
   it("loads embeddable tracks and skips the rest", async () => {

@@ -31,7 +31,12 @@ export function parseVideo(videoTitle: string, channel: string): { title: string
   const clean = (t: string) => t.replace(NOISE, "").replace(/\s{2,}/g, " ").trim();
   const topic = /^(.*) - Topic$/.exec(channel.trim());
   if (topic) return { title: clean(videoTitle), artists: topic[1]!.split(/\s*,\s*|\s*&\s*/).filter(Boolean) };
-  const m = /^(.+?)\s+[-–—]\s+(.+)$/.exec(clean(videoTitle));
+  const cleaned = clean(videoTitle);
+  const channelName = channel.replace(/\s*(VEVO|Official)$/i, "").trim();
+  // '"Kiss Me" - "There She Goes" Version': a quoted first part is the song, the channel is the artist
+  const quoted = /^["“”‘’']\s*(.+?)\s*["“”‘’']\s+[-–—]\s+/.exec(cleaned) ?? /^["“”]\s*(.+?)\s*["“”]$/.exec(cleaned);
+  if (quoted && channelName) return { title: quoted[1]!.trim(), artists: [channelName] };
+  const m = /^(.+?)\s+[-–—]\s+(.+)$/.exec(cleaned);
   if (m) return { title: m[2]!.trim(), artists: m[1]!.split(/\s*,\s*|\s*&\s*|\s+x\s+|\s+feat\.?\s+|\s+ft\.?\s+/i).filter(Boolean) };
   const c = channel.replace(/\s*VEVO$/i, "").trim();
   return c ? { title: clean(videoTitle), artists: [c] } : null;
