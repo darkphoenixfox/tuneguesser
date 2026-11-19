@@ -175,6 +175,9 @@ A 🎤 button on the typed answer form uses the Web Speech API (free, no server)
 ### DEC-049 · Shared settings menu, next-song setting moved, Android app, private addresses · 2026-11-19 · Active
 The ⚙ menu is one component on the Join and Host screens (theme + link to the Android APK; the APK link is hidden inside the app). *Next song automatically* is now a gameplay option on the setup page, no longer changed live during a game. The Android app is a Capacitor shell (`android-app/`, `npm run build:apk`) around the live site; its APK embeds the server address, so it is git-ignored and served from the web app. Deployment settings (NAS path, public address, Portainer URL) now come from the environment or an untracked `.env`, never from the repo, and the git history was rewritten to remove the private addresses and unrelated project names.
 
+### DEC-050 · Spotify login in the Android app runs in the system browser · 2026-11-19 · Active
+Inside the Capacitor WebView the login link was opened in the phone's browser by default, so the session ended up in the browser, not the app (error "Spotify login failed"), and Spotify rejects embedded web views anyway. The app now calls `TuneGuesserApp.openExternal(login URL with a random nonce)`; the server parks the finished login under that nonce (2 min, one use) and the browser page returns to the app through the `net.phoenixfox.tuneguesser://auth` link; the app polls `/api/auth/claim?nonce=` and moves the login into its own session. No user-agent spoofing. Also: a failed Spotify `play` no longer crashes the server (it used to wipe all logins).
+
 ---
 
 ## Open questions

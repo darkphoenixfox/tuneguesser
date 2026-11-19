@@ -54,6 +54,27 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
   const [busy, setBusy] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const poll = useRef<ReturnType<typeof setInterval>>();
+  useEffect(() => () => clearInterval(poll.current), []);
+  /** Android app: Spotify login runs in the system browser (Spotify refuses embedded web views); the app then claims the result. */
+  const appLogin = (e: React.MouseEvent) => {
+    const app = (window as unknown as { TuneGuesserApp?: { openExternal?: (url: string) => void } }).TuneGuesserApp;
+    if (!app?.openExternal) return; // normal browsers: the plain link works
+    e.preventDefault();
+    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+    app.openExternal(`${location.origin}/api/auth/login?app=${nonce}`);
+    setWaiting(true);
+    clearInterval(poll.current);
+    const until = Date.now() + 5 * 60_000;
+    poll.current = setInterval(async () => {
+      if (Date.now() > until) { clearInterval(poll.current); setWaiting(false); return; }
+      try {
+        const r = await fetch(`/api/auth/claim?nonce=${nonce}`).then((x) => x.json());
+        if (r.ok) { clearInterval(poll.current); setWaiting(false); setMe(await fetch("/api/me").then((x) => x.json())); }
+      } catch { /* keep trying */ }
+    }, 1500);
+  };
 
   useEffect(() => {
     fetch("/api/me").then((r) => r.json()).then(setMe).catch(() => setErr("Cannot reach the server"));
@@ -98,7 +119,8 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
       {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
         <div className="card center">
           <p>Log in with the Spotify account that will play the music (Premium required).</p>
-          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
+          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
+          {waiting && <p className="muted">Finish logging in in the browser, then come back to the app…</p>}
           <p className="muted login-note">Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.</p>
           <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
         </div>

@@ -13,7 +13,9 @@ const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI ?? `http://127.0.0.1:5173/
 /** Where the browser lands after Spotify login */
 const APP_URL = new URL(REDIRECT_URI).origin;
 
-interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce> }
+interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce>; appNonce?: string }
+/** Android app login: the login runs in the system browser, the app then claims the result with its secret nonce (2 min). */
+const handoffs = new Map<string, { client: SpotifyClient; expires: number }>();
 const sessions = new Map<string, Session>();
 
 interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number; abandonTimer?: ReturnType<typeof setTimeout> }
@@ -75,6 +77,8 @@ const http = createServer(async (req, res) => {
     if (url.pathname === "/api/auth/login") {
       if (!CLIENT_ID) return json(res, 500, { error: "SPOTIFY_CLIENT_ID is not configured" });
       s.pkce = newPkce();
+      const app = url.searchParams.get("app");
+      s.appNonce = app && /^[\w-]{16,64}$/.test(app) ? app : undefined;
       res.writeHead(302, { Location: authorizeUrl(CLIENT_ID, REDIRECT_URI, s.pkce.challenge, s.pkce.state) });
       res.end();
       return;
@@ -89,8 +93,25 @@ const http = createServer(async (req, res) => {
       const tokens: Tokens = await exchangeCode(CLIENT_ID, REDIRECT_URI, code, s.pkce.verifier);
       s.client = new SpotifyClient(CLIENT_ID, tokens);
       s.pkce = undefined;
+      if (s.appNonce) {
+        // the Android app started this login: park the result for the app and send the browser back to it
+        handoffs.set(s.appNonce, { client: s.client, expires: Date.now() + 120_000 });
+        s.appNonce = undefined;
+        s.client = undefined; // the browser itself stays logged out
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        return void res.end(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TuneGuesser</title><body style="font-family:sans-serif;background:#0b0b1a;color:#f4f4ff;text-align:center;padding:48px 20px"><h1>Logged in to Spotify ✅</h1><p>Return to the TuneGuesser app.</p><p><a style="color:#fff;background:#ff3d9a;padding:14px 28px;border-radius:14px;text-decoration:none;font-weight:700" href="net.phoenixfox.tuneguesser://auth">Open the app</a></p><script>location.href="net.phoenixfox.tuneguesser://auth"</script></body>`);
+      }
       res.writeHead(302, { Location: `${APP_URL}/host` });
       return void res.end();
+    }
+
+    if (url.pathname === "/api/auth/claim") {
+      const nonce = url.searchParams.get("nonce") ?? "";
+      const h = handoffs.get(nonce);
+      if (!h || h.expires < Date.now()) { handoffs.delete(nonce); return json(res, 200, { ok: false }); }
+      handoffs.delete(nonce);
+      s.client = h.client;
+      return json(res, 200, { ok: true });
     }
 
     if (url.pathname === "/api/me") return json(res, 200, { spotify: !!s.client, spotifyConfigured: !!CLIENT_ID });
@@ -213,6 +234,8 @@ wss.on("connection", (ws) => {
     }
   });
 });
+
+setInterval(() => { for (const [k, h] of handoffs) if (h.expires < Date.now()) handoffs.delete(k); }, 60_000).unref();
 
 // Drop rooms older than 4 hours (and stop their music)
 setInterval(() => {

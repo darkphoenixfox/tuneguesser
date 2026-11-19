@@ -136,7 +136,7 @@ Needs `PORTAINER_TOKEN` in the environment, and `NAS_DIR`, `TUNEGUESSER_REDIRECT
 Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneguesser-server` (Node); DSM reverse proxy (HTTPS) → `localhost:8087` with the WebSocket header enabled; the Spotify redirect URI is `https://<your public host>/callback`.
 
 ## Android app
-A debug APK (a Capacitor shell around the live site, `android-app/`) is built with `npm run build:apk` and served from the web app: the **⚙ settings menu on the Join and Host screens** has a *Download the Android app* link. The APK embeds the server address, so it is git-ignored and published by `npm run deploy:nas`. Details in `android-app/README.md`.
+A debug APK (a Capacitor shell around the live site, `android-app/`) is built with `npm run build:apk` and served from the web app: the **⚙ settings menu on the Join and Host screens** has a *Download the Android app* link. The APK embeds the server address, so it is git-ignored and published by `npm run deploy:nas`. Spotify refuses logins inside embedded web views, so in the app the *Log in with Spotify* button opens the phone's browser; after the login the browser returns to the app (`net.phoenixfox.tuneguesser://auth`) and the app claims the result from the server with a one-time secret (2 minutes). Details in `android-app/README.md`.
 
 ## Project layout
 ```

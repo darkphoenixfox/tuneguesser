@@ -1,5 +1,7 @@
 package net.phoenixfox.tuneguesser;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
@@ -21,6 +23,13 @@ public class MainActivity extends BridgeActivity {
       @JavascriptInterface
       public void quit() {
         runOnUiThread(() -> finishAndRemoveTask());
+      }
+
+      /** Open a web page in the system browser (Spotify login must not run inside this WebView). */
+      @JavascriptInterface
+      public void openExternal(String url) {
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
+        runOnUiThread(() -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
       }
     }, "TuneGuesserApp");
   }
