@@ -10,9 +10,10 @@ Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 ## Game rules
 
 ### Setup
-1. The host opens the **Host a game** tab, logs in with Spotify and chooses the game type (below).
+0. The **main screen** has three buttons: **Solo Play** (one player on this screen: no room code, no lobby, no play-order setting; *Start the game* begins at once), **Host a game** and **Join a game**.
+1. The host chooses **Host a game**, logs in with Spotify and chooses the game type (below).
 2. The host creates a room. The screen shows a 4-letter **room code** and a QR code.
-3. Players open the **Join a game** tab on their phones (or scan the QR code), enter the code and a name. **1 to 4 players** per room. Nobody can join after the game starts, but a player who drops can reconnect.
+3. Players choose **Join a game** on their phones (or scan the QR code), enter the code and a name. **1 to 4 players** per room. Nobody can join after the game starts, but a player who drops can reconnect.
 4. Optional: the host can also play on the host screen (name field in the lobby). The host then counts as one of the 4 players.
 
 ### Game types (Host a game page)
@@ -28,7 +29,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 | Answers | **Type** / **Multiple choice** | *Multiple choice:* the guesser gets 4 options (title - artist); the 3 wrong ones are other songs from the selected playlists. A wrong pick uses an attempt and that option disappears. The right pick scores title and artist together. |
 | Hints | checkboxes: **Reveal letters**, **Trivia**, **Artwork** (none, one or several) | *Reveal letters:* underscores for each letter of title and artist; after 10 s letters fill in evenly; the last ones appear only 5 s after the timer would end, so the title is never complete during play; frozen while someone is answering or paused. *Trivia:* facts about the artist and song appear over time (genre, origin, formed/born, release year, a Wikipedia sentence with the name hidden), from MusicBrainz and Wikipedia. *Artwork:* the album cover from Spotify appears as big blocks in an area to the right of the answer panel (host screen) and sharpens step by step and is fully clear only 5 s after the timer ends (the reveal shows it in full). |
 | Timer | **seconds per song** (10-120) / **Unlimited** | Unlimited: the round lasts until the song ends; points fade over 40 s and hints unfold over 60 s. |
-| Next song | **Automatic** / **Wait for host / song end** | *Automatic:* the next song starts 5 s after the reveal. *Wait:* every round end is held so the song can be heard in full; the next round starts when the song ends or the host presses *Next song*. |
+| Next song | **Automatic** / **Song end / Manually skip** | *Automatic:* the next song starts 5 s after the reveal. *Song end / Manually skip:* every round end is held so the song can be heard in full; the next round starts when the song ends or the host presses *Next song*. |
 | Attempts | 1-5 | Wrong answers a player may use per round. |
 | Score multipliers | Yes / No | See Scoring. |
 

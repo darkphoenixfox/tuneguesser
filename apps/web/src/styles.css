@@ -543,3 +543,10 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .pairing-side p { margin: 0; overflow-wrap: anywhere; }
 .pairing-overlay h2 { margin: 0; text-align: center; }
 @media (max-height: 520px) { .pairing-overlay .card { padding: 12px; gap: 8px; } .pairing-body .qr { width: min(60vh, 240px); } }
+/* main menu */
+.screen.menu { align-items: center; justify-content: center; text-align: center; gap: 22px; min-height: 100vh; padding-top: 70px; }
+.screen.menu .brand img { width: clamp(150px, 30vw, 260px); }
+.menu-intro { max-width: 640px; margin: 0; color: var(--muted); font-size: 1.1rem; line-height: 1.5; }
+.menu-buttons { display: flex; flex-direction: column; gap: 14px; width: min(420px, 100%); }
+.menu-buttons .btn { font-size: 1.4rem; padding: 18px 28px; }
+.backlink { position: fixed; top: 14px; left: 14px; z-index: 6; height: 44px; padding: 0 16px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); color: var(--text); font-weight: 700; cursor: pointer; }

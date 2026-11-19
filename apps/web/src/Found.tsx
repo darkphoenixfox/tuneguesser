@@ -67,7 +67,7 @@ export function GameSummary({ state }: { state: RoomState }) {
     ["Timer", c.roundSeconds === null ? "Unlimited" : `${c.roundSeconds} s per song`],
     ["Attempts", String(c.attempts)],
     ["Multipliers", c.multipliers ? "Yes" : "No"],
-    ["Next song", c.autoAdvance ? "Automatic" : "Host / song end"],
+    ["Next song", c.autoAdvance ? "Automatic" : "Song end / manually skip"],
   ];
   return (
     <dl className="summary">

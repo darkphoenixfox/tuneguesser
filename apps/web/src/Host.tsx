@@ -22,13 +22,14 @@ const load = (): Saved | null => {
   try { return JSON.parse(sessionStorage.getItem("tg_room") ?? "null"); } catch { return null; }
 };
 
-export function Host({ onInGame }: { onInGame?: (v: boolean) => void }) {
+/** `solo`: one player on this screen, no lobby and no room code. */
+export function Host({ solo, onBack }: { solo?: boolean; onBack?: () => void }) {
   const [saved, setSaved] = useState<Saved | null>(load);
-  useEffect(() => onInGame?.(!!saved), [!!saved]);
+  const isSolo = solo || (!!saved && sessionStorage.getItem("tg_solo") === "1");
   return saved ? (
-    <Game saved={saved} onLeave={() => { sessionStorage.removeItem("tg_room"); setSaved(null); }} />
+    <Game saved={saved} solo={isSolo} onLeave={() => { ["tg_room", "tg_solo", "tg_hostplayer"].forEach((k) => sessionStorage.removeItem(k)); setSaved(null); }} />
   ) : (
-    <Setup onCreated={(s) => { sessionStorage.setItem("tg_room", JSON.stringify(s)); setSaved(s); }} />
+    <Setup solo={isSolo} onBack={onBack} onCreated={(s) => { sessionStorage.setItem("tg_room", JSON.stringify(s)); if (isSolo) sessionStorage.setItem("tg_solo", "1"); else sessionStorage.removeItem("tg_solo"); setSaved(s); }} />
   );
 }
 
@@ -44,7 +45,8 @@ const LAST_PLAYLISTS = "tg_playlists";
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
 
-function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
+function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; solo?: boolean; onBack?: () => void }) {
+  const [playerName, setPlayerName] = useState(() => { try { return localStorage.getItem("tg_name") || ""; } catch { return ""; } });
   const [me, setMe] = useState<{ spotify: boolean; spotifyConfigured: boolean }>();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
@@ -113,9 +115,14 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
     setBusy(true); setErr("");
     sfx.start(); // unlocks audio on this screen
     try { localStorage.setItem(LAST_PLAYLISTS, JSON.stringify(picked)); localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ }
+    const name = playerName.trim() || "Player";
+    if (solo) {
+      try { localStorage.setItem("tg_name", name); } catch { /* storage blocked */ }
+      sessionStorage.setItem("tg_hostplayer", JSON.stringify({ name })); // this screen plays: the lobby is skipped
+    }
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ demo, playlistIds: picked, deviceId: deviceId || undefined, config: cfg }),
+      body: JSON.stringify({ demo, playlistIds: picked, deviceId: deviceId || undefined, config: solo ? { ...cfg, order: "buzzer" } : cfg }),
     });
     const j = await r.json();
     setBusy(false);
@@ -126,6 +133,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
   const timed = cfg.roundSeconds !== null;
   return (
     <main className="screen setup">
+      {onBack && <button className="backlink" onClick={onBack}>← Menu</button>}
       <SettingsMenu apk solo />
       <Logo />
       {err && <p className="error">{err}</p>}
@@ -170,6 +178,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
             </div>
           </section>
           <section className="card opts">
+            {solo && <label>Your name<input value={playerName} maxLength={16} autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} placeholder="Player" /></label>}
             <div className="opt"><span>Music plays on</span>
               <select value={deviceId} onChange={(e) => setDeviceId(e.target.value)} onFocus={loadDevices}>
                 {devices.length === 0 && <option value="">No device found – open Spotify somewhere</option>}
@@ -182,10 +191,12 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
                 ? <label>Rounds <input type="number" min={1} max={100} value={cfg.playTo.rounds} onChange={(e) => set({ playTo: { kind: "rounds", rounds: +e.target.value } })} /></label>
                 : <label>Target score <input type="number" min={500} max={100000} step={500} value={cfg.playTo.target} onChange={(e) => set({ playTo: { kind: "score", target: +e.target.value } })} /></label>}
             </div>
-            <div className="opt"><span>Play order</span>
-              <Seg value={cfg.order} options={[["buzzer", "Buzzer"], ["roundRobin", "Round robin"]]} onChange={(order) => set({ order })} />
-              <small className="muted">{cfg.order === "buzzer" ? "Everyone can buzz in; the first to press ANSWER guesses." : "Players take turns: each player gets one song to guess, or skip."}</small>
-            </div>
+            {!solo && (
+              <div className="opt"><span>Play order</span>
+                <Seg value={cfg.order} options={[["buzzer", "Buzzer"], ["roundRobin", "Round robin"]]} onChange={(order) => set({ order })} />
+                <small className="muted">{cfg.order === "buzzer" ? "Everyone can buzz in; the first to press ANSWER guesses." : "Players take turns: each player gets one song to guess, or skip."}</small>
+              </div>
+            )}
             <div className="opt"><span>Guess</span>
               <Seg value={cfg.guess} options={[["both", "Both"], ["title", "Song"], ["artist", "Artist"]]} onChange={(guess) => set({ guess })} />
               {cfg.guess !== "both" && <small className="muted">{cfg.guess === "title" ? "Only the song title counts. Handy when the playlist is one artist." : "Only the artist counts. Handy for mixed playlists where you only care who it is."}</small>}
@@ -203,7 +214,7 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               <small className="muted">{!cfg.hints.reveal && !cfg.hints.trivia && !cfg.hints.art ? "No hints." : [cfg.hints.reveal && "Reveal: underscores, letters appear after 10 s.", cfg.hints.trivia && "Trivia: facts from MusicBrainz and Wikipedia.", cfg.hints.art && "Artwork: pixelated cover that sharpens over time."].filter(Boolean).join(" ")}</small>
             </div>
             <div className="opt"><span>Next song</span>
-              <Seg value={cfg.autoAdvance} options={[[true, "Automatic"], [false, "Wait for host / song end"]]} onChange={(autoAdvance) => set({ autoAdvance })} />
+              <Seg value={cfg.autoAdvance} options={[[true, "Automatic"], [false, "Song end / Manually skip"]]} onChange={(autoAdvance) => set({ autoAdvance })} />
             </div>
             <div className="opt"><span>Timer</span>
               <Seg value={timed} options={[[true, "Seconds per song"], [false, "Unlimited"]]} onChange={(t) => set({ roundSeconds: t ? 40 : null })} />
@@ -218,14 +229,14 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               <small className="muted">Extra points for song + artist at once, and for streaks.</small>
             </div>
           </section>
-          <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>Create room<PadHint button="a" focusOnly /></button>
+          <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
         </>
       )}
     </main>
   );
 }
 
-function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
+function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; solo?: boolean }) {
   const first = useMemo(() => ({ t: "host" as const, code: saved.code, token: saved.token }), [saved]);
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first);
   const [mute, setMute] = useState(false);
@@ -243,6 +254,8 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   };
 
   useEffect(() => { setMuted(mute); }, [mute]);
+  // solo: no lobby, the game starts as soon as this screen's player has joined
+  useEffect(() => { if (solo && state?.phase === "lobby" && state.players.length > 0) send({ t: "start" }); }, [solo, state?.phase, state?.players.length]);
   useEffect(() => {
     if (!state || prev.current === state.phase) return;
     if (state.phase === "playing") sfx.start();
@@ -312,7 +325,8 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
       <SettingsMenu />
-      {state.phase === "lobby" && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
+      {state.phase === "lobby" && solo && <main className="center"><p className="muted">Starting…</p></main>}
+      {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
       {state.phase === "playing" && <Playing state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}

@@ -193,6 +193,9 @@ The Android Back button closed the app at once. The web view treats Back as hist
 ### DEC-055 · Voice answers in the Android app use the native recognizer · 2026-11-19 · Active · extends DEC-048
 Android's WebView has no Web Speech API, so the 🎤 button never appeared and no permission was asked. The app now exposes `SpeechRecognizer` to the page (`TuneGuesserApp.startListening` / `window.__tgSpeech`) and requests `RECORD_AUDIO` at first use; `Mic.tsx` wraps it in the same interface as the browser API. Needs the new APK (older installs have no mic).
 
+### DEC-056 · New main screen with Solo Play; "Next song" relabelled · 2026-11-19 · Active
+The home page is now a menu (logo, two-line explanation incl. the Spotify requirement, **Solo Play / Host a game / Join a game**) instead of tabs; Host and Join have a "← Menu" link. Solo uses the host setup without *Play order* (forced to buzzer), asks for a name, and *Start the game* creates the room, joins this screen as the player and starts immediately (no lobby; flag `tg_solo` in sessionStorage so a reload resumes). *Next song* options are now **Automatic** / **Song end / Manually skip** in every mode.
+
 ---
 
 ## Open questions

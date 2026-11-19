@@ -25,22 +25,22 @@ const load = (): Saved | null => {
 const save = (s: Saved) => { try { localStorage.setItem("tg_player", JSON.stringify(s)); if (s.name) localStorage.setItem("tg_name", s.name); } catch { /* private mode */ } };
 const savedName = () => { try { return localStorage.getItem("tg_name") ?? ""; } catch { return ""; } };
 
-export function Player({ onInGame }: { onInGame?: (v: boolean) => void }) {
+export function Player({ onBack }: { onBack?: () => void }) {
   const [saved, setSaved] = useState<Saved | null>(load);
-  useEffect(() => onInGame?.(!!saved), [!!saved]);
   return saved ? (
     <Play saved={saved} onLeave={() => { localStorage.removeItem("tg_player"); setSaved(null); }} onId={(playerId) => save({ ...saved, playerId })} />
   ) : (
-    <Join onJoin={(s) => { save(s); setSaved(s); }} />
+    <Join onBack={onBack} onJoin={(s) => { save(s); setSaved(s); }} />
   );
 }
 
-function Join({ onJoin }: { onJoin: (s: Saved) => void }) {
+function Join({ onJoin, onBack }: { onJoin: (s: Saved) => void; onBack?: () => void }) {
   const [code, setCode] = useState((new URLSearchParams(location.search).get("code") ?? "").toUpperCase());
   const [name, setName] = useState(savedName);
   const ok = code.length === 4 && name.trim().length > 0;
   return (
     <main className="screen phone">
+      {onBack && <button className="backlink" onClick={onBack}>← Menu</button>}
       <SettingsMenu apk solo />
       <Logo />
       <form className="card" onSubmit={(e) => { e.preventDefault(); if (ok) { sfx.join(); onJoin({ code, name: name.trim() }); } }}>
