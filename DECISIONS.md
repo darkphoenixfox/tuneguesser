@@ -163,6 +163,9 @@ LB/L1 (in a game, or any screen without tabs) or Select/Share (menu screens) ent
 ### DEC-045 · In-app confirmation dialogs · 2026-11-19 · Active
 Quit (host) and Exit (player) used the browser's `window.confirm`, which a gamepad cannot operate. They now use an in-app `Confirm` dialog: A confirms (Quit), B / Start / Esc go back; while open it takes over the pad (menu mode) so the game and the corner-menu navigator ignore it. Mouse and touch work too.
 
+### DEC-046 · Hints never complete before the timer ends · 2026-11-19 · Active · supersedes the end point in DEC-042/043
+The revealed letters and the pixelated artwork are scaled to finish 5 s after the timer (`HINT_GRACE_MS`), so at timeout they are close to, but not at, 100%; the reveal screen then shows the full answer. The artwork progress is capped below 1 during play.
+
 ---
 
 ## Open questions

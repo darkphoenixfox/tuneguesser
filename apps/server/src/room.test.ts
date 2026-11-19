@@ -570,9 +570,12 @@ describe("Room (buzzer game)", () => {
     await room.start();
     expect(room.state().art).toMatchObject({ progress: 0 });
     await vi.advanceTimersByTimeAsync(20_000);
-    expect(room.state().art!.progress).toBeCloseTo(0.5);
+    expect(room.state().art!.progress).toBeCloseTo(20 / 45); // sharp only 5 s after the 40 s timer
+    await vi.advanceTimersByTimeAsync(19_000);
+    expect(room.state().art!.progress).toBeLessThan(1); // not complete when time runs out
     room.togglePause();
+    const frozen = room.state().art!.progress;
     await vi.advanceTimersByTimeAsync(10_000);
-    expect(room.state().art!.progress).toBeCloseTo(0.5);
+    expect(room.state().art!.progress).toBeCloseTo(frozen);
   });
 });

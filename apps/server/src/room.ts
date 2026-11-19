@@ -72,6 +72,7 @@ const UNLIMITED_SCORE_WINDOW_MS = 40_000;
 const UNLIMITED_HINT_WINDOW_MS = 60_000;
 /** No letters are revealed before this much of the round has passed. */
 const HINT_DELAY_MS = 10_000;
+const HINT_GRACE_MS = 5_000;
 /** Extra time after the computed end of a song before moving on (latency, gaps). */
 const SONG_END_BUFFER_MS = 800;
 
@@ -602,13 +603,14 @@ export class Room {
     const progress = elapsed / this.hintWindowMs;
     // letters only start to appear after a delay, then fill in evenly until the timer ends
     const delay = Math.min(HINT_DELAY_MS, this.hintWindowMs / 2);
-    const letterProgress = Math.max(0, (elapsed - delay) / (this.hintWindowMs - delay));
+    // the hints finish HINT_GRACE_MS after the timer ends (the round is over by then), never before it
+    const letterProgress = Math.max(0, (elapsed - delay) / (this.hintWindowMs + HINT_GRACE_MS - delay));
 
     let hint: RoomState["hint"];
     if (playing && this.config.hints.reveal) {
       hint = {
-        title: this.wantTitle ? maskText(this.hintTitle, this.hintOrder.title, revealCount(letterProgress, this.hintOrder.title.length)) : this.hintTitle,
-        artist: this.wantArtist ? maskText(this.hintArtist, this.hintOrder.artist, revealCount(letterProgress, this.hintOrder.artist.length)) : this.hintArtist,
+        title: this.wantTitle ? maskText(this.hintTitle, this.hintOrder.title, revealCount(letterProgress, this.hintOrder.title.length, 1)) : this.hintTitle,
+        artist: this.wantArtist ? maskText(this.hintArtist, this.hintOrder.artist, revealCount(letterProgress, this.hintOrder.artist.length, 1)) : this.hintArtist,
       };
     }
     let triviaShown: string[] | undefined;
@@ -616,7 +618,7 @@ export class Room {
       const facts = this.trivia.peek(this.current);
       triviaShown = facts.slice(0, Math.min(facts.length, Math.floor(Math.min(1, progress) * (facts.length + 1))));
     }
-    const art = playing && this.config.hints.art && this.current?.albumArt ? { url: this.current.albumArt, progress: Math.min(1, progress) } : undefined;
+    const art = playing && this.config.hints.art && this.current?.albumArt ? { url: this.current.albumArt, progress: Math.min(0.999, elapsed / (this.hintWindowMs + HINT_GRACE_MS)) } : undefined;
     let options: ChoiceOption[] | undefined;
     if (playing && g && forPlayerId === g.id && this.choices.length > 0) {
       const out = this.eliminated.get(g.id);
