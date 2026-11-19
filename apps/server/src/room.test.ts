@@ -33,6 +33,15 @@ describe("Room (buzzer game)", () => {
     }
   });
 
+  it("a random start leaves the whole round timer (+3 s) before the song ends", async () => {
+    for (let i = 0; i < 20; i++) {
+      const b = make(1, true, { start: "random", roundSeconds: 60 });
+      b.room.addPlayer("A");
+      await b.room.start();
+      expect(b.music.played[0]!.startMs + 63_000).toBeLessThanOrEqual(200_000);
+    }
+  });
+
   it("limits players to 4 and only joins in the lobby", () => {
     const { room } = make();
     for (let i = 0; i < 4; i++) expect(room.addPlayer(`p${i}`)).toBeTruthy();

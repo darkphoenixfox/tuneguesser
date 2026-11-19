@@ -305,8 +305,10 @@ export class Room {
     this.pickActivePlayer();
     this.prepareChoices(track);
     this.prepareHints(track);
-    // "random": anywhere, but at least 20 s before the end
-    this.startMs = this.config.start === "beginning" ? 0 : Math.floor(Math.random() * Math.max(0, track.durationMs - 20_000));
+    // "random": anywhere, but at least 20 s before the end, and never so late that the song ends before the round timer does
+    // (a few seconds extra: the player needs a moment to start)
+    const needMs = Math.max(20_000, (this.limitMs ?? 0) + 3_000);
+    this.startMs = this.config.start === "beginning" ? 0 : Math.floor(Math.random() * Math.max(0, track.durationMs - needMs));
     this.phase = "playing";
     this.roundStartedAt = this.now();
     // a refused play (device asleep, Spotify 404/502) must not crash the server: report it and let the round run
