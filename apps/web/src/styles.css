@@ -592,3 +592,10 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
   .settings { top: calc(max(6px, env(safe-area-inset-top)) + 50px); }
 }
 @media (min-width: 701px) { .settings { top: 70px; } }
+
+/* YouTube mode */
+.source-pick { flex-direction: row; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.yt-add { display: flex; gap: 10px; }
+.yt-add input { flex: 1; min-width: 0; }
+/* the embedded player plays the sound; its picture would give the song away, so it is invisible */
+.yt-player { position: fixed; left: 0; bottom: 0; width: 200px; height: 113px; opacity: 0; pointer-events: none; z-index: -1; }

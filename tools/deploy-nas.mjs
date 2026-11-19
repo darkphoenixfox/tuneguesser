@@ -68,6 +68,8 @@ try {
   const stack = stacks.find((s) => s.Name === NAME && s.EndpointId === ep.Id);
   const compose = fs.readFileSync("deploy/docker-compose.yml", "utf-8");
   const env = [{ name: "SPOTIFY_CLIENT_ID", value: clientId() }, { name: "SPOTIFY_REDIRECT_URI", value: REDIRECT }];
+  const ytKey = process.env.YOUTUBE_API_KEY || (/^YOUTUBE_API_KEY=(.+)$/m.exec(fs.existsSync(".env") ? fs.readFileSync(".env", "utf-8") : "") ?? [])[1];
+  if (ytKey) env.push({ name: "YOUTUBE_API_KEY", value: ytKey });
   if (!env[0].value) throw new Error("SPOTIFY_CLIENT_ID is not set in .env: stack not touched");
 
   if (!stack) {

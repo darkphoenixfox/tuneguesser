@@ -205,6 +205,10 @@ Host, solo and player screens had a mix of fixed corner buttons and static contr
 ### DEC-059 · Song start setting: random or from the beginning · 2026-11-19 · Active
 New gameplay option `start`: `random` (default) picks any point at least 20 s before the end of the song (before: 15-65% of the song, which could clip the end); `beginning` starts at 0:00. The 20 s margin is not shown to players. Tests use `beginning` so they stay deterministic.
 
+### DEC-060 · YouTube as a second music source · 2026-11-19 · In progress (branch `youtube-playback`)
+Spotify needs Premium, a login and an open device. YouTube mode needs none of that: the host pastes **public or unlisted playlist links**, and the music plays in YouTube's **IFrame player on the host screen**. The server stays the game clock and sends `{t:"player", cmd}` (play / pause / resume / stop) to the host sockets; `YouTubeProvider` implements the same `MusicProvider`, so `Room` is unchanged. Playlists are read with the YouTube Data API using a server-side `YOUTUBE_API_KEY` (no Google login). Title and artist come from "Artist - Topic" channels (clean) or by splitting "Artist - Title" and stripping "(Official Video)"-style noise; videos that cannot be embedded, live streams and clips under 45 s or over 15 min are dropped; the thumbnail is the artwork (year = upload year, so approximate).
+Known gaps / risks: (1) the player is invisible (its picture would give the answer away), which YouTube's terms discourage, so a visible-but-masked design may be needed; (2) autoplay needs a user gesture on the host page (Create room counts; the Android WebView may need `mediaPlaybackRequiresUserGesture` off); (3) a host reload drops the current song until the next round; (4) YouTube metadata is messier than Spotify's, so some answers will be odd; (5) no way yet to skip a video that fails to play.
+
 ---
 
 ## Open questions

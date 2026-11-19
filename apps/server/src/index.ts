@@ -7,6 +7,7 @@ import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tunegue
 import { DemoProvider, type MusicProvider } from "./music";
 import { Room } from "./room";
 import { TriviaCache } from "./trivia";
+import { YouTubeApi, YouTubeProvider, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -14,6 +15,9 @@ const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID ?? "";
 const REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI ?? `http://127.0.0.1:5173/callback`;
 /** Where the browser lands after Spotify login */
 const APP_URL = new URL(REDIRECT_URI).origin;
+/** YouTube mode: music plays in an embedded player on the host screen; needs a YouTube Data API key (public/unlisted playlists, no login). */
+const YT_KEY = process.env.YOUTUBE_API_KEY ?? "";
+const youtube = YT_KEY ? new YouTubeApi(YT_KEY) : undefined;
 
 interface Session { client?: SpotifyClient; pkce?: ReturnType<typeof newPkce>; appNonce?: string }
 /** Android app login: the login runs in the system browser, the app then claims the result with its secret nonce (2 min). */
@@ -161,7 +165,15 @@ const http = createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
-    if (url.pathname === "/api/me") return json(res, 200, { spotify: !!s.client, spotifyConfigured: !!CLIENT_ID });
+    if (url.pathname === "/api/me") return json(res, 200, { spotify: !!s.client, spotifyConfigured: !!CLIENT_ID, youtube: !!youtube });
+
+    if (url.pathname === "/api/youtube/playlist") {
+      if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
+      const id = parsePlaylistId(url.searchParams.get("url") ?? "");
+      if (!id) return json(res, 400, { error: "That is not a YouTube playlist link" });
+      const p = await youtube.playlist(id).catch(() => null);
+      return p ? json(res, 200, p) : json(res, 404, { error: "Playlist not found (it must be public or unlisted)" });
+    }
 
     if (url.pathname === "/api/playlists") {
       if (!s.client) return json(res, 401, { error: "not logged in" });
@@ -177,7 +189,12 @@ const http = createServer(async (req, res) => {
       const body = await readJson(req);
       let music: MusicProvider;
       if (body.demo) music = new DemoProvider();
-      else {
+      else if (body.source === "youtube") {
+        if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
+        const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : []).map((x: unknown) => parsePlaylistId(String(x))).filter((x: string | null): x is string => !!x).slice(0, 10);
+        if (!ids.length) return json(res, 400, { error: "add at least one playlist" });
+        music = new YouTubeProvider(youtube, ids);
+      } else {
         if (!s.client) return json(res, 401, { error: "not logged in" });
         const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : [body.playlistId]).filter((x: unknown): x is string => typeof x === "string" && /^[\w]+$/.test(x)).slice(0, 10);
         if (!ids.length) return json(res, 400, { error: "pick at least one playlist" });
@@ -186,6 +203,7 @@ const http = createServer(async (req, res) => {
       const code = newCode();
       const room = new Room(code, music, sanitizeConfig(body.config), { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
       const entry: RoomEntry = { room, hostToken: randomBytes(16).toString("base64url"), sockets: new Map(), createdAt: Date.now() };
+      if (music instanceof YouTubeProvider) music.emit = (cmd) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws)) send(ws, { t: "player", cmd }); };
       room.onChange = () => broadcast(entry);
       room.onError = (message) => { for (const ws of entry.sockets.keys()) if (hostSockets.has(ws)) send(ws, { t: "error", message }); };
       rooms.set(code, entry);

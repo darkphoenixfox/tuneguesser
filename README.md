@@ -16,6 +16,9 @@ Why things are the way they are: see [DECISIONS.md](DECISIONS.md).
 3. Players choose **Join a game** on their phones (or scan the QR code), enter the code and a name. **1 to 4 players** per room. Nobody can join after the game starts, but a player who drops can reconnect.
 4. Optional: the host can also play on the host screen (name field in the lobby). The host then counts as one of the 4 players.
 
+### YouTube mode (experimental, branch `youtube-playback`)
+With `YOUTUBE_API_KEY` set on the server, the host setup shows **Music from: Spotify / YouTube**. YouTube needs no account: paste public or unlisted playlist links and the music plays on the host screen.
+
 ### Game types (Host a game page)
 The last chosen playlists and options are remembered on the host's device. The **⚡ Quickstart** button at the top starts a game at once with those last settings.
 

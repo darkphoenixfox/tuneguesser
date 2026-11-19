@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type RoomState } from "@tuneguesser/shared";
+import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { SettingsMenu } from "./Settings";
@@ -13,11 +13,12 @@ import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
 import { MicToggle } from "./input/Mic";
 import { Confirm } from "./input/Confirm";
+import { useYouTubePlayer } from "./YouTubePlayer";
 import { onPadButton, usePad } from "./input/pad";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
-interface Saved { code: string; token: string }
+interface Saved { code: string; token: string; youtube?: boolean }
 
 const load = (): Saved | null => {
   try { return JSON.parse(sessionStorage.getItem("tg_room") ?? "null"); } catch { return null; }
@@ -48,12 +49,28 @@ const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStor
 
 function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; solo?: boolean; onBack?: () => void }) {
   const [playerName, setPlayerName] = useState(() => { try { return localStorage.getItem("tg_name") || ""; } catch { return ""; } });
-  const [me, setMe] = useState<{ spotify: boolean; spotifyConfigured: boolean }>();
+  const [me, setMe] = useState<{ spotify: boolean; spotifyConfigured: boolean; youtube?: boolean }>();
+  // music source: Spotify (account + a playing device) or YouTube (playlist links, plays on this screen)
+  const [source, setSource] = useState<"spotify" | "youtube">(() => (readJson<string>("tg_source", "spotify") === "youtube" ? "youtube" : "spotify"));
+  const [ytLists, setYtLists] = useState<Array<{ id: string; name: string; tracks: number; image?: string }>>(() => readJson("tg_ytlists", []));
+  const [ytInput, setYtInput] = useState("");
+  const useYt = source === "youtube" && !!me?.youtube;
+  const addYt = async () => {
+    if (!ytInput.trim()) return;
+    setErr("");
+    const r = await fetch(`/api/youtube/playlist?url=${encodeURIComponent(ytInput.trim())}`);
+    const j = await r.json();
+    if (!r.ok) return setErr(j.error ?? "Could not add that playlist");
+    setYtLists((cur) => (cur.some((x) => x.id === j.id) ? cur : [...cur, j]));
+    setYtInput("");
+  };
+  useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_source", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
   const [deviceId, setDeviceId] = useState("");
   const [cfg, setCfg] = useState<GameConfig>(() => sanitizeConfig({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
+  const canStart = useYt ? ytLists.length > 0 : picked.length > 0 && !!deviceId;
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? "Spotify login failed, try again." : "");
   const [busy, setBusy] = useState(false);
@@ -123,61 +140,17 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     }
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ demo, playlistIds: picked, deviceId: deviceId || undefined, config: solo ? { ...cfg, order: "buzzer" } : cfg }),
+      body: JSON.stringify({ demo, ...(useYt ? { source: "youtube", playlistIds: ytLists.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg }),
     });
     const j = await r.json();
     setBusy(false);
     if (!r.ok) return setErr(j.error ?? "Could not create room");
-    onCreated({ code: j.code, token: j.hostToken });
+    onCreated({ code: j.code, token: j.hostToken, youtube: useYt || undefined });
   };
 
   const timed = cfg.roundSeconds !== null;
-  return (
-    <main className="screen setup">
-      {onBack && <button className="backlink" onClick={onBack}>← Menu</button>}
-      <SettingsMenu apk solo />
-      <Logo />
-      {err && <p className="error">{err}</p>}
-      {!me ? <p className="muted">Loading…</p> : !me.spotify ? (
-        <div className="card center">
-          <p>Log in with the Spotify account that will play the music (Premium required).</p>
-          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
-          {pairing && (
-            <div className="pairing-overlay padtext" role="dialog" aria-label="Log in on another device">
-              <div className="card pairing">
-                <h2>Log in to Spotify on another device</h2>
-                <div className="pairing-body">
-                  <img src={pairing.qr} alt="QR code to log in" className="qr" />
-                  <div className="pairing-side">
-                    <p>Scan the code with your phone, or open <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
-                    <p className="muted">Log in to Spotify there (Premium). This screen continues by itself.</p>
-                    <button className="btn" data-pad-first onClick={openHere}>Use this device's browser</button>
-                    <button className="btn ghost" onClick={stopLogin}>Cancel</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <p className="muted login-note">Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.</p>
-          <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
-        </div>
-      ) : (
-        <>
-          <div className="quick">
-            <button className="btn big" data-pad-first data-pad-quick disabled={picked.length === 0 || !deviceId || busy} title="Play with the last settings" onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
-          </div>
-          <section className="card">
-            <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
-            <p className="muted pl-note">Pick the playlists for the next game. Manage your playlists on Spotify. <a className="sp-link" href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer" aria-label="Open your playlists on Spotify" title="Open Spotify"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></a></p>
-            <div className="grid">
-              {playlists.map((p) => (
-                <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>
-                  {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                  <b>{p.name}</b><small>{p.tracks} tracks</small>
-                </button>
-              ))}
-            </div>
-          </section>
+  const options = (
+    <>
           <section className="card opts">
             {solo && <label>Your name<input value={playerName} maxLength={16} autoComplete="nickname" onChange={(e) => setPlayerName(e.target.value)} placeholder="Player" /></label>}
             <div className="opt"><span>Music plays on</span>
@@ -233,7 +206,82 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               <small className="muted">Extra points for song + artist at once, and for streaks.</small>
             </div>
           </section>
-          <button className="btn big" disabled={picked.length === 0 || !deviceId || busy} onClick={() => create(false)}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
+          <button className="btn big" disabled={!canStart || busy} onClick={() => create(false)}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
+    </>
+  );
+  return (
+    <main className="screen setup">
+      {onBack && <button className="backlink" onClick={onBack}>← Menu</button>}
+      <SettingsMenu apk solo />
+      <Logo />
+      {err && <p className="error">{err}</p>}
+      {me?.youtube && (
+        <div className="card source-pick"><span>Music from</span><Seg value={source} options={[["spotify", "Spotify"], ["youtube", "YouTube"]]} onChange={(v) => setSource(v)} /></div>
+      )}
+      {!me ? <p className="muted">Loading…</p> : useYt ? (
+        <>
+          <div className="quick">
+            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title="Play with the last settings" onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
+          </div>
+          <section className="card">
+            <h2>YouTube playlists {ytLists.length > 0 && <small className="muted">({ytLists.length})</small>}</h2>
+            <p className="muted pl-note">Paste the link of a public or unlisted playlist (YouTube or YouTube Music). The music plays on this screen, no account needed.</p>
+            <form className="yt-add" onSubmit={(e) => { e.preventDefault(); void addYt(); }}>
+              <input value={ytInput} onChange={(e) => setYtInput(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" inputMode="url" aria-label="YouTube playlist link" />
+              <button className="btn" type="submit">Add</button>
+            </form>
+            <div className="grid">
+              {ytLists.map((p) => (
+                <button key={p.id} className="pl sel" onClick={() => setYtLists((cur) => cur.filter((x) => x.id !== p.id))} title="Remove">
+                  {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
+                  <b>{p.name}</b><small>{p.tracks} videos · tap to remove</small>
+                </button>
+              ))}
+            </div>
+          </section>
+          {options}
+        </>
+      ) : !me.spotify ? (
+        <div className="card center">
+          <p>Log in with the Spotify account that will play the music (Premium required).</p>
+          {me.spotifyConfigured ? <a className="btn big" href="/api/auth/login" data-pad-first onClick={appLogin}>Log in with Spotify<PadHint button="a" focusOnly /></a> : <p className="error">Server has no SPOTIFY_CLIENT_ID.</p>}
+          {pairing && (
+            <div className="pairing-overlay padtext" role="dialog" aria-label="Log in on another device">
+              <div className="card pairing">
+                <h2>Log in to Spotify on another device</h2>
+                <div className="pairing-body">
+                  <img src={pairing.qr} alt="QR code to log in" className="qr" />
+                  <div className="pairing-side">
+                    <p>Scan the code with your phone, or open <b>{pairing.url.replace(/^https?:\/\//, "")}</b></p>
+                    <p className="muted">Log in to Spotify there (Premium). This screen continues by itself.</p>
+                    <button className="btn" data-pad-first onClick={openHere}>Use this device's browser</button>
+                    <button className="btn ghost" onClick={stopLogin}>Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <p className="muted login-note">Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.</p>
+          <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
+        </div>
+      ) : (
+        <>
+          <div className="quick">
+            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title="Play with the last settings" onClick={() => create(false)}>⚡ Quickstart<PadHint button="y" /></button>
+          </div>
+          <section className="card">
+            <h2>Playlists {picked.length > 0 && <small className="muted">({picked.length} selected)</small>}</h2>
+            <p className="muted pl-note">Pick the playlists for the next game. Manage your playlists on Spotify. <a className="sp-link" href="https://open.spotify.com/collection/playlists" target="_blank" rel="noreferrer" aria-label="Open your playlists on Spotify" title="Open Spotify"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></a></p>
+            <div className="grid">
+              {playlists.map((p) => (
+                <button key={p.id} className={"pl" + (picked.includes(p.id) ? " sel" : "")} onClick={() => toggle(p.id)}>
+                  {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
+                  <b>{p.name}</b><small>{p.tracks} tracks</small>
+                </button>
+              ))}
+            </div>
+          </section>
+          {options}
         </>
       )}
     </main>
@@ -242,7 +290,11 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
 
 function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; solo?: boolean }) {
   const first = useMemo(() => ({ t: "host" as const, code: saved.code, token: saved.token }), [saved]);
-  const { state, error, send, endsAt, guessEndsAt } = useRoom(first);
+  const ytRun = useRef<(c: PlayerCommand) => void>();
+  const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => { if (m.t === "player") ytRun.current?.(m.cmd); });
+  const [ytError, setYtError] = useState("");
+  const yt = useYouTubePlayer(!!saved.youtube, (msg) => { setYtError(msg); setTimeout(() => setYtError(""), 7000); });
+  ytRun.current = yt.run;
   const [mute, setMute] = useState(false);
   const [askQuit, setAskQuit] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null); // the left part of the status bar, filled by the round screen
@@ -329,7 +381,7 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
         <div className="sb-right">
           <button className="mute" onClick={() => setMute(!mute)} aria-label="Toggle sound">{mute ? "🔇" : "🔊"}</button>
           <MicToggle className="micbtn" />
-          <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />
+          {!saved.youtube && <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />}
           <SettingsMenu />
           <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label="Quit game" title="Quit game">✕</button>
         </div>
@@ -342,7 +394,8 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {notice && <p className="notice toast" role="status">{notice}</p>}
-      {error && <p className="error toast">{error}</p>}
+      {(error || ytError) && <p className="error toast">{error || ytError}</p>}
+      {yt.element}
       {askQuit && <Confirm message="Quit the game for everyone?" confirmLabel="Quit game" onCancel={() => setAskQuit(false)} onConfirm={quit} />}
     </main>
   );

@@ -32,6 +32,7 @@ services:
       # Set these in Portainer (Stack > Environment variables), never in the repo
       - DATA_DIR=/data
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
       - SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI:-}
     volumes:
       - /volume1/docker/tuneguesser/server:/app:ro

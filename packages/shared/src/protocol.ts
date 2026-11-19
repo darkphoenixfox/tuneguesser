@@ -112,7 +112,16 @@ export type ClientMessage =
   | { t: "device"; deviceId: string }
   | { t: "next" };
 
+/** YouTube mode: what the host screen's embedded player has to do. */
+export type PlayerCommand =
+  | { op: "play"; videoId: string; startMs: number }
+  | { op: "pause" }
+  | { op: "resume"; videoId: string; positionMs: number }
+  | { op: "stop" };
+
 export type ServerMessage =
+  /** host screen only (YouTube mode) */
+  | { t: "player"; cmd: PlayerCommand }
   | { t: "joined"; playerId: string }
   | { t: "state"; state: RoomState }
   | { t: "result"; title: boolean; artist: boolean; points: number; multipliers: Multiplier[] }
