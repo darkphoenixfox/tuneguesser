@@ -40,3 +40,13 @@ export function ThemeButton() {
   const [theme, setTheme] = useTheme();
   return <button className="theme-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={t("Toggle theme")}>{theme === "dark" ? "☀️" : "🌙"}</button>;
 }
+
+/** Language dropdown next to the settings button (main screen). */
+export function LangSelect() {
+  useLang();
+  return (
+    <select className="langsel" value={getLang()} onChange={(e) => setLang(e.target.value as typeof LANGS[number][0])} aria-label={t("Language")} title={t("Language")}>
+      {LANGS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+    </select>
+  );
+}

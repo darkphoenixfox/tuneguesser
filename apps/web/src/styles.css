@@ -538,6 +538,9 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 /* main screens (join / host setup): the settings button sits in the corner, identical on both */
 .gear.solo { right: 14px; }
 .settings.solo { right: 14px; }
+/* language dropdown, left of the settings button on the main screen */
+.langsel { position: fixed; top: 14px; right: 68px; z-index: 6; height: 44px; width: auto; padding: 0 12px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); color: var(--text); font-size: 1rem; cursor: pointer; box-sizing: border-box; }
+@media (max-width: 700px) { .langsel { top: max(6px, env(safe-area-inset-top)); right: 54px; height: 32px; font-size: .9rem; padding: 0 8px; } }
 .settings .btn { text-align: center; }
 
 /* "log in on another device": a fixed overlay that always fits the screen, QR code next to the buttons */

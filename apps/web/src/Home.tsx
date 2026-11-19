@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Host } from "./Host";
 import { Player } from "./Player";
 import { Logo } from "./Logo";
-import { SettingsMenu } from "./Settings";
+import { LangSelect, SettingsMenu } from "./Settings";
 import { PadHint } from "./input/Glyph";
 import { t } from "./i18n";
 
@@ -31,6 +31,7 @@ export function Home() {
   if (view === "join") return <Player onBack={back} />;
   return (
     <main className="screen menu">
+      <LangSelect />
       <SettingsMenu apk solo />
       <Logo />
       <p className="menu-intro">
