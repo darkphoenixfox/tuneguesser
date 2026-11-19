@@ -142,11 +142,12 @@ function Setup({ onCreated }: { onCreated: (s: Saved) => void }) {
               {cfg.answers === "choice" && <small className="muted">4 options, the wrong ones are other songs from the playlist(s).</small>}
             </div>
             <div className="opt"><span>Hints</span>
-              <div className="checks">
-                <label><input type="checkbox" checked={cfg.hints.reveal} onChange={(e) => set({ hints: { ...cfg.hints, reveal: e.target.checked } })} /> Reveal letters <small className="muted">(underscores, letters appear after 10 s)</small></label>
-                <label><input type="checkbox" checked={cfg.hints.trivia} onChange={(e) => set({ hints: { ...cfg.hints, trivia: e.target.checked } })} /> Trivia <small className="muted">(facts from MusicBrainz and Wikipedia)</small></label>
-                <label><input type="checkbox" checked={cfg.hints.art} onChange={(e) => set({ hints: { ...cfg.hints, art: e.target.checked } })} /> Artwork <small className="muted">(pixelated cover that sharpens over time)</small></label>
+              <div className="seg" role="group" aria-label="Hints">
+                {([["reveal", "Reveal letters"], ["trivia", "Trivia"], ["art", "Artwork"]] as const).map(([k, label]) => (
+                  <button key={k} type="button" className={cfg.hints[k] ? "on" : ""} aria-pressed={cfg.hints[k]} onClick={() => set({ hints: { ...cfg.hints, [k]: !cfg.hints[k] } })}>{cfg.hints[k] ? "✓ " : ""}{label}</button>
+                ))}
               </div>
+              <small className="muted">{!cfg.hints.reveal && !cfg.hints.trivia && !cfg.hints.art ? "No hints." : [cfg.hints.reveal && "Reveal: underscores, letters appear after 10 s.", cfg.hints.trivia && "Trivia: facts from MusicBrainz and Wikipedia.", cfg.hints.art && "Artwork: pixelated cover that sharpens over time."].filter(Boolean).join(" ")}</small>
             </div>
             <div className="opt"><span>Timer</span>
               <Seg value={timed} options={[[true, "Seconds per song"], [false, "Unlimited"]]} onChange={(t) => set({ roundSeconds: t ? 40 : null })} />
