@@ -37,7 +37,7 @@ export function Hints({ state }: { state: RoomState }) {
   return (
     <ul className="trivia" aria-label="Trivia" ref={box}>
       {t.length === 0 && <li className="muted">Trivia coming up…</li>}
-      {t.map((x, i) => <li key={i}>{x}</li>)}
+      {t.map((x, i) => <li key={i} title={x}>{x}</li>)}
     </ul>
   );
 }

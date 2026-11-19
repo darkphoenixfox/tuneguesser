@@ -460,3 +460,6 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
   .screen.phone .answer-btn { min-height: 12.7vh; font-size: clamp(1.4rem, 6vw, 1.9rem); border-radius: 20px; box-shadow: 0 6px 0 #7d1049, 0 14px 30px rgba(255,61,154,.4); }
   .screen.phone .answer-btn:disabled { min-height: 8vh; font-size: 1.05rem; box-shadow: none; }
 }
+/* phone trivia: one line; each new fact scrolls the previous one up out of view */
+.phone .trivia { height: 2.2em; gap: 0; scroll-snap-type: y mandatory; }
+.phone .trivia li { height: 2.2em; box-sizing: border-box; padding: 0 12px; line-height: 2.2em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; scroll-snap-align: end; border-radius: 10px; font-size: .9rem; }
