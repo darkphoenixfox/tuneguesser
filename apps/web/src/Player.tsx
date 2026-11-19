@@ -7,7 +7,7 @@ import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
 import { Confirm } from "./input/Confirm";
 import { onPadButton, usePad } from "./input/pad";
-import { useCountdown, useRoom } from "./net";
+import { useCountdown, useRoom, useScrollTop } from "./net";
 import { Scoreboard } from "./Scoreboard";
 import { sfx } from "./sfx";
 
@@ -70,6 +70,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   const left = useCountdown(endsAt, guessing || state?.paused ? state?.remainingMs : undefined);
   const pad = usePad();
   const mine = state?.players.find((p) => p.id === me);
+  useScrollTop(embedded ? "" : (state?.phase ?? "") + (mine ? "m" : ""));
   const iAmGuesser = !!mine && state?.guesser?.id === mine.id;
   const titleRef = useRef<HTMLInputElement>(null);
 

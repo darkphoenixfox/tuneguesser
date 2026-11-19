@@ -54,3 +54,8 @@ export function useCountdown(endsAt: number, frozenMs?: number): number {
   if (frozenMs !== undefined) return frozenMs / 1000; // paused: show the frozen value
   return endsAt ? Math.max(0, (endsAt - now) / 1000) : 0;
 }
+
+/** Start at the top of the page whenever the screen changes (joining, creating a room, a new phase). */
+export function useScrollTop(key: unknown) {
+  useEffect(() => { window.scrollTo(0, 0); }, [key]);
+}

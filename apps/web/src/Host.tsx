@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG, sanitizeConfig, type GameConfig, type RoomState } from 
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { HostSettings } from "./Settings";
-import { useCountdown, useRoom } from "./net";
+import { useCountdown, useRoom, useScrollTop } from "./net";
 import { Play } from "./Player";
 import { setMuted, sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
@@ -175,6 +175,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
   const { state, error, send, endsAt, guessEndsAt } = useRoom(first);
   const [mute, setMute] = useState(false);
   const [askQuit, setAskQuit] = useState(false);
+  useScrollTop(state?.phase ?? "");
   const prev = useRef<RoomState["phase"]>();
   const joinUrl = `${location.origin}/?code=${saved.code}`;
   // optional: the host device plays too

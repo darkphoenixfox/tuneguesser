@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Host } from "./Host";
 import { Player } from "./Player";
 
@@ -18,6 +18,7 @@ function initialTab(): Tab {
 export function Home() {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [inGame, setInGame] = useState(false);
+  useEffect(() => { window.scrollTo(0, 0); }, [inGame, tab]);
   const pick = (t: Tab) => { setInGame(false); setTab(t); history.replaceState(null, "", t === "host" ? "/?tab=host" : "/"); };
   return (
     <>
