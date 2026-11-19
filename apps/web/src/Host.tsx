@@ -401,7 +401,7 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       {state.phase === "lobby" && solo && <main className="center"><p className="muted">Starting…</p></main>}
       {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
-      {state.phase === "playing" && <Playing slot={slot} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
+      {state.phase === "playing" && <Playing slot={slot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
       {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
@@ -477,7 +477,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
   );
 }
 
-function Playing({ slot, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void }) {
+function Playing({ slot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void }) {
   const guessing = !!state.guesser;
   const left = useCountdown(endsAt, guessing || state.paused ? state.remainingMs : undefined);
   const unlimited = state.roundMs === null;
@@ -492,6 +492,14 @@ function Playing({ slot, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: 
   const foundCount = (state.found?.title ? 1 : 0) + (state.found?.artist ? 1 : 0);
   const prevFound = useRef(0);
   useEffect(() => { if (foundCount > prevFound.current) sfx.correct(); prevFound.current = foundCount; }, [foundCount]);
+  // YouTube: the video itself, pixelated, is the artwork hint
+  const videoSlot = useRef<HTMLDivElement>(null);
+  const artProgress = state.art?.progress;
+  useEffect(() => {
+    if (!follow) return;
+    follow(artProgress !== undefined ? videoSlot.current : null, artProgress);
+    return () => follow(null);
+  }, [follow, artProgress]);
   const R = 90, C = 2 * Math.PI * R;
   return (
     <div className={"p2" + (state.art ? " with-art" : "")}>
@@ -529,7 +537,7 @@ function Playing({ slot, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: 
         <Hints state={state} />
         <ScoreBanner state={state} />
       </div>
-      {state.art && <div className="p2-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
+      {state.art && <div className="p2-art">{follow ? <div className="yt-slot" ref={videoSlot} /> : <PixelArt url={state.art.url} progress={state.art.progress} />}</div>}
       {guessing && <div className="p2-bar"><GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} /></div>}
     </div>
   );
