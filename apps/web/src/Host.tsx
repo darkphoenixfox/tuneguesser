@@ -58,6 +58,7 @@ const DEFAULT_YT_PLAYLISTS = [
   "PLdHiRrMNS0D3gw0mjudLXoGYxiEpGvdUa", // Prince Greatest Hits
   "PLD8F8D858996445F4", // U2
   "PLp3o6lwxnqMkm9dUECwqVBQY0IN6n1wH_", // Led Zeppelin
+  "PLr5pQJcv3NjbTTxr--i3wzxsQbwRyASN5", // classic rock 60s-90s (239)
 ];
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
