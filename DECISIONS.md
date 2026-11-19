@@ -263,3 +263,6 @@ Local names in localStorage (`tg_ytnames`), global names in `edits.json` (`playl
 
 ### DEC-074 · Challenge seeds · 2026-11-19 · Active
 `encodeSeed`/`decodeSeed` (shared): `TG1-` + base64url of a compact JSON with the sorted playlist ids and the settings that separate high-score tables (not auto-advance). Applying a seed switches to YouTube, adds the playlists that are missing (fetched from the server), switches the others off and sets the options. `/?seed=…` opens Solo Play and applies it once. A seed from a round-robin host game has `order` set, which Solo Play ignores (solo is always buzzer), so such a table cannot be matched solo. Custom names, song edits and bans are not part of a seed, since they do not change the table.
+
+### DEC-075 · Short seeds (`TG-xxxxxxxx`) · 2026-11-19 · Active
+The full seed (DEC-074) holds every playlist id and is long. The server now maps it to `TG-` + 8 characters of its SHA-256 (`POST /api/seed`, `GET /api/seed?code=`, stored in `DATA_DIR/seeds.json`, capped at 5000 entries, only valid seeds accepted). The same selection always gives the same short seed. The UI shows and links the short one (falls back to the long one if the server cannot be reached); both forms are accepted when pasted or opened as `/?seed=…`.

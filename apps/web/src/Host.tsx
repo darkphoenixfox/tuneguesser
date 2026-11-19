@@ -134,9 +134,22 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   // seeds: a text with the playlists and rules; the same seed = the same high-score table
   const [seedIn, setSeedIn] = useState("");
   const [copied, setCopied] = useState(false);
-  const seed = encodeSeed(ytPicked.map((l) => l.id), cfg);
+  const longSeed = encodeSeed(ytPicked.map((l) => l.id), cfg);
+  // the full seed is long (it holds the playlist ids): the server gives it a short name, TG-xxxxxxxx
+  const [shortSeed, setShortSeed] = useState<{ of: string; code: string }>();
+  useEffect(() => {
+    if (!useYt || !ytPicked.length) return;
+    const h = setTimeout(() => { fetch("/api/seed", { method: "POST", body: JSON.stringify({ seed: longSeed }) }).then((r) => r.json()).then((j) => { if (j.code) setShortSeed({ of: longSeed, code: j.code }); }).catch(() => {}); }, 400);
+    return () => clearTimeout(h);
+  }, [useYt, longSeed]);
+  const seed = shortSeed?.of === longSeed ? shortSeed.code : longSeed;
   const seedLink = `${location.origin}/?seed=${seed}`;
   const applySeed = async (text: string) => {
+    const short = /TG-([\w-]{8})(?![\w-])/.exec(text);
+    if (short) {
+      const j = await fetch(`/api/seed?code=${encodeURIComponent("TG-" + short[1])}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      text = j?.seed ?? "";
+    }
     const d = decodeSeed(text);
     if (!d) { setErr(t("That is not a valid seed.")); return; }
     setErr("");

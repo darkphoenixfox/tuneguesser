@@ -10,6 +10,7 @@ import { TriviaCache } from "./trivia";
 import { VoteStore } from "./votes";
 import { HighScoreStore, categoryKey } from "./highscores";
 import { cleanFeat } from "./feat";
+import { SeedStore } from "./seeds";
 import { EditStore, effectiveArtist, forceArtist, sanitizeLocal } from "./edits";
 import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, dropDoubtful, fixLoose, parsePlaylistId } from "./youtube";
@@ -47,6 +48,7 @@ async function isAdmin(pw: unknown): Promise<boolean> {
   if (!ok) await new Promise((r) => setTimeout(r, 800)); // slows down guessing
   return ok;
 }
+const seeds = new SeedStore(path.join(DATA_DIR, "seeds.json"));
 const edits = new EditStore(path.join(DATA_DIR, "edits.json"));
 const highScores = new HighScoreStore(path.join(DATA_DIR, "highscores.json"));
 const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
@@ -235,6 +237,14 @@ const http = createServer(async (req, res) => {
       for (const id of l.banned) votes.vote(id, "playlist-page", -1);
       for (const [pid, a] of Object.entries(l.artists)) edits.setArtist(pid, a || null);
       return json(res, 200, { ok: true });
+    }
+    if (url.pathname === "/api/seed" && req.method === "POST") {
+      const code = seeds.shorten(String((await readJson(req)).seed ?? ""));
+      return code ? json(res, 200, { code }) : json(res, 400, { error: "bad seed" });
+    }
+    if (url.pathname === "/api/seed" && req.method === "GET") {
+      const full = seeds.full(url.searchParams.get("code") ?? "");
+      return full ? json(res, 200, { seed: full }) : json(res, 404, { error: "unknown seed" });
     }
     if (url.pathname === "/api/playlist/names" && req.method === "GET") return json(res, 200, edits.names());
     if (url.pathname === "/api/playlist/name" && req.method === "POST") {
