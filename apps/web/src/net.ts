@@ -20,7 +20,9 @@ export function useRoom(first: ClientMessage | null, onMessage?: (m: ServerMessa
     let closed = false;
     let retry: ReturnType<typeof setTimeout>;
     const open = () => {
-      const s = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+      // ?room=CODE lets the proxy send the socket to the server that owns the room (blue/green deploys)
+      const code = "code" in first ? encodeURIComponent(String(first.code)) : "";
+      const s = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws${code ? `?room=${code}` : ""}`);
       ws.current = s;
       s.onopen = () => { setConnected(true); setError(undefined); s.send(JSON.stringify(first)); };
       s.onmessage = (e) => {

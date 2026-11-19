@@ -132,17 +132,18 @@ In the Spotify dashboard add the redirect URI `http://127.0.0.1:5173/callback` f
 The host screen has a **demo mode** (no Spotify, silent) for trying the flow.
 
 ## Deploying to the NAS
-`npm run deploy:nas` builds everything, copies it to the NAS share that holds the stack's folder and creates or updates the Portainer stack `tuneguesser`. It restarts `tuneguesser-server` on later runs.
+`npm run deploy:nas` builds everything and deploys it **blue/green**, so a deploy never drops a game in progress. There are two game servers, `tuneguesser-server-a` and `-b`. A deploy copies the new build to the *idle* one, restarts it, waits until it answers, then tells nginx (`nginx -s reload`, which keeps open connections) to send **new rooms** to it. Rooms already running stay on the old server until they finish: a room code starts with A–M (server a) or N–Z (server b), and the client opens its WebSocket as `/ws?room=CODE`, so nginx routes it to the right server. The web files are copied additively (old players keep their hashed assets; files older than 14 days are pruned).
 
 | Flag | Effect |
 | :--- | :--- |
-| *(none)* | build, copy files, create the stack (first time) or restart the server |
-| `-- --stack` | also push `deploy/docker-compose.yml` to the stack (use when the compose file changes) |
-| `-- --files` | copy files only, no Portainer |
+| *(none)* | build, start the new version on the idle server, switch new rooms to it. Refuses if the idle server (the previous version) still has running rooms |
+| `-- --stack` | also push `deploy/docker-compose.yml` to the stack. **First time ever** this sets up blue/green and removes the old single `tuneguesser-server`; it recreates containers, so running games end: do it when nobody is playing |
+| `-- --force` | deploy even if the idle server still has rooms (they are cut) |
+| `-- --files` | copy files only, no Portainer, no switch |
 
-Needs `PORTAINER_TOKEN` in the environment, and `NAS_DIR`, `TUNEGUESSER_REDIRECT_URI` and `PORTAINER_URL` in the environment or your untracked `.env` (see `.env.example`). The Spotify Client ID is read from `.env` and sent to the stack's environment variables, never stored in the repo. The server loses Spotify logins on restart, so the host logs in again after a deploy.
+Needs `PORTAINER_TOKEN` in the environment, and `NAS_DIR`, `TUNEGUESSER_REDIRECT_URI` and `PORTAINER_URL` in the environment or your untracked `.env` (see `.env.example`). The Spotify Client ID is read from `.env` and sent to the stack's environment variables, never stored in the repo. Spotify logins are kept in `data/sessions.json`, shared by both servers.
 
-Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneguesser-server` (Node); DSM reverse proxy (HTTPS) → `localhost:8087` with the WebSocket header enabled; the Spotify redirect URI is `https://<your public host>/callback`.
+Production setup: containers `tuneguesser-web` (nginx, port **8087**) and `tuneguesser-server-a` / `-b` (Node); DSM reverse proxy (HTTPS) → `localhost:8087` with the WebSocket header enabled; the Spotify redirect URI is `https://<your public host>/callback`. `https://<host>/slot/a` and `/slot/b` report how many rooms each server still has.
 
 ## Android app
 A debug APK (a Capacitor shell around the live site, `android-app/`) is built with `npm run build:apk` and served from the web app: the **⚙ settings menu on the Join and Host screens** has a *Download the Android app* link. The APK embeds the server address, so it is git-ignored and published by `npm run deploy:nas`. Spotify refuses logins inside embedded web views and a TV has no browser, so in the app *Log in with Spotify* shows a **QR code and a short link**: log in on your phone (or any device), and the app continues by itself. *Use this device's browser* is there too for phones; the browser then returns to the app (`net.phoenixfox.tuneguesser://auth`). The app claims the finished login from the server with a one-time secret (10 minutes). Details in `android-app/README.md`.

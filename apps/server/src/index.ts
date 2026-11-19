@@ -7,6 +7,7 @@ import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tunegue
 import { DemoProvider, type MusicProvider } from "./music";
 import { Room } from "./room";
 import { TriviaCache } from "./trivia";
+import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
 
@@ -33,22 +34,22 @@ const sessions = new Map<string, Session>();
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
+function readSavedSessions(): Record<string, Tokens> {
+  try { return JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8")) as Record<string, Tokens>; } catch { return {}; }
+}
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 function saveSessions() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try {
-      const out: Record<string, Tokens> = {};
+      const out: Record<string, Tokens> = readSavedSessions(); // keep logins made on the other slot
       for (const [sid, s] of sessions) if (s.client) out[sid] = s.client.current;
       fs.mkdirSync(DATA_DIR, { recursive: true });
       fs.writeFileSync(SESSIONS_FILE, JSON.stringify(out), { mode: 0o600 });
     } catch (e) { console.warn("could not save sessions:", (e as Error).message); }
   }, 200);
 }
-try {
-  const saved = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8")) as Record<string, Tokens>;
-  for (const [sid, t] of Object.entries(saved)) sessions.set(sid, { client: makeClient(t) });
-} catch { /* first start */ }
+for (const [sid, t] of Object.entries(readSavedSessions())) sessions.set(sid, { client: makeClient(t) });
 
 interface RoomEntry { room: Room; hostToken: string; sockets: Map<WebSocket, string | undefined>; createdAt: number; yt?: YouTubeProvider; abandonTimer?: ReturnType<typeof setTimeout> }
 const rooms = new Map<string, RoomEntry>();
@@ -59,10 +60,11 @@ const hostSockets = new WeakSet<WebSocket>();
 const listeners = new WeakSet<WebSocket>();
 const trivia = new TriviaCache();
 
-const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid confusion with 1/0
+/** Blue/green deploys: which of the two server containers this is ("a" or "b"); it decides the first letter of new room codes. */
+const SLOT = process.env.SLOT === "a" || process.env.SLOT === "b" ? process.env.SLOT : undefined;
 function newCode(): string {
   for (;;) {
-    const c = Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+    const c = makeRoomCode(SLOT);
     if (!rooms.has(c)) return c;
   }
 }
@@ -70,6 +72,10 @@ function newCode(): string {
 function getSession(req: IncomingMessage, res: ServerResponse): Session {
   const m = /(?:^|;\s*)tg_sid=([\w-]+)/.exec(req.headers.cookie ?? "");
   let sid = m?.[1];
+  if (sid && !sessions.has(sid)) { // a login made on the other slot (blue/green) is in the shared file
+    const t = readSavedSessions()[sid];
+    if (t) sessions.set(sid, { client: makeClient(t) });
+  }
   if (!sid || !sessions.has(sid)) {
     sid = randomBytes(24).toString("base64url");
     sessions.set(sid, {});
@@ -104,6 +110,7 @@ function broadcast(entry: RoomEntry) {
 const http = createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? "/", "http://x");
+    if (url.pathname === "/api/health") return json(res, 200, { ok: true, slot: SLOT ?? null, rooms: rooms.size }); // used by the deploy script
     const s = getSession(req, res);
 
     if (url.pathname === "/healthz") { res.end("ok\n"); return; }
