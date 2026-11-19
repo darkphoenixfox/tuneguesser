@@ -598,4 +598,4 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .yt-add { display: flex; gap: 10px; }
 .yt-add input { flex: 1; min-width: 0; }
 /* the embedded player plays the sound; its picture would give the song away, so it is invisible */
-.yt-player { position: fixed; left: 0; bottom: 0; width: 200px; height: 113px; opacity: 0; pointer-events: none; z-index: -1; }
+.yt-player { position: fixed; left: 0; bottom: 0; width: 200px; height: 200px; opacity: 0; pointer-events: none; z-index: -1; overflow: hidden; }
