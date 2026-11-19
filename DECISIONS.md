@@ -169,6 +169,9 @@ The revealed letters and the pixelated artwork are scaled to finish 5 s after th
 ### DEC-047 · Abandoned rooms are ended · 2026-11-19 · Active
 A room kept running (timers, auto-advance, `play()` calls on the host's Spotify) after the host closed the tab, so songs kept changing on the host's account. Now, when the host screen has been disconnected for 60 s (reloads reconnect in time), the server ends the game and stops the music (a lobby is just dropped). Rooms older than 4 h also stop their music.
 
+### DEC-048 · Voice answers with the browser's speech recognition · 2026-11-19 · Active
+A 🎤 button on the typed answer form uses the Web Speech API (free, no server). Interim text fills the box, the final text is auto-sent after 1.5 s unless edited. Chosen over a server-side speech-to-text service (Whisper) for zero infrastructure; the answer matcher's typo tolerance absorbs most recognition errors. Not offered on the gamepad keyboard form or where the API is missing. Possible later: sound-alike matching for names, or Whisper for better accuracy.
+
 ---
 
 ## Open questions

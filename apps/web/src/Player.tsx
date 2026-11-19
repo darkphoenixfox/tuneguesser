@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
+import { MicButton } from "./input/Mic";
 import { PadKeyboard } from "./input/PadKeyboard";
 import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
@@ -82,6 +83,11 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
   // keyboard and gamepad shortcuts (the host screen handles pause/skip/next itself when this is embedded in it)
   const live = useRef({ state, mine, iAmGuesser, sent, text });
   live.current = { state, mine, iAmGuesser, sent, text };
+  const autoSend = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(autoSend.current), []);
+  useEffect(() => { if (!iAmGuesser) clearTimeout(autoSend.current); }, [iAmGuesser]);
+  /** spoken answer: shown in the box, sent 1.5 s after the speech ends unless the player edits or cancels it */
+  const heard = (t: string) => { setText(t); clearTimeout(autoSend.current); autoSend.current = setTimeout(() => doSubmit(), 1500); };
   const doSubmit = () => {
     const l = live.current;
     if (l.sent || !l.text.trim()) return;
@@ -198,10 +204,11 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               ) : (
                 <div className="gf-main">
                   <label>{state.config.guess === "title" ? "What's the song?" : state.config.guess === "artist" ? "Who is the artist?" : found?.title ? "Who is the artist?" : found?.artist ? "What's the song?" : "Song, artist, or both"}
-                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
+                <input ref={titleRef} value={text} onChange={(e) => { clearTimeout(autoSend.current); setText(e.target.value); }} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? "Song title" : state.config.guess === "artist" ? "Artist" : found?.title ? "Artist" : found?.artist ? "Song title" : "e.g. Billie Jean – Michael Jackson"} />
               </label>
+                  <MicButton disabled={sent} onText={(t) => { clearTimeout(autoSend.current); setText(t); }} onFinal={heard} />
                   <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
-                  <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>Cancel</button>
+                  <button type="button" className="btn ghost" onClick={() => { clearTimeout(autoSend.current); send({ t: "cancel" }); }}>Cancel</button>
                 </div>
               )}
             </form>
