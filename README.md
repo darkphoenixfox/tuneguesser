@@ -129,7 +129,6 @@ npm test                    # unit tests (matching, scoring, game engine, Spotif
 npm run typecheck
 ```
 In the Spotify dashboard add the redirect URI `http://127.0.0.1:5173/callback` for local development.
-The host screen has a **demo mode** (no Spotify, silent) for trying the flow.
 
 ## Deploying to the NAS
 `npm run deploy:nas` builds everything and deploys it **blue/green**, so a deploy never drops a game in progress. There are two game servers, `tuneguesser-server-a` and `-b`. A deploy copies the new build to the *idle* one, restarts it, waits until it answers, then tells nginx (`nginx -s reload`, which keeps open connections) to send **new rooms** to it. Rooms already running stay on the old server until they finish: a room code starts with A–M (server a) or N–Z (server b), and the client opens its WebSocket as `/ws?room=CODE`, so nginx routes it to the right server. The web files are copied additively (old players keep their hashed assets; files older than 14 days are pruned).

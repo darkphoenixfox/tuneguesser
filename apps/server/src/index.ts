@@ -4,7 +4,7 @@ import path from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tuneguesser/shared";
-import { DemoProvider, type MusicProvider } from "./music";
+import type { MusicProvider } from "./music";
 import { Room } from "./room";
 import { TriviaCache } from "./trivia";
 import { CODE_CHARS, makeRoomCode } from "./code";
@@ -197,8 +197,7 @@ const http = createServer(async (req, res) => {
     if (url.pathname === "/api/rooms" && req.method === "POST") {
       const body = await readJson(req);
       let music: MusicProvider;
-      if (body.demo) music = new DemoProvider();
-      else if (body.source === "youtube") {
+      if (body.source === "youtube") {
         if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
         const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : []).map((x: unknown) => parsePlaylistId(String(x))).filter((x: string | null): x is string => !!x).slice(0, 10);
         if (!ids.length) return json(res, 400, { error: "add at least one playlist" });

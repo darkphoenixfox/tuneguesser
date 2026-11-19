@@ -18,7 +18,7 @@ Players answer on their own phones with a room code (like Kahoot); the host scre
 
 ### DEC-004 · Music source: Spotify first, YouTube later · 2026-11-18 · Active
 Initially YouTube was chosen, then the user changed to **Spotify first**, leaving video/YouTube for later.
-Everything the game needs from a music source is behind the `MusicProvider` interface (`loadTracks`, `play`, `pause`, `resume`), so YouTube (and a video-clip mode) can be added without touching game logic. A silent `DemoProvider` is used for tests and demo mode.
+Everything the game needs from a music source is behind the `MusicProvider` interface (`loadTracks`, `play`, `pause`, `resume`), so YouTube (and a video-clip mode) can be added without touching game logic. A silent `DemoProvider` is used by the tests (the user-facing demo mode was removed in DEC-063).
 **Consequence:** the host needs **Spotify Premium** (playback control); the music plays on any device on the host's account.
 
 ### DEC-005 · Answer matching rules · 2026-11-18 · Active
@@ -155,7 +155,7 @@ A presses the highlighted key, **B cancels** (no attempt used), **X backspace**,
 The Reveal hint shows only underscores for the first 10 s (or half the timer if it is shorter than 20 s); the letters then appear evenly so all are visible just before time ends.
 
 ### DEC-043 · Hints are checkboxes; artwork hint · 2026-11-19 · Active · supersedes the single-choice hints of DEC-023/028
-`GameConfig.hints` is now `{reveal, trivia, art}` (any combination; the old single-choice value is still accepted when loading saved settings). The **artwork** hint sends the cover URL and a progress value (elapsed / timer window, frozen on pause) to the host screen only; the canvas draws it as 3 to 96 blocks per side and the sharp image at the end. Note: the cover URL is in the room state, so a technically minded player could look at it on the network; acceptable for a party game. Tracks without cover art (demo mode) show no art area.
+`GameConfig.hints` is now `{reveal, trivia, art}` (any combination; the old single-choice value is still accepted when loading saved settings). The **artwork** hint sends the cover URL and a progress value (elapsed / timer window, frozen on pause) to the host screen only; the canvas draws it as 3 to 96 blocks per side and the sharp image at the end. Note: the cover URL is in the room state, so a technically minded player could look at it on the network; acceptable for a party game. Tracks without cover art show no art area.
 
 ### DEC-044 · Gamepad access to the corner buttons · 2026-11-19 · Active
 LB/L1 (in a game, or any screen without tabs) or Select/Share (menu screens) enters a "corner menu" mode: all pad buttons go only to the menu handler so the game does not react (A cannot buzz by accident); left/right pick device / quit / settings / mute, A presses, panels are navigated with the d-pad, B / LB / Select leaves. A "Menu" glyph hint sits under the buttons.
@@ -227,3 +227,6 @@ In the **Music from** menu YouTube is now first and the default (devices that ne
 ### DEC-062 · Blue/green deploys with room-code routing · 2026-11-19 · Active
 Rooms live in the server's memory, so restarting the server ended every game. Two identical servers (`-a`, `-b`) now run side by side. A deploy goes to the idle one; nginx's `active.conf` (a one-line `map`, written by the deploy script) says which server takes new rooms, and `nginx -s reload` switches without cutting open sockets. A room's code encodes its server (first letter A–M = a, N–Z = b, `SLOT` env var) and the client connects to `/ws?room=CODE`, so nginx needs no lookup table and a reload/reconnect lands on the right server even after a switch. The deploy script refuses to overwrite the idle server while it still has rooms (`/slot/a|b` → `/api/health`), unless `--force`. nginx.conf and active.conf are mounted as a directory (a replaced single-file mount would go stale). Static files are copied additively and pruned after 14 days so open pages keep their lazy chunks.
 Trade-offs: a player who reloads mid-game gets the new client talking to the old server (needs a backwards-compatible protocol; no version check yet). Spotify logins are shared through `sessions.json` (a session missing in memory is looked up in the file; saves merge with the file); if Spotify ever rotates refresh tokens, a login used on both servers could need a re-login. In-flight Spotify logins (PKCE, in memory) can fail if a switch happens during the few seconds of the login. The one-time migration (`--stack`) still ends running games.
+
+### DEC-063 · Demo mode removed · 2026-11-19 · Active
+The silent "Try demo mode" button and the `demo` flag of `POST /api/rooms` are gone: with YouTube as the default source nobody needs a music-less game, and its fixed placeholder fields were confusing. `DemoProvider` stays as test infrastructure only.

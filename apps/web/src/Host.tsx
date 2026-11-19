@@ -155,7 +155,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
 
   const toggle = (id: string) => setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
-  const create = async (demo: boolean) => {
+  const create = async () => {
     setBusy(true); setErr("");
     sfx.start(); // unlocks audio on this screen
     try { localStorage.setItem(LAST_PLAYLISTS, JSON.stringify(picked)); localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ }
@@ -166,7 +166,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     }
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ demo, ...(useYt ? { source: "youtube", playlistIds: ytPicked.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg }),
+      body: JSON.stringify({ ...(useYt ? { source: "youtube", playlistIds: ytPicked.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg }),
     });
     const j = await r.json();
     setBusy(false);
@@ -234,7 +234,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               <small className="muted">{t("Extra points for song + artist at once, and for streaks.")}</small>
             </div>
           </section>
-          <button className="btn big" disabled={!canStart || busy} onClick={() => create(false)}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
+          <button className="btn big" disabled={!canStart || busy} onClick={() => create()}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
     </>
   );
   return (
@@ -249,7 +249,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
       {!me ? <p className="muted">{t("Loading…")}</p> : useYt ? (
         <>
           <div className="quick">
-            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create(false)}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
+            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create()}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
             <h2>{t("YouTube playlists")} {ytLists.length > 0 && <small className="muted">({t("{n} selected", { n: ytPicked.length })})</small>}</h2>
@@ -293,12 +293,11 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
             </div>
           )}
           <p className="muted login-note">{t("Spotify must be open somewhere for the music to play: the web player in another tab, the Spotify app on your phone or computer, or Spotify on a TV, a Chromecast, a smart speaker (Echo/Alexa) and so on. Start it once and it shows up in the device list.")}</p>
-          <button className="btn ghost" disabled={busy} onClick={() => create(true)}>Try demo mode (no music)</button>
         </div>
       ) : (
         <>
           <div className="quick">
-            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create(false)}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
+            <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create()}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
             <h2>{t("Playlists")} {picked.length > 0 && <small className="muted">({t("{n} selected", { n: picked.length })})</small>}</h2>
