@@ -439,10 +439,19 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .pl-row { display: flex; gap: 12px; align-items: stretch; }
 .pl-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .vbar { display: none; }
-.phone .trivia { height: 9.6em; overflow-y: auto; justify-content: flex-start; scroll-behavior: smooth; flex-shrink: 0; }
+.phone .trivia { height: 7.6em; overflow-y: auto; justify-content: flex-start; scroll-behavior: smooth; flex-shrink: 0; }
 .phone .trivia li { flex-shrink: 0; }
 @media (max-width: 700px) {
   .hbar { display: none; }
   .vbar { display: flex; align-items: flex-end; width: 10px; flex-shrink: 0; border-radius: 5px; background: var(--soft2); overflow: hidden; }
   .vbar i { display: block; width: 100%; background: linear-gradient(0deg, var(--pink), var(--purple) 55%, var(--cyan)); transition: height .1s linear; }
 }
+/* compact phone header */
+.screen.phone { padding-top: max(4px, env(safe-area-inset-top)); padding-left: 10px; padding-right: 10px; gap: 8px; }
+.phone-head { font-size: .95rem; padding: 0; gap: 8px; min-height: 0; }
+.phone-head .exit { padding: 2px 8px; font-size: .85rem; border-radius: 8px; }
+.phone-head .theme-btn { font-size: 1rem; padding: 0; line-height: 1; }
+.phone-head .skip-top { padding: 2px 8px; font-size: .9rem; border-radius: 8px; }
+.phone-head .skip-top small { font-size: .7rem; }
+.phone-head .score { font-size: 1rem; }
+.screen.phone > .card.answer { padding: 12px; gap: 10px; }
