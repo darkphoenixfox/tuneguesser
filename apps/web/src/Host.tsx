@@ -19,6 +19,7 @@ import { Confirm } from "./input/Confirm";
 import { useYouTubePlayer } from "./YouTubePlayer";
 import { onPadButton, usePad } from "./input/pad";
 import { t } from "./i18n";
+import { banLocal, getLocal } from "./local";
 
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
@@ -104,7 +105,8 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     if (!useYt || !pickedKey) return;
     fetch(`/api/playlist/settings?ids=${encodeURIComponent(pickedKey)}`).then((r) => r.json()).then((j: unknown) => { if (j && typeof j === "object") setOnlyArtists(j as Record<string, string | null>); }).catch(() => {});
   }, [useYt, pickedKey]);
-  const oneArtist = useYt ? commonSingleArtist(ytPicked.map((l) => onlyArtists[l.id])) : null;
+  const localArtists = getLocal().artists; // this device's own choice wins over the default
+  const oneArtist = useYt ? commonSingleArtist(ytPicked.map((l) => (l.id in localArtists ? localArtists[l.id] || null : onlyArtists[l.id]))) : null;
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
@@ -185,7 +187,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     }
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ ...(useYt ? { source: "youtube", playlistIds: ytPicked.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg }),
+      body: JSON.stringify({ ...(useYt ? { source: "youtube", playlistIds: ytPicked.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg, local: getLocal() }),
     });
     const j = await r.json();
     setBusy(false);
@@ -343,7 +345,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
 function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; solo?: boolean }) {
   const first = useMemo(() => ({ t: "host" as const, code: saved.code, token: saved.token }), [saved]);
   const ytRun = useRef<(c: PlayerCommand) => void>();
-  const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => { if (m.t === "player") ytRun.current?.(m.cmd); });
+  const { state, error, send, endsAt, guessEndsAt } = useRoom(first, (m) => { if (m.t === "player") ytRun.current?.(m.cmd); else if (m.t === "banned") banLocal(m.id); });
   const [ytError, setYtError] = useState("");
   const yt = useYouTubePlayer(!!saved.youtube, (msg) => { setYtError(msg); setTimeout(() => setYtError(""), 7000); });
   ytRun.current = yt.run;

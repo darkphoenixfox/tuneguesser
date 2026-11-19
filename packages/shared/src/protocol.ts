@@ -154,6 +154,8 @@ export type ServerMessage =
   /** host screen only (YouTube mode) */
   | { t: "player"; cmd: PlayerCommand }
   | { t: "joined"; playerId: string }
+  /** the host rejected this song ("This song has issues"): the host's device remembers it as banned */
+  | { t: "banned"; id: string; name: string }
   | { t: "state"; state: RoomState }
   | { t: "result"; title: boolean; artist: boolean; points: number; multipliers: Multiplier[] }
   /** sent once to a player who is about to answer by typing: song titles and artists of the playlist, for auto-completion */

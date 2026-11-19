@@ -76,3 +76,28 @@ export function forceArtist(t: Track, artist: string): Track {
   }
   return { ...t, title, artists: [a] };
 }
+
+/** One browser's own corrections, sent when it creates a room: they apply to that room only and win over the defaults. */
+export interface Local { tracks: Record<string, TrackEdit>; banned: Set<string>; artists: Record<string, string> }
+
+export function sanitizeLocal(raw: unknown): Local {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, any>;
+  const out: Local = { tracks: {}, banned: new Set(), artists: {} };
+  const id = /^[\w-]{6,64}$/;
+  if (r.tracks && typeof r.tracks === "object") {
+    for (const [k, v] of Object.entries(r.tracks).slice(0, 3000)) {
+      if (!id.test(k) || !v || typeof v !== "object") continue;
+      const title = clean((v as any).title, 120);
+      const artists = (Array.isArray((v as any).artists) ? (v as any).artists : []).map((a: unknown) => clean(a, 80)).filter(Boolean).slice(0, 6);
+      if (title || artists.length) out.tracks[k] = { ...(title ? { title } : {}), ...(artists.length ? { artists } : {}) };
+    }
+  }
+  if (Array.isArray(r.banned)) for (const b of r.banned.slice(0, 5000)) if (typeof b === "string" && id.test(b)) out.banned.add(b);
+  if (r.artists && typeof r.artists === "object") for (const [k, v] of Object.entries(r.artists).slice(0, 100)) if (id.test(k) && typeof v === "string") out.artists[k] = clean(v, 80); // "" = switched off here
+  return out;
+}
+
+/** The artist a playlist is limited to: this browser's choice if it made one ("" = off), else the default for everyone. */
+export function effectiveArtist(local: Local, playlistId: string, global: string | undefined): string | undefined {
+  return playlistId in local.artists ? local.artists[playlistId] || undefined : global;
+}

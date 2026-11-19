@@ -110,6 +110,8 @@ try {
     const env = [{ name: "SPOTIFY_CLIENT_ID", value: clientId() }, { name: "SPOTIFY_REDIRECT_URI", value: REDIRECT }];
     const ytKey = process.env.YOUTUBE_API_KEY || (/^YOUTUBE_API_KEY=(.+)$/m.exec(dotenv) ?? [])[1];
     if (ytKey) env.push({ name: "YOUTUBE_API_KEY", value: ytKey });
+    const adminPw = process.env.ADMIN_PASSWORD || (/^ADMIN_PASSWORD=(.+)$/m.exec(dotenv) ?? [])[1]; // optional: otherwise set it in Portainer
+    if (adminPw) env.push({ name: "ADMIN_PASSWORD", value: adminPw });
     if (!env[0].value) throw new Error("SPOTIFY_CLIENT_ID is not set in .env: stack not touched");
     if (!stack) {
       await api("POST", `/api/stacks/create/standalone/string?endpointId=${ep.Id}`, { name: NAME, stackFileContent: compose, env });

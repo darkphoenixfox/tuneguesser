@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -9,7 +9,7 @@ import { Room } from "./room";
 import { TriviaCache } from "./trivia";
 import { VoteStore } from "./votes";
 import { HighScoreStore, categoryKey } from "./highscores";
-import { EditStore, forceArtist } from "./edits";
+import { EditStore, effectiveArtist, forceArtist, sanitizeLocal } from "./edits";
 import { CODE_CHARS, makeRoomCode } from "./code";
 import { YouTubeApi, YouTubeProvider, dropDoubtful, fixLoose, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
@@ -37,6 +37,15 @@ const sessions = new Map<string, Session>();
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const votes = new VoteStore(path.join(DATA_DIR, "votes.json"));
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
+/** Only with the admin password (set in the container's environment) may corrections and bans be made the default for everyone. */
+async function isAdmin(pw: unknown): Promise<boolean> {
+  if (!ADMIN_PASSWORD || typeof pw !== "string") return false;
+  const h = (x: string) => createHash("sha256").update(x).digest();
+  const ok = timingSafeEqual(h(pw), h(ADMIN_PASSWORD));
+  if (!ok) await new Promise((r) => setTimeout(r, 800)); // slows down guessing
+  return ok;
+}
 const edits = new EditStore(path.join(DATA_DIR, "edits.json"));
 const highScores = new HighScoreStore(path.join(DATA_DIR, "highscores.json"));
 const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
@@ -180,7 +189,7 @@ const http = createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
-    if (url.pathname === "/api/me") return json(res, 200, { spotify: !!s.client, spotifyConfigured: !!CLIENT_ID, youtube: !!youtube });
+    if (url.pathname === "/api/me") return json(res, 200, { spotify: !!s.client, spotifyConfigured: !!CLIENT_ID, youtube: !!youtube, admin: !!ADMIN_PASSWORD });
 
     if (url.pathname === "/api/youtube/playlist") {
       if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
@@ -191,20 +200,39 @@ const http = createServer(async (req, res) => {
     }
 
     // playlist pages: check the songs, fix titles/artists, bring back or ban songs, "one artist only"
-    if (url.pathname === "/api/youtube/playlist/tracks") {
+    if (url.pathname === "/api/youtube/playlist/tracks" && req.method === "POST") {
       if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
-      const id = parsePlaylistId(url.searchParams.get("id") ?? "");
+      const b = await readJson(req);
+      const id = parsePlaylistId(String(b.id ?? ""));
       if (!id) return json(res, 400, { error: "That is not a YouTube playlist" });
+      const local = sanitizeLocal(b.local);
       const [info, raw] = await Promise.all([youtube.playlist(id).catch(() => null), youtube.tracks(id)]);
-      const only = edits.playlist(id).artist;
-      const fixed = dropDoubtful(fixLoose(raw)).map((t) => (only ? forceArtist(t, only) : t));
-      const ed = edits.edits();
-      const bad = votes.blacklisted();
-      const tracks = fixed.map((t) => ({ id: t.id, title: ed[t.id]?.title ?? t.title, artists: ed[t.id]?.artists ?? t.artists, original: ed[t.id] ? { title: t.title, artists: t.artists } : undefined, blacklisted: bad.has(t.id) }));
+      const parsed = dropDoubtful(fixLoose(raw));
+      const only = effectiveArtist(local, id, edits.playlist(id).artist);
+      const gEdits = edits.edits();
+      const gBad = votes.blacklisted();
+      const tracks = parsed.map((p) => {
+        const t = only ? forceArtist(p, only) : p;
+        const e = local.tracks[t.id] ?? gEdits[t.id];
+        return { id: t.id, title: e?.title ?? t.title, artists: e?.artists ?? t.artists, original: e ? { title: t.title, artists: t.artists } : undefined, edited: local.tracks[t.id] ? "local" : gEdits[t.id] ? "default" : undefined, banned: gBad.has(t.id) || local.banned.has(t.id), defaultBanned: gBad.has(t.id) };
+      });
       const count = new Map<string, number>();
-      for (const t of tracks) for (const a of t.artists.slice(0, 1)) count.set(a, (count.get(a) ?? 0) + 1);
+      for (const t of parsed) for (const a of t.artists.slice(0, 1)) count.set(a, (count.get(a) ?? 0) + 1);
       const artists = [...count].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([name, n]) => ({ name, n }));
-      return json(res, 200, { id, name: info?.name ?? id, artist: edits.playlist(id).artist ?? null, artists, tracks });
+      return json(res, 200, { id, name: info?.name ?? id, artist: only ?? null, artists, tracks });
+    }
+    if (url.pathname === "/api/admin/check" && req.method === "POST") {
+      return json(res, 200, { ok: await isAdmin((await readJson(req)).password) });
+    }
+    // everything below changes the defaults for everyone: admin password required
+    if (url.pathname === "/api/admin/publish" && req.method === "POST") {
+      const b = await readJson(req);
+      if (!(await isAdmin(b.password))) return json(res, 403, { error: "wrong password" });
+      const l = sanitizeLocal(b.local);
+      for (const [id, e] of Object.entries(l.tracks)) edits.editTrack(id, e);
+      for (const id of l.banned) votes.vote(id, "playlist-page", -1);
+      for (const [pid, a] of Object.entries(l.artists)) edits.setArtist(pid, a || null);
+      return json(res, 200, { ok: true });
     }
     if (url.pathname === "/api/playlist/settings" && req.method === "GET") {
       const out: Record<string, string | null> = {};
@@ -213,6 +241,7 @@ const http = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/playlist/settings" && req.method === "POST") {
       const b = await readJson(req);
+      if (!(await isAdmin(b.password))) return json(res, 403, { error: "wrong password" });
       const id = typeof b.id === "string" ? parsePlaylistId(b.id) : null;
       if (!id) return json(res, 400, { error: "bad playlist" });
       edits.setArtist(id, typeof b.artist === "string" ? b.artist : null);
@@ -220,12 +249,14 @@ const http = createServer(async (req, res) => {
     }
     if (url.pathname === "/api/track/edit" && req.method === "POST") {
       const b = await readJson(req);
+      if (!(await isAdmin(b.password))) return json(res, 403, { error: "wrong password" });
       if (typeof b.id !== "string") return json(res, 400, { error: "bad song" });
       edits.editTrack(b.id, b.reset ? null : { title: b.title, artists: Array.isArray(b.artists) ? b.artists : [] });
       return json(res, 200, { ok: true });
     }
     if (url.pathname === "/api/track/ban" && req.method === "POST") {
       const b = await readJson(req);
+      if (!(await isAdmin(b.password))) return json(res, 403, { error: "wrong password" });
       if (typeof b.id !== "string" || !b.id) return json(res, 400, { error: "bad song" });
       if (b.banned) votes.vote(b.id, "playlist-page", -1, typeof b.name === "string" ? b.name : undefined); else votes.clear(b.id);
       return json(res, 200, { ok: true });
@@ -253,8 +284,8 @@ const http = createServer(async (req, res) => {
         const yt = new YouTubeProvider(youtube, ids);
         // corrections from the playlist pages: fixed titles/artists, and playlists limited to one artist
         yt.adjust = (pid, list) => {
-          const only = edits.playlist(pid).artist;
-          return edits.apply(only ? list.map((t) => forceArtist(t, only)) : list);
+          const only = effectiveArtist(local, pid, edits.playlist(pid).artist);
+          return edits.apply(only ? list.map((t) => forceArtist(t, only)) : list, { ...edits.edits(), ...local.tracks });
         };
         music = yt;
       } else {
@@ -265,11 +296,12 @@ const http = createServer(async (req, res) => {
         music = new SpotifyProvider(s.client, ids, typeof body.deviceId === "string" ? body.deviceId : undefined);
       }
       // songs the players voted down (more than 3 thumbs down) are never loaded
+      const local = sanitizeLocal(body.local); // this browser's own corrections and bans
       const loadAll = music.loadTracks.bind(music);
-      music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id)); };
+      music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id) && !local.banned.has(t.id)); };
       const code = newCode();
       const config = sanitizeConfig(body.config);
-      if (body.source === "youtube" && commonSingleArtist(plIds.map((id) => edits.playlist(id).artist)) ) config.guess = "title"; // one artist only: guessing the artist would be pointless
+      if (body.source === "youtube" && commonSingleArtist(plIds.map((id) => effectiveArtist(local, id, edits.playlist(id).artist))) ) config.guess = "title"; // one artist only: guessing the artist would be pointless
       const room = new Room(code, music, config, { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
       const tableKey = categoryKey(body.source === "youtube" ? "youtube" : "spotify", plIds, config);
       room.onFinish = (r) => highScores.add(tableKey, config.playTo.kind, r.players.map((p) => ({ ...p, timeMs: r.timeMs })));
@@ -328,9 +360,8 @@ wss.on("connection", (ws) => {
         const cur = role === "host" ? room.votableTrack() : undefined;
         if (cur) {
           const v = m.v === 1 ? 1 : m.v === -1 ? -1 : 0;
-          const r = votes.vote(cur.id, String(m.voter ?? ""), v, cur.name);
-          if (r.blacklisted) for (const e of rooms.values()) e.room.dropTrack(cur.id);
-          if (v === -1) await room.discardCurrent(); // skip it now, not counted as a round
+          // the ban itself is kept on the host's device (and sent with its next rooms); the server only skips the song now
+          if (v === -1) { send(ws, { t: "banned", id: cur.id, name: cur.name }); await room.discardCurrent(); } // not counted as a round
         }
         return;
       }

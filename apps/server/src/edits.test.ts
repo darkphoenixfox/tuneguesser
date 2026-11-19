@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { EditStore, forceArtist } from "./edits";
+import { EditStore, effectiveArtist, forceArtist, sanitizeLocal } from "./edits";
 
 const track = (id: string, title: string, artists: string[]) => ({ id, uri: id, title, artists, durationMs: 1 });
 
@@ -32,5 +32,15 @@ describe("EditStore", () => {
     expect(f("Gloria - U2", ["x"]).title).toBe("Gloria");
     expect(f("U2", ["Gloria"])).toMatchObject({ title: "Gloria", artists: ["U2"] }); // swapped by the parser
     expect(f("Bad", ["Pop"]).artists).toEqual(["U2"]);
+  });
+
+  it("a browser's own choices win over the defaults and are sanitised", () => {
+    const l = sanitizeLocal({ tracks: { abcdefghijk: { title: " Mine ", artists: ["A"] }, "bad id": { title: "x" } }, banned: ["zzzzzzzzzzz", 5, "no"], artists: { PLabcdef123: "" } });
+    expect(Object.keys(l.tracks)).toEqual(["abcdefghijk"]);
+    expect(l.tracks.abcdefghijk!.title).toBe("Mine");
+    expect([...l.banned]).toEqual(["zzzzzzzzzzz"]);
+    expect(effectiveArtist(l, "PLabcdef123", "U2")).toBeUndefined(); // switched off here
+    expect(effectiveArtist(l, "PLother12345", "U2")).toBe("U2"); // default
+    expect(sanitizeLocal(undefined).banned.size).toBe(0);
   });
 });
