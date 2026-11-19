@@ -275,4 +275,5 @@ export const ES: Record<string, string> = {
   "Paste a seed or link": "Pega una semilla o un enlace",
   "Use seed": "Usar semilla",
   "skipped": "saltada",
+  "Select a playlist first": "Elige primero una lista",
 };

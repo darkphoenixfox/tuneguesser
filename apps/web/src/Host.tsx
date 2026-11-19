@@ -137,13 +137,15 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   const [copied, setCopied] = useState(false);
   const longSeed = encodeSeed(ytPicked.map((l) => l.id), cfg);
   // the full seed is long (it holds the playlist ids): the server gives it a short name, TG-xxxxxxxx
-  const [shortSeed, setShortSeed] = useState<{ of: string; code: string }>();
+  const [shortSeed, setShortSeed] = useState<{ of: string; code?: string }>(); // code missing = the server could not be reached
   useEffect(() => {
     if (!useYt || !ytPicked.length) return;
-    const h = setTimeout(() => { fetch("/api/seed", { method: "POST", body: JSON.stringify({ seed: longSeed }) }).then((r) => r.json()).then((j) => { if (j.code) setShortSeed({ of: longSeed, code: j.code }); }).catch(() => {}); }, 400);
+    const h = setTimeout(() => { fetch("/api/seed", { method: "POST", body: JSON.stringify({ seed: longSeed }) }).then((r) => r.json()).then((j) => setShortSeed({ of: longSeed, code: j.code })).catch(() => setShortSeed({ of: longSeed })); }, 400);
     return () => clearTimeout(h);
   }, [useYt, longSeed]);
-  const seed = shortSeed?.of === longSeed ? shortSeed.code : longSeed;
+  // nothing selected: no seed; while the server is naming it: "…"; only if it cannot be reached, the long form
+  const seed = !ytPicked.length ? "" : shortSeed?.of !== longSeed ? "…" : shortSeed.code ?? longSeed;
+  const seedReady = !!seed && seed !== "…";
   const seedLink = `${location.origin}/?seed=${seed}`;
   const applySeed = async (text: string) => {
     const short = /TG-([\w-]{8})(?![\w-])/.exec(text);
@@ -325,8 +327,8 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
             {useYt && (
               <div className="opt"><span>{t("Challenge seed")}</span>
                 <div className="yt-add">
-                  <input readOnly value={seed} onFocus={(e) => e.target.select()} aria-label={t("Challenge seed")} />
-                  <button type="button" className="btn" onClick={copySeed}>{copied ? t("Copied!") : t("Copy link")}</button>
+                  <input readOnly value={seed} placeholder={t("Select a playlist first")} onFocus={(e) => e.target.select()} aria-label={t("Challenge seed")} />
+                  <button type="button" className="btn" disabled={!seedReady} onClick={copySeed}>{copied ? t("Copied!") : t("Copy link")}</button>
                 </div>
                 <small className="muted">{t("Share it: whoever plays with the same playlists and settings competes in the same high-score table.")}</small>
                 <form className="yt-add" onSubmit={(e) => { e.preventDefault(); void applySeed(seedIn); }}>
