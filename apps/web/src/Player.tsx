@@ -221,7 +221,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
               </label>
                   <MicButton disabled={sent} onText={(t) => { clearTimeout(autoSend.current); setText(t); }} onFinal={heard} />
                   </div>
-                  <button className="btn big" disabled={sent || !text.trim()}>{sent ? "Sent…" : "Send answer"}</button>
+                  <button className="btn big" disabled={sent || !text.trim()}>{sent ? t("Sent…") : t("Send answer")}</button>
                   <button type="button" className="btn ghost" onClick={() => { clearTimeout(autoSend.current); send({ t: "cancel" }); }}>{t("Cancel")}</button>
                 </div>
               )}

@@ -16,7 +16,7 @@ export function ErrorPage({ error, onBack, host }: { error: string; onBack: () =
               : t("We couldn't find that room. Check the 4-letter code, or the host may have quit the game or closed the room. Ask the host for a fresh code and try again.")
             : error}
         </p>
-        <button className="btn next-btn" data-pad-first onClick={onBack}>{host ? "Back to start" : "Back to main screen"}</button>
+        <button className="btn next-btn" data-pad-first onClick={onBack}>{host ? t("Back to start") : t("Back to main screen")}</button>
       </div>
     </main>
   );

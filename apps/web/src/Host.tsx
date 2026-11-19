@@ -237,7 +237,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               <small className="muted">{t("Extra points for song + artist at once, and for streaks.")}</small>
             </div>
           </section>
-          <button className="btn big" disabled={!canStart || busy} onClick={() => create()}>{solo ? "Start the game" : "Create room"}<PadHint button="a" focusOnly /></button>
+          <button className="btn big" disabled={!canStart || busy} onClick={() => create()}>{solo ? t("Start the game") : t("Create room")}<PadHint button="a" focusOnly /></button>
     </>
   );
   return (
