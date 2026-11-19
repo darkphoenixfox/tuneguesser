@@ -25,7 +25,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   order: "buzzer",
   guess: "both",
   answers: "type",
-  hints: { reveal: false, trivia: false, art: false },
+  hints: { reveal: true, trivia: true, art: true },
   roundSeconds: 40,
   attempts: 3,
   multipliers: true,
@@ -42,7 +42,8 @@ const pick = <T extends string>(v: unknown, allowed: readonly T[], d: T): T => (
 /** Accepts the object form, or the old single-choice string ("none" | "reveal" | "trivia"). */
 function sanitizeHints(raw: unknown): GameConfig["hints"] {
   if (typeof raw === "string") return { reveal: raw === "reveal", trivia: raw === "trivia", art: false };
-  const h = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_CONFIG.hints };
+  const h = raw as Record<string, unknown>;
   return { reveal: h.reveal === true, trivia: h.trivia === true, art: h.art === true };
 }
 
