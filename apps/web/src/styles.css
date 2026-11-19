@@ -410,3 +410,10 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .confirm-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .confirm .btn.pad-sel { outline: 3px solid #facc15; outline-offset: 3px; }
 .confirm h2 { text-align: center; }
+
+/* top corner buttons: one size, one row, left to right: mute, device, settings, quit */
+.mute, .devbtn, .gear, .quit { top: 14px; width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-size: 1.25rem; box-sizing: border-box; border-radius: 50%; background: var(--card); border: 1px solid var(--line); cursor: pointer; z-index: 6; position: fixed; }
+.quit { right: 14px; } .gear { right: 66px; } .devbtn { right: 118px; } .mute { right: 170px; }
+.padmenu-hint { top: 44px; right: 6px; gap: 0; pointer-events: none; }
+.padmenu-hint .pad-glyph-svg, .padmenu-hint .pad-glyph-text { --glyph: 1.35rem; width: 1.35rem; height: 1.35rem; }
+.settings { top: 70px; }

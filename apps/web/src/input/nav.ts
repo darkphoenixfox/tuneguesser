@@ -66,8 +66,8 @@ function adjust(el: HTMLElement, dir: 1 | -1): boolean {
   return false;
 }
 
-/** The corner buttons (device, quit, settings, mute), left to right. */
-const toolbar = () => [...document.querySelectorAll<HTMLElement>(".devbtn, .quit, .gear, .mute")].filter((e) => e.getBoundingClientRect().width > 0).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+/** The corner buttons (mute, device, settings, quit), left to right. */
+const toolbar = () => [...document.querySelectorAll<HTMLElement>(".mute, .devbtn, .gear, .quit")].filter((e) => e.getBoundingClientRect().width > 0).sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
 
 function enterMenu() {
   const items = toolbar();

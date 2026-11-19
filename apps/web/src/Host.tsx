@@ -244,7 +244,7 @@ function Game({ saved, onLeave }: { saved: Saved; onLeave: () => void }) {
 /** Tells a gamepad user which button reaches the corner buttons. */
 function PadMenuHint({ inGame }: { inGame: boolean }) {
   const { connected } = usePad();
-  return connected ? <div className="padmenu-hint"><Glyph button={inGame ? "lb" : "select"} /> Menu</div> : null;
+  return connected ? <div className="padmenu-hint"><Glyph button={inGame ? "lb" : "select"} /></div> : null;
 }
 
 /** Top-right button: choose which Spotify device plays the music, also during a game. */
@@ -254,7 +254,7 @@ function DevicePicker({ onPick }: { onPick: (id: string) => void }) {
   const load = () => fetch("/api/devices").then((r) => r.json()).then(setDevices).catch(() => setDevices([]));
   return (
     <>
-      <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label="Play on device" aria-expanded={open} title="Play on device">🔈</button>
+      <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label="Play on device" aria-expanded={open} title="Play on device"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></button>
       {open && (
         <div className="settings card devices" role="dialog" aria-label="Play on">
           <h2>Play on</h2>
