@@ -21,10 +21,10 @@ export function parseDuration(iso: string): number {
   return (((d! * 24 + h!) * 60 + mi!) * 60 + s!) * 1000;
 }
 
-const NOISE = /\s*[\(\[][^)\]]*\b(official|lyrics?|lyric video|audio|video|music video|hd|hq|4k|remaster(ed)?|visuali[sz]er|live)\b[^)\]]*[\)\]]/gi;
+const NOISE = /\s*[\(\[][^)\]]*\b(official|lyrics?|lyric video|audio|video|music video|hd|hq|4k|remaster(ed)?|visuali[sz]er|live|tradu[cç][aã]o|traducci[oó]n|subtitulad[ao]|letra)\b[^)\]]*[\)\]]/gi;
 
 /** Trailing leftovers of the video title: "| Official Visualizer", "Official Video HD", "HD", "4K Video", "*OFFICIAL ANTHEM*", "Out Now!" */
-const TAIL = /\s*(?:[|*]\s*)?(?:(?:official\s+(?:(?:music|lyrics?)\s+)?|(?:music|lyrics?)\s+)(?:video|audio|visuali[sz]er)|video\s+official)(?:\s+(?:hd|hq|4k))?\s*\**\s*$|\s+(?:hd|hq|4k(?:\s+video)?)\s*$|\s+lyrics?$|\s+(?:nw\s+)?out now!?$|\s*\*[^*]*official[^*]*\*\s*$/i;
+const TAIL = /\s*(?:[|*]\s*)?(?:(?:official\s+(?:(?:music|lyrics?)\s+)?|(?:music|lyrics?)\s+)(?:video|audio|visuali[sz]er)|video\s+official)(?:\s+(?:hd|hq|4k))?\s*\**\s*$|\s+(?:hd|hq|4k(?:\s+video)?)\s*$|\s+(?:with\s+)?lyrics?$|\s+-\s+(?:with lyrics|video by .*)$|\s+(?:nw\s+)?out now!?$|\s*\*[^*]*official[^*]*\*\s*$/i;
 /** Extra " - ..." parts that are not part of the song name */
 const JUNK_PART = /^(live\b|(explicit|clean|single|album|studio|radio)\b.*\bver|remaster|mono\b|stereo\b|.*\b(com|www)$)/i;
 const SEP = /\s+[-–—|]\s+|\s*[–—]\s+/;
@@ -32,7 +32,7 @@ const norm = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 const unquote = (x: string) => x.replace(/^["“”‘’']\s*([^"“”‘’]+?)\s*["“”‘’']$/, "$1").trim();
 
 function tidy(x: string): string {
-  let t = x.replace(NOISE, "").replace(/\s{2,}/g, " ").trim();
+  let t = x.replace(/\.(flv|mp4|avi|mov|mpg|wmv|m4v)$/i, "").replace(NOISE, "").replace(/\s{2,}/g, " ").trim();
   for (let prev = ""; prev !== t;) { prev = t; t = t.replace(TAIL, "").trim(); }
   return t;
 }
@@ -43,7 +43,7 @@ function tidy(x: string): string {
  * "Artist - Title", "Title - Artist" (when the channel is the second part), "Artist | Title", "Artist: Title",
  * 'Artist "Title"', '"Title" - ...' (channel = artist). "(Official Video)", "| Visualizer", "HD" and similar are removed.
  */
-export function parseVideo(videoTitle: string, channel: string): { title: string; artists: string[]; loose?: boolean } | null {
+export function parseVideo(videoTitle: string, channel: string): { title: string; artists: string[]; loose?: boolean; fromChannel?: boolean; rawArtist?: string } | null {
   const topic = /^(.*) - Topic$/.exec(channel.trim());
   const split = (a: string) => a.split(/\s*,\s*|\s*&\s*|\s+x\s+|\s+feat\.?\s+|\s+ft\.?\s+/i).map((x) => x.trim()).filter(Boolean);
   if (topic) return { title: tidy(videoTitle).replace(/\s+-\s+(explicit|clean)\s+ver(\.|sion)?$/i, ""), artists: topic[1]!.split(/\s*,\s*|\s*&\s*/).filter(Boolean) };
@@ -70,15 +70,17 @@ export function parseVideo(videoTitle: string, channel: string): { title: string
       const [a, b, ...rest] = segs as [string, string, ...string[]];
       const title = [b, ...rest.filter((x) => !JUNK_PART.test(x))].join(" - ");
       const isChannel = (x: string) => !!chn && (norm(x) === chn || (norm(x).length > 3 && chn.includes(norm(x))));
-      if (isChannel(b) && !isChannel(a)) return { title: unquote(a), artists: split(b) }; // "Title - Artist"
-      return { title: unquote(title), artists: split(a) };
+      if (isChannel(b) && !isChannel(a)) return { title: unquote(a), artists: split(b), rawArtist: b }; // "Title - Artist"
+      return { title: unquote(title), artists: split(a), rawArtist: a };
     }
   }
-  return channelName ? { title: unquote(segs[0] ?? cleaned), artists: [channelName] } : null;
+  return channelName ? { title: unquote(segs[0] ?? cleaned), artists: [channelName], fromChannel: true } : null;
 }
 
 /** Tracks whose artist/title order was only guessed (unspaced hyphen: "somebody to love-jefferson airplane"). */
 export const loose = new WeakSet<Track>();
+/** How a track was parsed: `fromChannel` = no "Artist - Title" in the video title (the uploader is the artist); `rawArtist` = the unsplit artist text. */
+export const trackMeta = new WeakMap<Track, { fromChannel?: boolean; rawArtist?: string }>();
 
 /**
  * The order of a "x-y" title is ambiguous. Artists seen in confident titles (same playlists) settle it:
@@ -88,12 +90,41 @@ export function fixLoose(tracks: Track[]): Track[] {
   const key = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
   const known = new Set<string>();
   for (const t of tracks) if (!loose.has(t)) for (const a of t.artists) known.add(key(a));
+  fixUploaderTitles(tracks);
   for (const t of tracks) {
     if (!loose.has(t) || t.artists.length !== 1) continue;
     const [a, ti] = [key(t.artists[0]!), key(t.title)];
     if (known.has(ti) && !known.has(a)) { const old = t.title; t.title = t.artists[0]!; t.artists = [old]; }
   }
   return tracks;
+}
+
+/**
+ * Uploads without a clear "Artist - Title" ("U2 Gloria" by a fan channel, "Sunday Bloody Sunday - U2") get the uploader as artist or
+ * the two parts swapped. An artist that appears in 3+ tracks is "known": when the parsed artist is not known and the title starts or
+ * ends with a known artist (or is exactly one), that is the artist.
+ */
+export function fixUploaderTitles(tracks: Track[]): void {
+  const key = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const count = new Map<string, { n: number; name: string }>();
+  for (const t of tracks) for (const a of t.artists) { const k = key(a); if (k.length < 2) continue; const c = count.get(k) ?? { n: 0, name: a }; c.n++; count.set(k, c); }
+  const knownNames = [...count.values()].filter((c) => c.n >= 3).map((c) => c.name).sort((a, b) => b.length - a.length);
+  const isKnown = (x: string) => (count.get(key(x))?.n ?? 0) >= 3;
+  const esc = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (const t of tracks) {
+    if (t.artists.some(isKnown)) continue;
+    const m = trackMeta.get(t);
+    for (const k of knownNames) {
+      // "Sunday Bloody Sunday - U2": parts swapped
+      if (m?.rawArtist && key(t.title) === key(k)) { t.title = m.rawArtist; t.artists = [k]; break; }
+      if (!m?.fromChannel) continue;
+      // "U2 Gloria" / "Heartland U2" by a fan channel: the known artist is at the start or the end of the title
+      const pre = new RegExp(`^${esc(k)}\\s*[-–:]?\\s+(.{2,})$`, "i").exec(t.title);
+      const suf = new RegExp(`^(.{2,}?)\\s*[-–:]?\\s+${esc(k)}$`, "i").exec(t.title);
+      const rest = pre?.[1] ?? suf?.[1];
+      if (rest) { t.artists = [k]; t.title = rest.trim(); break; }
+    }
+  }
 }
 
 /** Hand-corrected songs (video id -> title/artists) for uploads whose title cannot be parsed reliably. */
@@ -142,6 +173,7 @@ export class YouTubeApi {
           year: v.snippet.publishedAt?.slice(0, 4),
         };
         if ("loose" in meta && meta.loose) loose.add(track);
+        if ("fromChannel" in meta || "rawArtist" in meta) trackMeta.set(track, { fromChannel: (meta as { fromChannel?: boolean }).fromChannel, rawArtist: (meta as { rawArtist?: string }).rawArtist });
         out.push(track);
       }
     }

@@ -9,7 +9,7 @@ const okFetch = (async (url: string) => {
   if (u.includes("musicbrainz")) return json({ artists: [
     { name: "Queen", score: 100, type: "Group", area: { name: "United Kingdom" }, "life-span": { begin: "1970" }, tags: [{ name: "rock", count: 9 }, { name: "glam rock", count: 5 }, { name: "pop", count: 1 }, { name: "opera", count: 0 }] },
   ] });
-  if (u.includes("search/title")) return json({ pages: [{ key: "Queen_(band)" }] });
+  if (u.includes("search/title")) return json({ pages: [{ key: "Queen_(band)", title: "Queen (band)" }] });
   if (u.includes("page/summary")) return json({ type: "standard", description: "British rock band", extract: "Queen are a British rock band formed in London in 1970 (originally Smile). Their line-up..." });
   return new Response("", { status: 404 });
 }) as unknown as typeof fetch;
@@ -30,6 +30,16 @@ describe("trivia", () => {
   it("ignores a search result for a different artist", async () => {
     const f = (async (url: string) => String(url).includes("musicbrainz") ? json({ artists: [{ name: "Queens of the Stone Age", score: 100 }] }) : new Response("", { status: 404 })) as unknown as typeof fetch;
     expect(await artistFacts("Queen", f)).toEqual({});
+  });
+
+  it("ignores a Wikipedia page that is not about the artist", async () => {
+    const f = (async (url: string) => {
+      const u = String(url);
+      if (u.includes("search/title")) return json({ pages: [{ key: "Musicians'_Union_(United_Kingdom)", title: "Musicians' Union (United Kingdom)" }] });
+      if (u.includes("page/summary")) return json({ type: "standard", description: "Musicians' union in the UK", extract: "The Musicians' Union is an organisation which represents over 30,000 musicians working in all sectors of the British music business." });
+      return new Response("", { status: 404 });
+    }) as unknown as typeof fetch;
+    expect((await artistFacts("U2", f)).about).toBeUndefined();
   });
 
   it("never throws: network failures just mean fewer facts", async () => {

@@ -375,6 +375,9 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .p2-hint .chip b { font-size: clamp(1.4rem, 3.2vw, 3rem); letter-spacing: .14em; }
 .p2-hint .chip.got { background: transparent; }
 .p2-hint .chip.got b { letter-spacing: 0; }
+/* trivia: a fixed-size box that scrolls to the newest fact, so nothing below it moves while facts arrive */
+.p2-hint .trivia { height: 8.6em; overflow-y: auto; justify-content: flex-start; scroll-behavior: smooth; flex-shrink: 0; max-width: none; }
+.p2-hint .trivia li { flex-shrink: 0; }
 .guessing-line { margin: 0; font-weight: 900; font-size: 1.4rem; color: var(--amber); }
 .p2-bar { grid-area: bar; }
 @media (max-width: 899px) {

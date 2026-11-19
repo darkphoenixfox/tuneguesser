@@ -39,18 +39,26 @@ export async function artistFacts(name: string, f: Fetcher = fetch): Promise<{ g
     const year = String(a["life-span"]?.begin ?? "").slice(0, 4);
     if (/^\d{4}$/.test(year)) out.started = a.type === "Group" ? `Formed in ${year}` : `Born in ${year}`;
   }
-  const search = await getJson(`https://en.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(name + " musician")}&limit=1`, f);
-  const key = search?.pages?.[0]?.key;
-  if (key) {
-    const sum = await getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(key)}`, f);
-    const musicy = /singer|band|musician|rapper|group|duo|composer|producer|songwriter|vocalist|\bDJ\b/i.test(sum?.description ?? "");
-    if (sum?.type === "standard" && musicy && typeof sum.extract === "string") {
-      let first = sum.extract.replace(/\s*\([^)]*\)/g, "").split(/(?<=[.!?])\s+/)[0] ?? "";
-      first = first.replace(new RegExp(esc(name), "gi"), "this artist");
-      // other words of the name (e.g. a surname) would also give it away
-      for (const w of name.split(/\s+/).filter((w) => w.length >= 4)) first = first.replace(new RegExp(`\\b${esc(w)}\\b`, "gi"), "…");
-      if (first.length >= 20 && first.length <= 260) out.about = first;
+  // the page must be about this artist: a search for "U2 musician" once returned the Musicians' Union page
+  const bare = (x: string) => norm(x.replace(/\s*\([^)]*\)\s*$/, ""));
+  const MUSICY = /singer|band|musician|rapper|group|duo|composer|producer|songwriter|vocalist|\bDJ\b/i;
+  const tried = new Set<string>();
+  let sum: any;
+  search: for (const q of [name, `${name} band`, `${name} musician`]) {
+    const found = await getJson(`https://en.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(q)}&limit=5`, f);
+    for (const p of found?.pages ?? []) {
+      if (bare(String(p.title ?? "")) !== norm(name) || !p.key || tried.has(p.key)) continue;
+      tried.add(p.key);
+      const cand = await getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(p.key)}`, f); // "Prince" is a title of nobility; "Prince (musician)" is the one
+      if (cand?.type === "standard" && MUSICY.test(cand.description ?? "") && typeof cand.extract === "string") { sum = cand; break search; }
     }
+  }
+  if (sum) {
+    let first = sum.extract.replace(/\s*\([^)]*\)/g, "").split(/(?<=[.!?])\s+/)[0] ?? "";
+    first = first.replace(new RegExp(esc(name), "gi"), "this artist");
+    // other words of the name (e.g. a surname) would also give it away
+    for (const w of name.split(/\s+/).filter((w) => w.length >= 4)) first = first.replace(new RegExp(`\\b${esc(w)}\\b`, "gi"), "…");
+    if (first.length >= 20 && first.length <= 260) out.about = first;
   }
   return out;
 }

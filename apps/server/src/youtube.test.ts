@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDuration, parsePlaylistId, parseVideo, YouTubeApi, YouTubeProvider } from "./youtube";
+import { fixUploaderTitles, trackMeta, parseDuration, parsePlaylistId, parseVideo, YouTubeApi, YouTubeProvider } from "./youtube";
 
 describe("youtube", () => {
   it("finds the playlist id in links", () => {
@@ -16,13 +16,17 @@ describe("youtube", () => {
     expect(parseDuration("P0D")).toBe(0);
   });
   it("gets title and artist from a video", () => {
-    expect(parseVideo("Bohemian Rhapsody", "Queen - Topic")).toEqual({ title: "Bohemian Rhapsody", artists: ["Queen"] });
-    expect(parseVideo("Queen - Bohemian Rhapsody (Official Video Remastered)", "Queen Official")).toEqual({ title: "Bohemian Rhapsody", artists: ["Queen"] });
-    expect(parseVideo("Daft Punk – Get Lucky [Lyrics]", "x")).toEqual({ title: "Get Lucky", artists: ["Daft Punk"] });
-    expect(parseVideo("Shape of You", "Ed Sheeran VEVO")).toEqual({ title: "Shape of You", artists: ["Ed Sheeran"] });
-    expect(parseVideo('" Kiss Me " - " There She Goes " Version (Official)', "Sixpence None The Richer")).toEqual({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
-    expect(parseVideo('"Kiss Me"', "Sixpence None The Richer")).toEqual({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
+    expect(parseVideo("Bohemian Rhapsody", "Queen - Topic")).toMatchObject({ title: "Bohemian Rhapsody", artists: ["Queen"] });
+    expect(parseVideo("Queen - Bohemian Rhapsody (Official Video Remastered)", "Queen Official")).toMatchObject({ title: "Bohemian Rhapsody", artists: ["Queen"] });
+    expect(parseVideo("Daft Punk – Get Lucky [Lyrics]", "x")).toMatchObject({ title: "Get Lucky", artists: ["Daft Punk"] });
+    expect(parseVideo("Shape of You", "Ed Sheeran VEVO")).toMatchObject({ title: "Shape of You", artists: ["Ed Sheeran"] });
+    expect(parseVideo('" Kiss Me " - " There She Goes " Version (Official)', "Sixpence None The Richer")).toMatchObject({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
+    expect(parseVideo('"Kiss Me"', "Sixpence None The Richer")).toMatchObject({ title: "Kiss Me", artists: ["Sixpence None The Richer"] });
     expect(parseVideo("Cheap Trick-I Want You To Want Me Lyrics", "x")).toMatchObject({ title: "I Want You To Want Me", artists: ["Cheap Trick"] });
+    expect(parseVideo("Sunday Bloody Sunday - U2 (with lyrics)", "jennys YT")).toMatchObject({ title: "U2", artists: ["Sunday Bloody Sunday"] }); // swapped here, fixed by fixUploaderTitles
+    expect(parseVideo("U2 moment of surrender lyrics", "x")?.title).toBe("U2 moment of surrender");
+    expect(parseVideo("U2 Dirty Day (Taxi Driver Version) - video by U2mixer", "u2mixer")?.title).toBe("U2 Dirty Day (Taxi Driver Version)");
+    expect(parseVideo("Stay (tradução) - U2", "Denise Paz")?.title).toBe("U2");
     expect(parseVideo("Something", "")).toBeNull();
   });
   it("loads embeddable tracks and skips the rest", async () => {
@@ -64,26 +68,42 @@ describe("listeners joining mid-song", () => {
     expect(p.snapshot()).toBeNull();
   });
   it("splits the messy titles found in the default playlists", () => {
-    expect(parseVideo('Numb (Official Music Video) [4K UPGRADE] – Linkin Park', 'Linkin Park')).toEqual({ title: 'Numb', artists: ['Linkin Park'] });
-    expect(parseVideo('In The End [Mellen Gi Remix] feat. Fleurie - Tommee Profitt', 'Tommee Profitt')).toEqual({ title: 'In The End [Mellen Gi Remix] feat. Fleurie', artists: ['Tommee Profitt'] });
-    expect(parseVideo('Scatman (ski-ba-bop-ba-dop-bop) Official Video HD - Scatman John', 'Scatman John Official YouTube Channel')).toEqual({ title: 'Scatman (ski-ba-bop-ba-dop-bop)', artists: ['Scatman John'] });
-    expect(parseVideo("8 Letters - Why Don't We [Official Music Video]", "Why Don't We")).toEqual({ title: '8 Letters', artists: ["Why Don't We"] });
-    expect(parseVideo('The Beatles - The Beatles - Hey Jude (Official Music Video) [Remastered 2015]', 'TheBeatlesVEVO')).toEqual({ title: 'Hey Jude', artists: ['The Beatles'] });
-    expect(parseVideo('Metallica: Enter Sandman (Official Music Video)', 'Metallica')).toEqual({ title: 'Enter Sandman', artists: ['Metallica'] });
-    expect(parseVideo('Panic! At The Disco: I Write Sins Not Tragedies [OFFICIAL VIDEO]', 'Fueled By Ramen')).toEqual({ title: 'I Write Sins Not Tragedies', artists: ['Panic! At The Disco'] });
-    expect(parseVideo('Passenger | Let Her Go (Official Video)', 'Passenger')).toEqual({ title: 'Let Her Go', artists: ['Passenger'] });
-    expect(parseVideo('Dynasty (Official Music Video) | MIIA', 'MIIA')).toEqual({ title: 'Dynasty', artists: ['MIIA'] });
-    expect(parseVideo('Limp Bizkit "Behind Blue Eyes"', 'limpbizkit')).toEqual({ title: 'Behind Blue Eyes', artists: ['Limp Bizkit'] });
-    expect(parseVideo('Neil Diamond "Sweet Caroline" on The Ed Sullivan Show', 'The Ed Sullivan Show')).toEqual({ title: 'Sweet Caroline', artists: ['Neil Diamond'] });
-    expect(parseVideo('Alok, SOMETHING ELSE– I Wonder If You Know (Official Lyric Video)', 'Alok')).toEqual({ title: 'I Wonder If You Know', artists: ['Alok', 'SOMETHING ELSE'] });
-    expect(parseVideo('MIRA - Ring, Ring | Official Video', 'MIRA')).toEqual({ title: 'Ring, Ring', artists: ['MIRA'] });
-    expect(parseVideo('Smiley - Let Me Go | Official Visualiser', 'Smiley')).toEqual({ title: 'Let Me Go', artists: ['Smiley'] });
-    expect(parseVideo('Calvin Harris ft. Rihanna - This Is What You Came For (Lyrics) HD', 'BestYoutubeVideos')).toEqual({ title: 'This Is What You Came For', artists: ['Calvin Harris', 'Rihanna'] });
-    expect(parseVideo('Mr. Big - To Be With You 4K Video', 'MrBigVEVO')).toEqual({ title: 'To Be With You', artists: ['Mr. Big'] });
-    expect(parseVideo('Marshmello & Anne-Marie - FRIENDS (Music Video) *OFFICIAL FRIENDZONE ANTHEM*', 'Marshmello')).toEqual({ title: 'FRIENDS', artists: ['Marshmello', 'Anne-Marie'] });
-    expect(parseVideo('Lynyrd Skynyrd - Simple Man - Live At The Florida Theatre / 2015', 'LynyrdSkynyrdVEVO')).toEqual({ title: 'Simple Man', artists: ['Lynyrd Skynyrd'] });
-    expect(parseVideo('Rednex - Cotton Eye Joe (Official Music Video) [HD] - RednexMusic com', 'Rednex Videos')).toEqual({ title: 'Cotton Eye Joe', artists: ['Rednex'] });
-    expect(parseVideo('BLACK SABBATH - "Paranoid" (Official Video)', 'Black Sabbath')).toEqual({ title: 'Paranoid', artists: ['BLACK SABBATH'] });
-    expect(parseVideo('Alan Walker - Lily ft. K-391 & Emelie Hollow (Official Lyric Video)', 'K-391')).toEqual({ title: 'Lily ft. K-391 & Emelie Hollow', artists: ['Alan Walker'] });
+    expect(parseVideo('Numb (Official Music Video) [4K UPGRADE] – Linkin Park', 'Linkin Park')).toMatchObject({ title: 'Numb', artists: ['Linkin Park'] });
+    expect(parseVideo('In The End [Mellen Gi Remix] feat. Fleurie - Tommee Profitt', 'Tommee Profitt')).toMatchObject({ title: 'In The End [Mellen Gi Remix] feat. Fleurie', artists: ['Tommee Profitt'] });
+    expect(parseVideo('Scatman (ski-ba-bop-ba-dop-bop) Official Video HD - Scatman John', 'Scatman John Official YouTube Channel')).toMatchObject({ title: 'Scatman (ski-ba-bop-ba-dop-bop)', artists: ['Scatman John'] });
+    expect(parseVideo("8 Letters - Why Don't We [Official Music Video]", "Why Don't We")).toMatchObject({ title: '8 Letters', artists: ["Why Don't We"] });
+    expect(parseVideo('The Beatles - The Beatles - Hey Jude (Official Music Video) [Remastered 2015]', 'TheBeatlesVEVO')).toMatchObject({ title: 'Hey Jude', artists: ['The Beatles'] });
+    expect(parseVideo('Metallica: Enter Sandman (Official Music Video)', 'Metallica')).toMatchObject({ title: 'Enter Sandman', artists: ['Metallica'] });
+    expect(parseVideo('Panic! At The Disco: I Write Sins Not Tragedies [OFFICIAL VIDEO]', 'Fueled By Ramen')).toMatchObject({ title: 'I Write Sins Not Tragedies', artists: ['Panic! At The Disco'] });
+    expect(parseVideo('Passenger | Let Her Go (Official Video)', 'Passenger')).toMatchObject({ title: 'Let Her Go', artists: ['Passenger'] });
+    expect(parseVideo('Dynasty (Official Music Video) | MIIA', 'MIIA')).toMatchObject({ title: 'Dynasty', artists: ['MIIA'] });
+    expect(parseVideo('Limp Bizkit "Behind Blue Eyes"', 'limpbizkit')).toMatchObject({ title: 'Behind Blue Eyes', artists: ['Limp Bizkit'] });
+    expect(parseVideo('Neil Diamond "Sweet Caroline" on The Ed Sullivan Show', 'The Ed Sullivan Show')).toMatchObject({ title: 'Sweet Caroline', artists: ['Neil Diamond'] });
+    expect(parseVideo('Alok, SOMETHING ELSE– I Wonder If You Know (Official Lyric Video)', 'Alok')).toMatchObject({ title: 'I Wonder If You Know', artists: ['Alok', 'SOMETHING ELSE'] });
+    expect(parseVideo('MIRA - Ring, Ring | Official Video', 'MIRA')).toMatchObject({ title: 'Ring, Ring', artists: ['MIRA'] });
+    expect(parseVideo('Smiley - Let Me Go | Official Visualiser', 'Smiley')).toMatchObject({ title: 'Let Me Go', artists: ['Smiley'] });
+    expect(parseVideo('Calvin Harris ft. Rihanna - This Is What You Came For (Lyrics) HD', 'BestYoutubeVideos')).toMatchObject({ title: 'This Is What You Came For', artists: ['Calvin Harris', 'Rihanna'] });
+    expect(parseVideo('Mr. Big - To Be With You 4K Video', 'MrBigVEVO')).toMatchObject({ title: 'To Be With You', artists: ['Mr. Big'] });
+    expect(parseVideo('Marshmello & Anne-Marie - FRIENDS (Music Video) *OFFICIAL FRIENDZONE ANTHEM*', 'Marshmello')).toMatchObject({ title: 'FRIENDS', artists: ['Marshmello', 'Anne-Marie'] });
+    expect(parseVideo('Lynyrd Skynyrd - Simple Man - Live At The Florida Theatre / 2015', 'LynyrdSkynyrdVEVO')).toMatchObject({ title: 'Simple Man', artists: ['Lynyrd Skynyrd'] });
+    expect(parseVideo('Rednex - Cotton Eye Joe (Official Music Video) [HD] - RednexMusic com', 'Rednex Videos')).toMatchObject({ title: 'Cotton Eye Joe', artists: ['Rednex'] });
+    expect(parseVideo('BLACK SABBATH - "Paranoid" (Official Video)', 'Black Sabbath')).toMatchObject({ title: 'Paranoid', artists: ['BLACK SABBATH'] });
+    expect(parseVideo('Alan Walker - Lily ft. K-391 & Emelie Hollow (Official Lyric Video)', 'K-391')).toMatchObject({ title: 'Lily ft. K-391 & Emelie Hollow', artists: ['Alan Walker'] });
+  });
+
+  it("uses artists seen in 3+ tracks to fix uploader titles", () => {
+    const mk = (title: string, artists: string[], meta?: { fromChannel?: boolean; rawArtist?: string }) => {
+      const x = { id: title, uri: title, title, artists, durationMs: 200_000 };
+      if (meta) trackMeta.set(x, meta);
+      return x;
+    };
+    const tracks = [mk("One", ["U2"]), mk("Beautiful Day", ["U2"]), mk("Pride", ["U2"]), mk("Heart", ["Heart"]), mk("Barracuda", ["Heart"]), mk("Alone", ["Heart"]),
+      mk("U2 Gloria", ["SolanoEastWood"], { fromChannel: true }),
+      mk("U2", ["Sunday Bloody Sunday"], { rawArtist: "Sunday Bloody Sunday" }),
+      mk("Wave of sorrow U2", ["rattleU2"], { fromChannel: true }),
+      mk("Burning Heart", ["Survivor"], { rawArtist: "Survivor" }), // artist from a real "Artist - Title": left alone
+      mk("Heart", ["Somebody"], { rawArtist: "Somebody" })]; // a song called like a known artist, but the parsed artist is not: swapped (accepted trade-off)
+    fixUploaderTitles(tracks);
+    expect(tracks.slice(6, 10).map((x) => [x.artists[0], x.title])).toEqual([["U2", "Gloria"], ["U2", "Sunday Bloody Sunday"], ["U2", "Wave of sorrow"], ["Survivor", "Burning Heart"]]);
   });
 });
