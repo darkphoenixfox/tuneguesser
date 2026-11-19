@@ -44,6 +44,8 @@ function Seg<T extends string | number | boolean>({ value, options, onChange }: 
 }
 
 const LAST_PLAYLISTS = "tg_playlists";
+/** YouTube mode starts with this playlist until the host changes the list */
+const DEFAULT_YT_PLAYLIST = "https://music.youtube.com/playlist?list=PLLLGHxXtD0Z4";
 const LAST_CONFIG = "tg_config";
 const readJson = <T,>(k: string, d: T): T => { try { return JSON.parse(localStorage.getItem(k) ?? "") as T; } catch { return d; } };
 
@@ -64,6 +66,14 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     setYtLists((cur) => (cur.some((x) => x.id === j.id) ? cur : [...cur, j]));
     setYtInput("");
   };
+  // first time on YouTube: start with the default playlist (removing it is remembered)
+  useEffect(() => {
+    if (!useYt) return;
+    let seen = false;
+    try { seen = localStorage.getItem("tg_ytinit") !== null; } catch { /* storage blocked */ }
+    if (seen) return;
+    void fetch(`/api/youtube/playlist?url=${encodeURIComponent(DEFAULT_YT_PLAYLIST)}`).then((r) => r.ok ? r.json() : null).then((j) => { if (j) { setYtLists((cur) => (cur.length ? cur : [j])); try { localStorage.setItem("tg_ytinit", "1"); } catch { /* storage blocked */ } } }).catch(() => {});
+  }, [useYt]);
   useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_source", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
