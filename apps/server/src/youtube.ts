@@ -80,7 +80,7 @@ export function parseVideo(videoTitle: string, channel: string): { title: string
 /** Tracks whose artist/title order was only guessed (unspaced hyphen: "somebody to love-jefferson airplane"). */
 export const loose = new WeakSet<Track>();
 /** How a track was parsed: `fromChannel` = no "Artist - Title" in the video title (the uploader is the artist); `rawArtist` = the unsplit artist text. */
-export const trackMeta = new WeakMap<Track, { fromChannel?: boolean; rawArtist?: string }>();
+export const trackMeta = new WeakMap<Track, { fromChannel?: boolean; rawArtist?: string; official?: boolean }>();
 
 /**
  * The order of a "x-y" title is ambiguous. Artists seen in confident titles (same playlists) settle it:
@@ -127,6 +127,35 @@ export function fixUploaderTitles(tracks: Track[]): void {
   }
 }
 
+/** Live recordings (concerts, fan videos, unplugged sessions): the sound and length do not match the studio song. */
+export function isLiveRecording(title: string): boolean {
+  if (/unplugged/i.test(title)) return false; // unplugged versions are kept, even when they are filmed live
+  return /\(\s*live\b|\[\s*live\b|[-–—|]\s*live(?:\s*$|\s*[(\[\-–—|,/@]|\s+(?:at|from|in|on|version|performance|session|concert|recording|\d))|\blive\s+(at|from|in|on|@|version|performance|session|concert|tour|recording|aid|8|20\d\d|19\d\d)\b|\blive$|in concert|full concert|\bconcert\b|fan[- ]?cam|front row|\bw\/\s*fan|\bfestival\b|world tour|\btour\b|\ben vivo\b|\ben directo\b|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/i.test(title);
+}
+
+/**
+ * Why a track is not trusted (undefined = fine). Doubtful tracks are not played at all, like a song voted down:
+ * the artist is only the uploader's channel, the order of an "x-y" title is a guess, or leftovers of the video title remain.
+ */
+export function doubt(t: Track, artistCount: (name: string) => number): string | undefined {
+  const m = trackMeta.get(t);
+  const artist = t.artists[0] ?? "";
+  if (m?.fromChannel && !m.official && artistCount(artist) < 3) return "artist is only the uploader's channel";
+  if (loose.has(t) && artistCount(artist) < 3 && artistCount(t.title) < 3) return "artist/title order of an unspaced hyphen is a guess";
+  const outsideBrackets = t.title.replace(/\s*[(\[][^)\]]*[)\]]/g, "");
+  if (/\b(official|lyrics?|visuali[sz]er)\b|\b(hd|4k)\b|["“”]/i.test(outsideBrackets)) return "video-title leftovers in the title";
+  if (t.title.length > 80 || t.artists.join(", ").length > 50) return "implausibly long title or artist";
+  return undefined;
+}
+
+export function dropDoubtful(tracks: Track[]): Track[] {
+  const key = (x: string) => x.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const count = new Map<string, number>();
+  for (const t of tracks) for (const a of t.artists) count.set(key(a), (count.get(key(a)) ?? 0) + 1);
+  const n = (name: string) => count.get(key(name)) ?? 0;
+  return tracks.filter((t) => !doubt(t, n));
+}
+
 /** Hand-corrected songs (video id -> title/artists) for uploads whose title cannot be parsed reliably. */
 const OVERRIDES: Record<string, { title: string; artists: string[] }> = {
   JUbMWtUyIIE: { title: "Somebody to Love", artists: ["Jefferson Airplane"] }, // uploaded as "somebody to love-jefferson airplane"
@@ -164,6 +193,7 @@ export class YouTubeApi {
       const j = await this.get("videos", { part: "snippet,contentDetails,status", id: ids.slice(i, i + 50).join(",") });
       for (const v of j.items ?? []) {
         if (v.status?.embeddable === false || v.snippet?.liveBroadcastContent !== "none") continue;
+        if (isLiveRecording(v.snippet.title)) continue; // concert footage and fan recordings make poor rounds
         const meta = OVERRIDES[v.id] ?? parseVideo(v.snippet.title, v.snippet.channelTitle ?? "");
         const durationMs = parseDuration(v.contentDetails?.duration ?? "");
         if (!meta || durationMs < 45_000 || durationMs > 15 * 60_000) continue; // clips and mixes make poor rounds
@@ -173,7 +203,7 @@ export class YouTubeApi {
           year: v.snippet.publishedAt?.slice(0, 4),
         };
         if ("loose" in meta && meta.loose) loose.add(track);
-        if ("fromChannel" in meta || "rawArtist" in meta) trackMeta.set(track, { fromChannel: (meta as { fromChannel?: boolean }).fromChannel, rawArtist: (meta as { rawArtist?: string }).rawArtist });
+        if ("fromChannel" in meta || "rawArtist" in meta) trackMeta.set(track, { fromChannel: (meta as { fromChannel?: boolean }).fromChannel, rawArtist: (meta as { rawArtist?: string }).rawArtist, official: /VEVO$|Official|- Topic$/i.test(v.snippet.channelTitle ?? "") });
         out.push(track);
       }
     }
@@ -199,7 +229,7 @@ export class YouTubeProvider implements MusicProvider {
     const seen = new Set<string>();
     const out: Track[] = [];
     for (const id of this.playlistIds) for (const t of await this.api.tracks(id)) if (!seen.has(t.id)) { seen.add(t.id); out.push(t); }
-    return fixLoose(out);
+    return dropDoubtful(fixLoose(out));
   }
   async play(track: Track, startMs: number) { this.now = { videoId: track.uri, pos: startMs, at: Date.now(), playing: true }; this.emit({ op: "play", videoId: track.uri, startMs }); }
   async pause() { if (this.now?.playing) this.now = { ...this.now, pos: this.now.pos + (Date.now() - this.now.at), playing: false }; this.emit({ op: "pause" }); }

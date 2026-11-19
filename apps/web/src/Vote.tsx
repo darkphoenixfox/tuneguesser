@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ClientMessage } from "@tuneguesser/shared";
 import { t } from "./i18n";
 
-/** Anonymous id of this browser, so one browser counts once per song. */
+/** Anonymous id of this browser (kept so the vote is recorded once per song). */
 function voterId(): string {
   try {
     let id = localStorage.getItem("tg_voter");
@@ -16,19 +16,15 @@ function voterId(): string {
   }
 }
 
-/** Thumbs up/down for the song of this round (host / solo screens only). A thumbs down skips the song at once without counting a round; more than 3 thumbs down (from different hosts) and the song is never played again. */
-export function VoteButtons({ round, send }: { round: number; send: (m: ClientMessage) => unknown }) {
-  const [vote, setVote] = useState<{ round: number; v: 1 | -1 } | null>(null);
-  const mine = vote && vote.round === round ? vote.v : 0;
-  const cast = (v: 1 | -1) => {
-    const next = mine === v ? 0 : v; // tapping again takes the vote back
-    setVote(next ? { round, v: next } : null);
-    send({ t: "vote", v: next, voter: voterId() });
-  };
+/**
+ * "This song has issues" (host / solo screens only): skips the song at once without counting a round
+ * and blacklists it for every later game. One vote is enough.
+ */
+export function VoteButtons({ send }: { round: number; send: (m: ClientMessage) => unknown }) {
+  const [sent, setSent] = useState(false);
   return (
-    <div className="vote" role="group" aria-label={t("Rate this song")}>
-      <button type="button" className={mine === 1 ? "on" : ""} aria-pressed={mine === 1} onClick={() => cast(1)} title={t("Good pick")}>👍</button>
-      <button type="button" className={mine === -1 ? "on down" : ""} aria-pressed={mine === -1} onClick={() => cast(-1)} title={t("Bad match: skip this song (no round counted); more than 3 thumbs down remove it for good")}>👎</button>
+    <div className="vote">
+      <button type="button" className={sent ? "on down" : ""} disabled={sent} onClick={() => { setSent(true); send({ t: "vote", v: -1, voter: voterId() }); setTimeout(() => setSent(false), 2500); }} /* the next song starts at once: re-arm for it */ title={t("This song has issues.")} aria-label={t("This song has issues.")}>👎</button>
     </div>
   );
 }

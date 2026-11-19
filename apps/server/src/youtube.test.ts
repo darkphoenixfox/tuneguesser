@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fixUploaderTitles, trackMeta, parseDuration, parsePlaylistId, parseVideo, YouTubeApi, YouTubeProvider } from "./youtube";
+import { doubt, isLiveRecording, fixUploaderTitles, trackMeta, parseDuration, parsePlaylistId, parseVideo, YouTubeApi, YouTubeProvider } from "./youtube";
 
 describe("youtube", () => {
   it("finds the playlist id in links", () => {
@@ -105,5 +105,24 @@ describe("listeners joining mid-song", () => {
       mk("Heart", ["Somebody"], { rawArtist: "Somebody" })]; // a song called like a known artist, but the parsed artist is not: swapped (accepted trade-off)
     fixUploaderTitles(tracks);
     expect(tracks.slice(6, 10).map((x) => [x.artists[0], x.title])).toEqual([["U2", "Gloria"], ["U2", "Sunday Bloody Sunday"], ["U2", "Wave of sorrow"], ["Survivor", "Burning Heart"]]);
+  });
+
+  it("recognises live recordings but not songs with 'live' in the name", () => {
+    for (const live of ["Paramore - Misery Business w/fan (Live) - Front Row - Wellington, NZ 7/10/10 HD", "U2 - Miracle Drug (Live)", "Aerosmith - Dream On (Live At Capitol Center, Largo, MD / November 9, 1978)", "The Beatles - Twist And Shout (Performed Live On The Ed Sullivan Show 2/23/64)"]) expect(isLiveRecording(live), live).toBe(true);
+    for (const studio of ["Tears in Heaven (Acoustic) (Live at MTV Unplugged, Bray Film Studios)", "Nirvana - The Man Who Sold The World (MTV Unplugged)", "Oasis - Live Forever (Remastered)", "Wings - Live and Let Die", "Bon Jovi - Livin' on a Prayer", "Queen - Bohemian Rhapsody (Official Video Remastered)", "Alive - Pearl Jam"]) expect(isLiveRecording(studio), studio).toBe(false);
+  });
+
+  it("does not trust tracks whose artist is only the uploader or whose title keeps video leftovers", () => {
+    const mk = (title: string, artists: string[], meta?: { fromChannel?: boolean; official?: boolean }) => {
+      const x = { id: title, uri: title, title, artists, durationMs: 200_000 };
+      if (meta) trackMeta.set(x, meta);
+      return x;
+    };
+    const none = () => 0;
+    expect(doubt(mk("Gloria", ["SolanoEastWood"], { fromChannel: true }), none)).toBeTruthy();
+    expect(doubt(mk("Hold Me", ["U2"], { fromChannel: true, official: true }), none)).toBeUndefined();
+    expect(doubt(mk("Start Me Up - Official Promo", ["The Rolling Stones"]), none)).toBeTruthy();
+    expect(doubt(mk("Kiss Me", ["Sixpence None The Richer"]), none)).toBeUndefined();
+    expect(doubt(mk("Video Killed the Radio Star", ["The Buggles"]), none)).toBeUndefined();
   });
 });

@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-/** Thumbs up/down on songs. A song with more than BLACKLIST_AFTER distinct thumbs-down voters is never played again. */
-export const BLACKLIST_AFTER = 3;
+/** Thumbs down on songs ("This song has issues"). A song with more than BLACKLIST_AFTER distinct thumbs-down voters is never played again: one is enough. */
+export const BLACKLIST_AFTER = 0;
 
 export interface VoteRecord { up: string[]; down: string[]; name?: string }
 
