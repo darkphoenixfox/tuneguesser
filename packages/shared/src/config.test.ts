@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIG, sanitizeConfig } from "./config";
+import { DEFAULT_CONFIG, commonSingleArtist, sanitizeConfig } from "./config";
 import { hintText, letterPositions, maskText, revealCount } from "./hints";
 import { multipliersFor, totalMultiplier } from "./scoring";
 
@@ -56,5 +56,15 @@ describe("multipliers", () => {
     expect(totalMultiplier(multipliersFor({ both: false, streak: 9 }))).toBe(2);
     expect(totalMultiplier(multipliersFor({ both: true, streak: 4 }))).toBe(3);
     expect(multipliersFor({ both: false, streak: 2 })[0]!.label).toBe("3 rounds in a row");
+  });
+});
+
+describe("commonSingleArtist", () => {
+  it("is set only when every playlist is single-artist and it is the same artist", () => {
+    expect(commonSingleArtist(["U2"])).toBe("U2");
+    expect(commonSingleArtist(["U2", "u2 "])).toBe("U2");
+    expect(commonSingleArtist(["U2", "Prince"])).toBeNull();
+    expect(commonSingleArtist(["U2", undefined])).toBeNull();
+    expect(commonSingleArtist([])).toBeNull();
   });
 });

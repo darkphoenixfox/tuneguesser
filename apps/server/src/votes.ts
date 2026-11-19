@@ -41,6 +41,12 @@ export class VoteStore {
     return { blacklisted: r.down.length > BLACKLIST_AFTER };
   }
 
+  /** Brings a song back (removes all its thumbs down). */
+  clear(trackId: string) {
+    const all = this.read();
+    if (all[trackId]) { delete all[trackId]; this.write(all); }
+  }
+
   blacklisted(): Set<string> {
     return new Set(Object.entries(this.read()).filter(([, r]) => (r.down?.length ?? 0) > BLACKLIST_AFTER).map(([id]) => id));
   }

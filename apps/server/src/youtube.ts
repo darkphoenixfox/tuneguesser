@@ -217,6 +217,8 @@ export class YouTubeProvider implements MusicProvider {
   emit: (c: PlayerCommand) => void = () => {};
   /** what is playing, so a device that starts listening mid-song can join in at the right place */
   private now: { videoId: string; pos: number; at: number; playing: boolean } | null = null;
+  /** set by the server: applies the playlist's corrections (fixed titles, "one artist only") to the songs of one playlist */
+  adjust?: (playlistId: string, tracks: Track[]) => Track[];
   constructor(private api: YouTubeApi, private playlistIds: string[]) {}
 
   /** The command that makes a new listener play the current song from where it is, or null when nothing is playing. */
@@ -228,8 +230,11 @@ export class YouTubeProvider implements MusicProvider {
   async loadTracks(): Promise<Track[]> {
     const seen = new Set<string>();
     const out: Track[] = [];
-    for (const id of this.playlistIds) for (const t of await this.api.tracks(id)) if (!seen.has(t.id)) { seen.add(t.id); out.push(t); }
-    return dropDoubtful(fixLoose(out));
+    for (const id of this.playlistIds) {
+      const list = dropDoubtful(fixLoose(await this.api.tracks(id))); // judged per playlist, the same as on the playlist page
+      for (const t of this.adjust ? this.adjust(id, list) : list) if (!seen.has(t.id)) { seen.add(t.id); out.push(t); }
+    }
+    return out;
   }
   async play(track: Track, startMs: number) { this.now = { videoId: track.uri, pos: startMs, at: Date.now(), playing: true }; this.emit({ op: "play", videoId: track.uri, startMs }); }
   async pause() { if (this.now?.playing) this.now = { ...this.now, pos: this.now.pos + (Date.now() - this.now.at), playing: false }; this.emit({ op: "pause" }); }

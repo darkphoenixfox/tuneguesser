@@ -21,6 +21,9 @@ With `YOUTUBE_API_KEY` set on the server, the host setup shows **Music from: Spo
 
 The interface is available in **English and Spanish** (⚙ Settings → Language).
 
+### Playlist pages (YouTube)
+Each YouTube playlist card has a ⚙ that opens `/playlist/<id>`: the song list as the game would use it, with a search box. Per song: ✎ fix the title/artist (or undo it) and 🚫 never play it / ↩ bring it back. The page also has **One artist only**: pick an artist and only that artist's songs are used. If every selected playlist is "one artist only" for the same artist, the **Guess** option is locked to the song title (the server enforces it too); two playlists of different single artists still allow guessing the artist. Corrections and bans apply to everyone and live in `DATA_DIR/edits.json` and `votes.json`. Spotify playlists have no page yet.
+
 ### Timer and high scores
 Playing to a **target score** shows a game clock (⏱ m:ss, not counting pauses) and the time of the winning answer is the result. When a game ends by itself, the results are saved and a **High scores** table is shown (top 10, on the host screen and the phones). Rounds games rank by points, target-score games by the fastest time. Each table is only for games with the **same** playlists, rounds/target, hints, timer, type/choice, song start, attempts, multipliers, guess type and play order. Saved in `DATA_DIR/highscores.json`. Quit games are not saved. The top of the options has a **Reset settings to defaults** button.
 

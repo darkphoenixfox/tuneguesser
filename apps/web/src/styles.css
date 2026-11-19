@@ -640,3 +640,21 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .highscores li small { color: var(--muted); text-align: right; }
 .highscores li.mine { border-color: var(--amber); background: linear-gradient(90deg, rgba(255,197,61,.25), var(--card)); }
 .reset-opts { align-self: flex-end; }
+
+/* playlist cog + playlist page */
+.pl-cog { position: absolute; top: 6px; left: 6px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 80%, transparent); color: var(--text); text-decoration: none; display: grid; place-items: center; line-height: 1; }
+.pl-cog:hover { border-color: var(--cyan); }
+.plpage { gap: 16px; }
+.plpage .card { width: min(760px, 100%); text-align: left; }
+.pl-filter { width: 100%; margin: 6px 0 10px; }
+.songs { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.songs li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: var(--field); }
+.songs li.off { opacity: .45; }
+.song-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.song-main b, .song-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.song-main small { color: var(--muted); }
+.song-main em { font-style: normal; color: var(--amber); }
+.song-thumb { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--card); border: 1px solid var(--line); color: var(--text); text-decoration: none; flex: none; }
+.song-edit { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.song-edit label { display: flex; flex-direction: column; gap: 2px; }
+.song-btns { display: flex; gap: 8px; flex-wrap: wrap; }

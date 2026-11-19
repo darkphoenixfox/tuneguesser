@@ -3,7 +3,7 @@ import { Marquee } from "./Marquee";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { DEFAULT_CONFIG, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
+import { DEFAULT_CONFIG, commonSingleArtist, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
 import { SettingsMenu } from "./Settings";
@@ -97,11 +97,21 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_music", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
   useEffect(() => { try { localStorage.setItem("tg_ytoff", JSON.stringify(ytOff)); } catch { /* storage blocked */ } }, [ytOff]);
   const ytPicked = ytLists.filter((l) => !ytOff.includes(l.id));
+  // playlists marked "one artist only" on their page: if every selected one is by the same artist, only the song can be guessed
+  const [onlyArtists, setOnlyArtists] = useState<Record<string, string | null>>({});
+  const pickedKey = ytPicked.map((l) => l.id).join(",");
+  useEffect(() => {
+    if (!useYt || !pickedKey) return;
+    fetch(`/api/playlist/settings?ids=${encodeURIComponent(pickedKey)}`).then((r) => r.json()).then((j: unknown) => { if (j && typeof j === "object") setOnlyArtists(j as Record<string, string | null>); }).catch(() => {});
+  }, [useYt, pickedKey]);
+  const oneArtist = useYt ? commonSingleArtist(ytPicked.map((l) => onlyArtists[l.id])) : null;
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
   const [deviceId, setDeviceId] = useState("");
   const [cfg, setCfg] = useState<GameConfig>(() => sanitizeConfig({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
+  useEffect(() => { if (oneArtist && cfg.guess !== "title") setCfg((c) => ({ ...c, guess: "title" })); }, [oneArtist, cfg.guess]);
+  useEffect(() => { try { localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ } }, [cfg]); // survives a visit to a playlist page
   const canStart = useYt ? ytPicked.length > 0 : picked.length > 0 && !!deviceId;
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? t("Spotify login failed, try again.") : "");
@@ -210,7 +220,8 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
               </div>
             )}
             <div className="opt"><span>{t("Guess")}</span>
-              <Seg value={cfg.guess} options={[["both", "Both"], ["title", "Song"], ["artist", "Artist"]]} onChange={(guess) => set({ guess })} />
+              <Seg value={cfg.guess} options={oneArtist ? [["title", "Song"]] : [["both", "Both"], ["title", "Song"], ["artist", "Artist"]]} onChange={(guess) => set({ guess })} />
+              {oneArtist && <small className="muted">{t("All selected playlists are by {artist}: only the song title is guessed.", { artist: oneArtist })}</small>}
               {cfg.guess !== "both" && <small className="muted">{cfg.guess === "title" ? t("Only the song title counts. Handy when the playlist is one artist.") : t("Only the artist counts. Handy for mixed playlists where you only care who it is.")}</small>}
             </div>
             <div className="opt"><span>{t("Answers")}</span>
@@ -275,6 +286,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
                     {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
                     <Marquee text={p.name} /><small>{t("{n} videos", { n: p.tracks })}</small>
                   </button>
+                  <a className="pl-cog" href={`/playlist/${encodeURIComponent(p.id)}`} aria-label={t("Songs and settings of this playlist")} title={t("Songs and settings of this playlist")}>⚙</a>
                   {!DEFAULT_YT_PLAYLISTS.includes(p.id) && <button className="pl-x" aria-label={t("Remove playlist")} title={t("Remove playlist")} onClick={() => { setYtLists((cur) => cur.filter((x) => x.id !== p.id)); setYtOff((cur) => cur.filter((x) => x !== p.id)); }}>✕</button>}
                 </div>
               ))}

@@ -3,14 +3,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
-import { sanitizeConfig, type ClientMessage, type ServerMessage } from "@tuneguesser/shared";
+import { commonSingleArtist, sanitizeConfig, type ClientMessage, type ServerMessage } from "@tuneguesser/shared";
 import type { MusicProvider } from "./music";
 import { Room } from "./room";
 import { TriviaCache } from "./trivia";
 import { VoteStore } from "./votes";
 import { HighScoreStore, categoryKey } from "./highscores";
+import { EditStore, hasArtist } from "./edits";
 import { CODE_CHARS, makeRoomCode } from "./code";
-import { YouTubeApi, YouTubeProvider, parsePlaylistId } from "./youtube";
+import { YouTubeApi, YouTubeProvider, dropDoubtful, fixLoose, parsePlaylistId } from "./youtube";
 import { SpotifyClient, SpotifyProvider, authorizeUrl, exchangeCode, newPkce, type Tokens } from "./spotify";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -36,6 +37,7 @@ const sessions = new Map<string, Session>();
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "sessions.json");
 const votes = new VoteStore(path.join(DATA_DIR, "votes.json"));
+const edits = new EditStore(path.join(DATA_DIR, "edits.json"));
 const highScores = new HighScoreStore(path.join(DATA_DIR, "highscores.json"));
 const makeClient = (t: Tokens) => new SpotifyClient(CLIENT_ID, t, saveSessions);
 function readSavedSessions(): Record<string, Tokens> {
@@ -188,6 +190,46 @@ const http = createServer(async (req, res) => {
       return p ? json(res, 200, p) : json(res, 404, { error: "Playlist not found (it must be public or unlisted)" });
     }
 
+    // playlist pages: check the songs, fix titles/artists, bring back or ban songs, "one artist only"
+    if (url.pathname === "/api/youtube/playlist/tracks") {
+      if (!youtube) return json(res, 400, { error: "YouTube is not set up on this server" });
+      const id = parsePlaylistId(url.searchParams.get("id") ?? "");
+      if (!id) return json(res, 400, { error: "That is not a YouTube playlist" });
+      const [info, raw] = await Promise.all([youtube.playlist(id).catch(() => null), youtube.tracks(id)]);
+      const fixed = dropDoubtful(fixLoose(raw));
+      const ed = edits.edits();
+      const bad = votes.blacklisted();
+      const tracks = fixed.map((t) => ({ id: t.id, title: ed[t.id]?.title ?? t.title, artists: ed[t.id]?.artists ?? t.artists, original: ed[t.id] ? { title: t.title, artists: t.artists } : undefined, blacklisted: bad.has(t.id) }));
+      const count = new Map<string, number>();
+      for (const t of tracks) for (const a of t.artists.slice(0, 1)) count.set(a, (count.get(a) ?? 0) + 1);
+      const artists = [...count].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([name, n]) => ({ name, n }));
+      return json(res, 200, { id, name: info?.name ?? id, artist: edits.playlist(id).artist ?? null, artists, tracks });
+    }
+    if (url.pathname === "/api/playlist/settings" && req.method === "GET") {
+      const out: Record<string, string | null> = {};
+      for (const id of (url.searchParams.get("ids") ?? "").split(",").slice(0, 40)) if (id) out[id] = edits.playlist(id).artist ?? null;
+      return json(res, 200, out);
+    }
+    if (url.pathname === "/api/playlist/settings" && req.method === "POST") {
+      const b = await readJson(req);
+      const id = typeof b.id === "string" ? parsePlaylistId(b.id) : null;
+      if (!id) return json(res, 400, { error: "bad playlist" });
+      edits.setArtist(id, typeof b.artist === "string" ? b.artist : null);
+      return json(res, 200, { ok: true });
+    }
+    if (url.pathname === "/api/track/edit" && req.method === "POST") {
+      const b = await readJson(req);
+      if (typeof b.id !== "string") return json(res, 400, { error: "bad song" });
+      edits.editTrack(b.id, b.reset ? null : { title: b.title, artists: Array.isArray(b.artists) ? b.artists : [] });
+      return json(res, 200, { ok: true });
+    }
+    if (url.pathname === "/api/track/ban" && req.method === "POST") {
+      const b = await readJson(req);
+      if (typeof b.id !== "string" || !b.id) return json(res, 400, { error: "bad song" });
+      if (b.banned) votes.vote(b.id, "playlist-page", -1, typeof b.name === "string" ? b.name : undefined); else votes.clear(b.id);
+      return json(res, 200, { ok: true });
+    }
+
     if (url.pathname === "/api/playlists") {
       if (!s.client) return json(res, 401, { error: "not logged in" });
       return json(res, 200, await s.client.playlists());
@@ -207,7 +249,14 @@ const http = createServer(async (req, res) => {
         const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : []).map((x: unknown) => parsePlaylistId(String(x))).filter((x: string | null): x is string => !!x).slice(0, 10);
         if (!ids.length) return json(res, 400, { error: "add at least one playlist" });
         plIds = ids;
-        music = new YouTubeProvider(youtube, ids);
+        const yt = new YouTubeProvider(youtube, ids);
+        // corrections from the playlist pages: fixed titles/artists, and playlists limited to one artist
+        yt.adjust = (pid, list) => {
+          const fixed = edits.apply(list);
+          const only = edits.playlist(pid).artist;
+          return only ? fixed.filter((t) => hasArtist(t, only)) : fixed;
+        };
+        music = yt;
       } else {
         if (!s.client) return json(res, 401, { error: "not logged in" });
         const ids = (Array.isArray(body.playlistIds) ? body.playlistIds : [body.playlistId]).filter((x: unknown): x is string => typeof x === "string" && /^[\w]+$/.test(x)).slice(0, 10);
@@ -220,6 +269,7 @@ const http = createServer(async (req, res) => {
       music.loadTracks = async () => { const bad = votes.blacklisted(); return (await loadAll()).filter((t) => !bad.has(t.id)); };
       const code = newCode();
       const config = sanitizeConfig(body.config);
+      if (body.source === "youtube" && commonSingleArtist(plIds.map((id) => edits.playlist(id).artist)) ) config.guess = "title"; // one artist only: guessing the artist would be pointless
       const room = new Room(code, music, config, { guessMs: 25_000, slowGuessMs: 60_000, revealMs: 5000 }, trivia);
       const tableKey = categoryKey(body.source === "youtube" ? "youtube" : "spotify", plIds, config);
       room.onFinish = (r) => highScores.add(tableKey, config.playTo.kind, r.players.map((p) => ({ ...p, timeMs: r.timeMs })));

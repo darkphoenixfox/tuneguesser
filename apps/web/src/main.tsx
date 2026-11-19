@@ -1,6 +1,7 @@
 import "./storage";
 import { createRoot } from "react-dom/client";
 import { Home } from "./Home";
+import { PlaylistPage } from "./PlaylistPage";
 import { applyTheme, getTheme } from "./theme";
 import { startPadNav } from "./input/nav";
 import { PadTextEntry } from "./input/PadTextEntry";
@@ -14,6 +15,8 @@ import "./styles.css";
 const langPath = /^\/(es|en)\/?$/.exec(location.pathname);
 if (langPath) { setLang(langPath[1] as "es" | "en"); history.replaceState(null, "", "/" + location.search); }
 
+const playlistPath = /^\/playlist\/([\w%-]+)\/?$/.exec(location.pathname);
+
 startPadNav();
 
 applyTheme(getTheme());
@@ -23,7 +26,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="bg" aria-hidden><i /><i /><i /></div>
-      <Home />
+      {playlistPath ? <PlaylistPage id={decodeURIComponent(playlistPath[1]!)} /> : <Home />}
       <PadTextEntry />
       <PadHintBar />
       <BackHandler />

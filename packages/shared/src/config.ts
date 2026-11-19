@@ -67,3 +67,13 @@ export function sanitizeConfig(raw: unknown): GameConfig {
     start: pick(r.start, ["beginning", "random"] as const, "random"),
   };
 }
+
+/**
+ * Playlists can be marked as "one artist only". When every selected playlist is, and it is the same artist, guessing the
+ * artist is pointless: returns that artist (otherwise null).
+ */
+export function commonSingleArtist(artists: Array<string | null | undefined>): string | null {
+  if (!artists.length || artists.some((a) => !a)) return null;
+  const first = String(artists[0]).trim().toLowerCase();
+  return artists.every((a) => String(a).trim().toLowerCase() === first) ? String(artists[0]) : null;
+}
