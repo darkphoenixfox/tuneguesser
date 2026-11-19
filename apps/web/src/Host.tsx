@@ -63,6 +63,8 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
   // music source: Spotify (account + a playing device) or YouTube (playlist links, plays on this screen)
   const [source, setSource] = useState<"spotify" | "youtube">(() => (readJson<string>("tg_music", "youtube") === "spotify" ? "spotify" : "youtube")); // YouTube is the default
   const [ytLists, setYtLists] = useState<Array<{ id: string; name: string; tracks: number; image?: string }>>(() => readJson("tg_ytlists", []));
+  /** playlists that stay in the list but are switched off for the next game */
+  const [ytOff, setYtOff] = useState<string[]>(() => readJson<string[]>("tg_ytoff", []));
   const [ytInput, setYtInput] = useState("");
   const useYt = source === "youtube" && !!me?.youtube;
   const addYt = async () => {
@@ -74,29 +76,25 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     setYtLists((cur) => (cur.some((x) => x.id === j.id) ? cur : [...cur, j]));
     setYtInput("");
   };
-  // YouTube mode starts with the default playlists. Each default is offered once per device, so removing one sticks and a new default still shows up.
+  // the default playlists are always there (they cannot be removed, only switched off); any that is missing is fetched again
   useEffect(() => {
     if (!useYt) return;
-    let offered: string[] = [];
-    try {
-      const raw = localStorage.getItem("tg_ytinit");
-      offered = raw === null ? [] : raw === "1" ? [DEFAULT_YT_PLAYLISTS[0]!] : JSON.parse(raw); // "1": written by the first version
-    } catch { /* storage blocked */ }
-    const todo = DEFAULT_YT_PLAYLISTS.filter((id) => !offered.includes(id));
+    const todo = DEFAULT_YT_PLAYLISTS.filter((id) => !ytLists.some((l) => l.id === id));
     if (!todo.length) return;
     void Promise.all(todo.map((id) => fetch(`/api/youtube/playlist?url=${encodeURIComponent(id)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null))).then((found) => {
       const ok = found.filter((j): j is { id: string; name: string; tracks: number; image?: string } => !!j);
-      if (ok.length) setYtLists((cur) => [...cur, ...ok.filter((j) => !cur.some((x) => x.id === j.id))]);
-      try { localStorage.setItem("tg_ytinit", JSON.stringify([...offered, ...ok.map((j) => j.id)])); } catch { /* storage blocked */ }
+      if (ok.length) setYtLists((cur) => [...ok.filter((j) => !cur.some((x) => x.id === j.id)), ...cur]);
     });
   }, [useYt]);
   useEffect(() => { try { localStorage.setItem("tg_ytlists", JSON.stringify(ytLists)); localStorage.setItem("tg_music", JSON.stringify(source)); } catch { /* storage blocked */ } }, [ytLists, source]);
+  useEffect(() => { try { localStorage.setItem("tg_ytoff", JSON.stringify(ytOff)); } catch { /* storage blocked */ } }, [ytOff]);
+  const ytPicked = ytLists.filter((l) => !ytOff.includes(l.id));
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [picked, setPicked] = useState<string[]>(() => readJson<string[]>(LAST_PLAYLISTS, []));
   const [deviceId, setDeviceId] = useState("");
   const [cfg, setCfg] = useState<GameConfig>(() => sanitizeConfig({ ...DEFAULT_CONFIG, ...readJson<Partial<GameConfig>>(LAST_CONFIG, {}) }));
-  const canStart = useYt ? ytLists.length > 0 : picked.length > 0 && !!deviceId;
+  const canStart = useYt ? ytPicked.length > 0 : picked.length > 0 && !!deviceId;
   const set = (patch: Partial<GameConfig>) => setCfg((c) => ({ ...c, ...patch }));
   const [err, setErr] = useState(new URLSearchParams(location.search).get("error") ? t("Spotify login failed, try again.") : "");
   const [busy, setBusy] = useState(false);
@@ -166,7 +164,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
     }
     const r = await fetch("/api/rooms", {
       method: "POST",
-      body: JSON.stringify({ demo, ...(useYt ? { source: "youtube", playlistIds: ytLists.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg }),
+      body: JSON.stringify({ demo, ...(useYt ? { source: "youtube", playlistIds: ytPicked.map((l) => l.id) } : { playlistIds: picked, deviceId: deviceId || undefined }), config: solo ? { ...cfg, order: "buzzer" } : cfg }),
     });
     const j = await r.json();
     setBusy(false);
@@ -252,7 +250,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
             <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create(false)}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
-            <h2>{t("YouTube playlists")} {ytLists.length > 0 && <small className="muted">({ytLists.length})</small>}</h2>
+            <h2>{t("YouTube playlists")} {ytLists.length > 0 && <small className="muted">({t("{n} selected", { n: ytPicked.length })})</small>}</h2>
             <p className="muted pl-note">{t("Paste the link of a public or unlisted playlist (YouTube or YouTube Music). The music plays on this screen, no account needed.")}</p>
             <form className="yt-add" onSubmit={(e) => { e.preventDefault(); void addYt(); }}>
               <input value={ytInput} onChange={(e) => setYtInput(e.target.value)} placeholder="https://www.youtube.com/playlist?list=…" inputMode="url" aria-label={t("YouTube playlist link")} />
@@ -260,10 +258,13 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
             </form>
             <div className="grid">
               {ytLists.map((p) => (
-                <button key={p.id} className="pl sel" onClick={() => setYtLists((cur) => cur.filter((x) => x.id !== p.id))} title={t("Remove")}>
-                  {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
-                  <b>{p.name}</b><small>{t("{n} videos · tap to remove", { n: p.tracks })}</small>
-                </button>
+                <div key={p.id} className="pl-wrap">
+                  <button className={"pl" + (ytOff.includes(p.id) ? "" : " sel")} aria-pressed={!ytOff.includes(p.id)} onClick={() => setYtOff((cur) => (cur.includes(p.id) ? cur.filter((x) => x !== p.id) : [...cur, p.id]))}>
+                    {p.image ? <img src={p.image} alt="" /> : <div className="ph" />}
+                    <b>{p.name}</b><small>{t("{n} videos", { n: p.tracks })}</small>
+                  </button>
+                  {!DEFAULT_YT_PLAYLISTS.includes(p.id) && <button className="pl-x" aria-label={t("Remove playlist")} title={t("Remove playlist")} onClick={() => { setYtLists((cur) => cur.filter((x) => x.id !== p.id)); setYtOff((cur) => cur.filter((x) => x !== p.id)); }}>✕</button>}
+                </div>
               ))}
             </div>
           </section>
