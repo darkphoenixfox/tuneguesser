@@ -108,7 +108,7 @@ function onMenuButton(b: PadButtonName) {
   else if (b === "right") focus(items[Math.min(items.length - 1, i + 1)]);
   else if (b === "a" && el) {
     el.click();
-    setTimeout(() => { const pn = document.querySelector<HTMLElement>(".settings"); if (pn) focus(candidates(pn)[0]); else exitMenu(); }, 120); // a panel opened: go into it; otherwise (mute, quit) back to the game
+    setTimeout(() => { const pn = document.querySelector<HTMLElement>(".settings"); if (pn) focus(candidates(pn)[0]); else if (!document.querySelector(".confirm")) exitMenu(); }, 120); // a panel opened: go into it; otherwise (mute, quit) back to the game
   }
 }
 

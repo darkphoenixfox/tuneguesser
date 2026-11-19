@@ -161,7 +161,7 @@ The Reveal hint shows only underscores for the first 10 s (or half the timer if 
 LB/L1 (in a game, or any screen without tabs) or Select/Share (menu screens) enters a "corner menu" mode: all pad buttons go only to the menu handler so the game does not react (A cannot buzz by accident); left/right pick device / quit / settings / mute, A presses, panels are navigated with the d-pad, B / LB / Select leaves. A "Menu" glyph hint sits under the buttons.
 
 ### DEC-045 · In-app confirmation dialogs · 2026-11-19 · Active
-Quit (host) and Exit (player) used the browser's `window.confirm`, which a gamepad cannot operate. They now use an in-app `Confirm` dialog: it starts on Cancel, left/right choose, A presses, B / Start / Esc cancel; while open it takes over the pad (menu mode) so the game and the corner-menu navigator ignore it. Mouse and touch work too.
+Quit (host) and Exit (player) used the browser's `window.confirm`, which a gamepad cannot operate. They now use an in-app `Confirm` dialog: A confirms (Quit), B / Start / Esc go back; while open it takes over the pad (menu mode) so the game and the corner-menu navigator ignore it. Mouse and touch work too.
 
 ---
 

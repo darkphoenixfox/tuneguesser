@@ -74,7 +74,7 @@ The last chosen playlists and options are remembered on the host's device. The *
 - **Pause** stops the music and the round clock for everybody (host or any player can press it; not while someone is answering). Buzzing is blocked until it continues.
 - When a gamepad is connected, the person answering by typing gets an **on-screen keyboard** with **auto-completion** (a row of suggested words, from the playlist first and then a dictionary of common English words; press up from the letters to reach it): d-pad moves, A presses the key, B cancels, X adds a space, R1/RB deletes (backspace), Y sends. Button glyphs (Xbox or PlayStation style, detected from the pad) are drawn on the buttons they trigger.
 - **Play on** (🔈 top right on the host screen): move the music to another Spotify device during a game; the song carries on there.
-- **Quit** (✕ on the host screen) stops the music and ends the game for everyone. Quit and Exit ask for confirmation in an in-game dialog that the gamepad can use (left/right choose, A presses, B cancels; it starts on Cancel).
+- **Quit** (✕ on the host screen) stops the music and ends the game for everyone. Quit and Exit ask for confirmation in an in-game dialog that the gamepad can use (A quits, B goes back to the game).
 
 ### Scoring
 | Part | Max points |
