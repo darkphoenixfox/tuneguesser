@@ -373,10 +373,10 @@ wss.on("connection", (ws) => {
           if (m.token !== e.hostToken) return send(ws, { t: "error", message: "Bad host token" });
           entry = e; role = "host"; hostSockets.add(ws); clearTimeout(e.abandonTimer); e.room.setHostConnected(true);
         } else if (m.t === "join") {
-          const id = e.room.addPlayer(String(m.name ?? ""), m.playerId);
+          const local = !!m.hostToken && m.hostToken === e.hostToken; // a player on the host's own screen
+          const id = e.room.addPlayer(String(m.name ?? ""), m.playerId, local);
           if (!id) return send(ws, { t: "error", message: "Room is full or already started" });
           entry = e; role = "player"; playerId = id;
-          if (m.hostToken && m.hostToken === e.hostToken) e.room.markHostPlayer(id); // the host plays too
           send(ws, { t: "joined", playerId: id });
         } else return;
         entry.sockets.set(ws, playerId);
@@ -435,6 +435,7 @@ wss.on("connection", (ws) => {
         if (m.t === "start") await room.start();
         else if (m.t === "settings") room.setSettings({ autoAdvance: typeof m.autoAdvance === "boolean" ? m.autoAdvance : undefined });
         else if (m.t === "skip") room.voteSkipHost();
+        else if (m.t === "leaveLocal" && typeof m.playerId === "string") room.leaveHostPlayer(m.playerId);
         else if (m.t === "pause") room.togglePause();
         else if (m.t === "device" && typeof m.deviceId === "string") await room.setDevice(m.deviceId.slice(0, 80));
         else if (m.t === "quit") { await room.stop(); rooms.delete(room.code); }

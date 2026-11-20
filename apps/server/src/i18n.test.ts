@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ES } from "../../web/src/es";
+import { IT } from "../../web/src/it";
 
 const WEB = path.resolve(__dirname, "../../web/src");
 const files = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(path.join(dir, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(dir, e.name)] : []));
@@ -17,13 +18,15 @@ function keys(): Set<string> {
   return out;
 }
 
-describe("Spanish translation", () => {
-  it("has an entry for every text in the UI", () => {
-    const missing = [...keys()].filter((k) => !(k in ES));
-    expect(missing).toEqual([]);
+for (const [name, dict] of [["Spanish", ES], ["Italian", IT]] as const) {
+  describe(`${name} translation`, () => {
+    it("has an entry for every text in the UI", () => {
+      const missing = [...keys()].filter((k) => !(k in dict));
+      expect(missing).toEqual([]);
+    });
+    it("keeps the {placeholders} of the English text", () => {
+      const ph = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join();
+      for (const [k, v] of Object.entries(dict)) expect(ph(v), k).toBe(ph(k));
+    });
   });
-  it("keeps the {placeholders} of the English text", () => {
-    const ph = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join();
-    for (const [k, v] of Object.entries(ES)) expect(ph(v), k).toBe(ph(k));
-  });
-});
+}

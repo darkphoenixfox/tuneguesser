@@ -56,10 +56,36 @@ describe("Room (buzzer game)", () => {
     expect(music.played[1]!.id).not.toBe(first);
   });
 
-  it("limits players to 4 and only joins in the lobby", () => {
+  it("limits players to 8, at most 4 of them on the host screen", () => {
     const { room } = make();
+    for (let i = 0; i < 4; i++) expect(room.addPlayer(`h${i}`, undefined, true)).toBeTruthy();
+    expect(room.addPlayer("h5", undefined, true)).toBeNull();
     for (let i = 0; i < 4; i++) expect(room.addPlayer(`p${i}`)).toBeTruthy();
-    expect(room.addPlayer("p5")).toBeNull();
+    expect(room.addPlayer("p9")).toBeNull();
+  });
+
+  it("the host's skip button votes for every player on the host screen", async () => {
+    const { room } = make(2);
+    const h1 = room.addPlayer("Ana", undefined, true)!;
+    room.addPlayer("Bea", undefined, true);
+    const c = room.addPlayer("Cy")!;
+    room.setHostConnected(true);
+    await room.start();
+    room.voteSkipHost();
+    expect(room.state().skip).toEqual({ votes: 2, voters: 3, host: true });
+    expect(room.state().players.find((p) => p.id === h1)!.skipVote).toBe(true);
+    room.voteSkip(c);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().phase).toBe("reveal");
+  });
+
+  it("the host can take a player on its screen out of the lobby, but not a remote player", () => {
+    const { room } = make();
+    const h = room.addPlayer("Ana", undefined, true)!;
+    const r = room.addPlayer("Cy")!;
+    room.leaveHostPlayer(r);
+    room.leaveHostPlayer(h);
+    expect(room.state().players.map((p) => p.id)).toEqual([r]);
   });
 
   it("first buzz wins, stops music and clock; others see who is guessing", async () => {
@@ -640,7 +666,7 @@ describe("Room (buzzer game)", () => {
     await room.start();
     expect(room.state().art).toMatchObject({ progress: 0 });
     await vi.advanceTimersByTimeAsync(20_000);
-    expect(room.state().art!.progress).toBeCloseTo(20 / 45); // sharp only 5 s after the 40 s timer
+    expect(room.state().art!.progress).toBeCloseTo((20 * 1.2) / 45); // 1.2x faster than the 40 s timer + 5 s grace
     await vi.advanceTimersByTimeAsync(19_000);
     expect(room.state().art!.progress).toBeLessThan(1); // not complete when time runs out
     room.togglePause();

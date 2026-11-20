@@ -112,6 +112,10 @@ export interface RoomState {
   youtube?: boolean;
 }
 
+/** Players in one room, and how many of them can play on the host's own screen. */
+export const MAX_PLAYERS = 8;
+export const MAX_LOCAL_PLAYERS = 4;
+
 export type ClientMessage =
   /** hostToken: set when the host joins as a player from the host screen (the host still counts as one voter) */
   | { t: "join"; code: string; name: string; playerId?: string; hostToken?: string }
@@ -124,6 +128,8 @@ export type ClientMessage =
   | { t: "choose"; optionId: string }
   /** a player exits to the main screen */
   | { t: "leave" }
+  /** host, in the lobby: a player on the host screen leaves */
+  | { t: "leaveLocal"; playerId: string }
   /** host: change a game setting */
   | { t: "settings"; autoAdvance?: boolean }
   /** player (YouTube mode): also play the music on this device */

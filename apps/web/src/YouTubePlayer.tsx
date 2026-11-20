@@ -28,6 +28,10 @@ function loadApi(): Promise<void> {
  * YouTube mode: the music plays here, in YouTube's embedded player on the host screen. The server sends the commands.
  * Returns `run`, to be called for every {t:"player"} message, and a small element to render somewhere in the page.
  */
+/** fade lengths: short on the way out, so a buzz still cuts the music almost at once */
+const FADE_IN_MS = 1500;
+const FADE_OUT_MS = 500;
+
 export function useYouTubePlayer(enabled: boolean, onError: (message: string, code?: number, videoId?: string) => void) {
   const player = useRef<any>(null);
   const queue = useRef<PlayerCommand[]>([]);
@@ -42,14 +46,33 @@ export function useYouTubePlayer(enabled: boolean, onError: (message: string, co
   const wanted = useRef<{ videoId: string; startMs: number } | null>(null);
   const nudges = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  /** volume fades: songs fade in once they really start playing, and fade out before a pause or stop */
+  const fade = useRef<ReturnType<typeof setInterval> | null>(null);
+  const vol = useRef(100);
+  const ramp = useCallback((p: any, to: number, ms: number, done?: () => void, waitPlaying = false) => {
+    if (fade.current) clearInterval(fade.current);
+    const step = 40;
+    const delta = (100 / ms) * step;
+    fade.current = setInterval(() => {
+      try {
+        if (waitPlaying && p.getPlayerState?.() !== 1) return; // the fade-in starts with the sound, not while buffering
+        vol.current = to > vol.current ? Math.min(to, vol.current + delta) : Math.max(to, vol.current - delta);
+        p.setVolume?.(Math.round(vol.current));
+      } catch { /* player not ready */ }
+      if (vol.current === to) { clearInterval(fade.current!); fade.current = null; done?.(); }
+    }, step);
+  }, []);
+
   const apply = useCallback((p: any, c: PlayerCommand) => {
     for (const n of nudges.current.splice(0)) clearTimeout(n);
-    if (c.op === "play") p.loadVideoById({ videoId: c.videoId, startSeconds: c.startMs / 1000 });
+    const fadeIn = () => { vol.current = 0; try { p.setVolume?.(0); } catch { /* not ready */ } ramp(p, 100, FADE_IN_MS, undefined, true); };
+    if (c.op === "play") { fadeIn(); p.loadVideoById({ videoId: c.videoId, startSeconds: c.startMs / 1000 }); }
     else if (c.op === "resume") {
+      fadeIn();
       const cur = p.getVideoData?.().video_id;
       if (cur === c.videoId) p.playVideo(); else p.loadVideoById({ videoId: c.videoId, startSeconds: c.positionMs / 1000 });
-    } else if (c.op === "pause") p.pauseVideo();
-    else p.stopVideo();
+    } else if (c.op === "pause") ramp(p, 0, FADE_OUT_MS, () => { try { p.pauseVideo(); } catch { /* gone */ } });
+    else ramp(p, 0, FADE_OUT_MS, () => { try { p.stopVideo(); } catch { /* gone */ } });
     wanted.current = c.op === "play" ? { videoId: c.videoId, startMs: c.startMs } : c.op === "resume" ? { videoId: c.videoId, startMs: c.positionMs } : null;
     const w = wanted.current;
     if (!w) return;
@@ -66,7 +89,7 @@ export function useYouTubePlayer(enabled: boolean, onError: (message: string, co
         } catch { /* player not ready */ }
       }, ms));
     }
-  }, []);
+  }, [ramp]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -133,6 +156,7 @@ export function useYouTubePlayer(enabled: boolean, onError: (message: string, co
     return () => {
       dead = true;
       cancelAnimationFrame(raf);
+      if (fade.current) { clearInterval(fade.current); fade.current = null; }
       document.removeEventListener("pointerdown", unblock);
       document.removeEventListener("keydown", unblock);
       try { player.current?.destroy?.(); } catch { /* already gone */ }

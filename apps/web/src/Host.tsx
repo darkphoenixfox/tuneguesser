@@ -3,18 +3,17 @@ import { Marquee } from "./Marquee";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { DEFAULT_CONFIG, commonSingleArtist, decodeSeed, encodeSeed, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
+import { DEFAULT_CONFIG, MAX_LOCAL_PLAYERS, MAX_PLAYERS, commonSingleArtist, decodeSeed, encodeSeed, sanitizeConfig, type ClientMessage, type GameConfig, type PlayerCommand, type RoomState } from "@tuneguesser/shared";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { ScoreLine, Scoreboard } from "./Scoreboard";
-import { SettingsMenu } from "./Settings";
+import { SettingRow, SettingsMenu } from "./Settings";
 import { useCountdown, useRoom, useScrollTop } from "./net";
 import { Play } from "./Player";
-import { setMuted, sfx } from "./sfx";
+import { sfx } from "./sfx";
 import { Glyph, PadHint } from "./input/Glyph";
 import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
 import { VoteButtons } from "./Vote";
-import { MicToggle } from "./input/Mic";
 import { Confirm } from "./input/Confirm";
 import { useYouTubePlayer } from "./YouTubePlayer";
 import { onPadButton, usePad } from "./input/pad";
@@ -24,6 +23,8 @@ import { banLocal, getGone, getLocal, getNames, setGone } from "./local";
 interface Playlist { id: string; name: string; tracks: number; image?: string }
 interface Device { id: string; name: string; type: string; active: boolean }
 interface Saved { code: string; token: string; youtube?: boolean }
+/** a player on the host screen; `key` tells them apart before the server has given them an id */
+interface LocalPlayer { key: string; name: string; playerId?: string }
 
 const load = (): Saved | null => {
   try { return JSON.parse(sessionStorage.getItem("tg_room") ?? "null"); } catch { return null; }
@@ -246,7 +247,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
 
   const create = async () => {
     setBusy(true); setErr("");
-    sfx.start(); // unlocks audio on this screen
+    sfx.unlock(); // silent: the start jingle plays once, when the round begins
     try { localStorage.setItem(LAST_PLAYLISTS, JSON.stringify(picked)); localStorage.setItem(LAST_CONFIG, JSON.stringify(cfg)); } catch { /* storage blocked */ }
     const name = playerName.trim() || t("Player");
     if (solo) {
@@ -353,6 +354,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
       {!me ? <p className="muted">{t("Loading…")}</p> : useYt ? (
         <>
           <div className="quick">
+            <span className={"mode-badge" + (solo ? " solo" : "")}>{solo ? "🎮 " + t("Solo Play") : "📺 " + t("Host a game")}</span>
             <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create()}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
@@ -402,6 +404,7 @@ function Setup({ onCreated, solo, onBack }: { onCreated: (s: Saved) => void; sol
       ) : (
         <>
           <div className="quick">
+            <span className={"mode-badge" + (solo ? " solo" : "")}>{solo ? "🎮 " + t("Solo Play") : "📺 " + t("Host a game")}</span>
             <button className="btn big" data-pad-first data-pad-quick disabled={!canStart || busy} title={t("Play with the last settings")} onClick={() => create()}>⚡ {t("Quickstart")}<PadHint button="y" /></button>
           </div>
           <section className="card">
@@ -436,24 +439,31 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
     setTimeout(() => setYtError(""), 7000);
   });
   ytRun.current = yt.run;
-  const [mute, setMute] = useState(false);
   const [askQuit, setAskQuit] = useState(false);
-  const [answerSlot, setAnswerSlot] = useState<HTMLElement | null>(null); // wide screens: the host's own ANSWER panel goes in the right column
+  // the ANSWER column holds one slot per player on this screen; the answer field goes in a long line under the hints
+  const [answerSlots, setAnswerSlots] = useState<Array<HTMLElement | null>>([]);
+  const answerSlotRefs = useMemo(() => Array.from({ length: MAX_LOCAL_PLAYERS }, (_, i) => (el: HTMLElement | null) => setAnswerSlots((cur) => (cur[i] === el ? cur : Object.assign([...cur], { [i]: el })))), []);
+  const [fieldSlot, setFieldSlot] = useState<HTMLElement | null>(null);
   const [barSlot, setBarSlot] = useState<HTMLElement | null>(null); // wide screens: the thin timer bar under the status bar
   const [slot, setSlot] = useState<HTMLElement | null>(null); // the left part of the status bar, filled by the round screen
   useScrollTop(state?.phase ?? "");
   const prev = useRef<RoomState["phase"]>();
   const joinUrl = `${location.origin}/?code=${saved.code}`;
-  // optional: the host device plays too
-  const [me, setMe] = useState<{ name: string; playerId?: string } | null>(() => {
-    try { return JSON.parse(sessionStorage.getItem("tg_hostplayer") ?? "null"); } catch { return null; }
+  // optional: up to 4 players play on the host device too
+  const [locals, setLocals] = useState<LocalPlayer[]>(() => {
+    try {
+      const v = JSON.parse(sessionStorage.getItem("tg_hostplayer") ?? "null");
+      const list: LocalPlayer[] = Array.isArray(v) ? v : v ? [v] : []; // older sessions (and solo setup) saved a single player
+      return list.map((l, i) => ({ ...l, key: l.key ?? `p${i}` }));
+    } catch { return []; }
   });
-  const saveMe = (m: { name: string; playerId?: string } | null) => {
-    setMe(m);
-    if (m) sessionStorage.setItem("tg_hostplayer", JSON.stringify(m)); else sessionStorage.removeItem("tg_hostplayer");
-  };
+  const saveLocals = (f: (cur: LocalPlayer[]) => LocalPlayer[]) => setLocals((cur) => {
+    const next = f(cur);
+    if (next.length) sessionStorage.setItem("tg_hostplayer", JSON.stringify(next)); else sessionStorage.removeItem("tg_hostplayer");
+    return next;
+  });
+  const localIds = locals.map((l) => l.playerId).filter((id): id is string => !!id);
 
-  useEffect(() => { setMuted(mute); }, [mute]);
   // solo: no lobby, the game starts as soon as this screen's player has joined
   useEffect(() => { if (solo && state?.phase === "lobby" && state.players.length > 0) send({ t: "start" }); }, [solo, state?.phase, state?.players.length]);
   useEffect(() => {
@@ -479,10 +489,10 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
     const prev = prevPlayers.current;
     const msgs: string[] = [];
     const ids = new Set(state.players.map((p) => p.id));
-    for (const [id, o] of prev) if (!ids.has(id) && id !== me?.playerId) msgs.push(t("{name} left the game", { name: o.name }));
+    for (const [id, o] of prev) if (!ids.has(id) && !localIds.includes(id)) msgs.push(t("{name} left the game", { name: o.name }));
     for (const p of state.players) {
       const o = prev.get(p.id);
-      if (!o || p.id === me?.playerId) continue;
+      if (!o || localIds.includes(p.id)) continue;
       if (o.connected && !p.connected) msgs.push(t("{name} left or lost connection", { name: p.name }));
       else if (!o.connected && p.connected) msgs.push(t("{name} is back", { name: p.name }));
     }
@@ -522,21 +532,25 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
       <header className="statusbar">
         <div className="sb-left" ref={setSlot} />
         <div className="sb-right">
-          <button className="mute" onClick={() => setMute(!mute)} aria-label={t("Toggle sound")}>{mute ? "🔇" : "🔊"}</button>
-          <MicToggle className="micbtn" />
-          {!saved.youtube && <DevicePicker onPick={(deviceId) => send({ t: "device", deviceId })} />}
-          <SettingsMenu />
+          {/* one ⚙ button for every option (sound, voice, keyboard, Spotify device, theme, language) */}
+          <SettingsMenu>{!saved.youtube && <DeviceSection onPick={(deviceId) => send({ t: "device", deviceId })} />}</SettingsMenu>
           <button className="quit" onClick={() => { if (state.phase === "lobby" || state.phase === "finished") quit(); else setAskQuit(true); }} aria-label={t("Quit game")} title={t("Quit game")}>✕</button>
         </div>
       </header>
       <div className="timebar" ref={setBarSlot} />
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       {state.phase === "lobby" && solo && <main className="center"><p className="muted">{t("Starting…")}</p></main>}
-      {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
-      {state.phase === "playing" && <Playing send={send} slot={slot} barSlot={barSlot} setAnswerSlot={setAnswerSlot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
-      {state.phase === "reveal" && <Reveal state={state} send={send} onNext={() => send({ t: "next" })} />}
+      {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} locals={locals} onPlay={(name) => saveLocals((cur) => cur.length >= MAX_LOCAL_PLAYERS ? cur : [...cur, { key: Math.random().toString(36).slice(2, 8), name }])}
+        onLeaveLocal={(key) => { const l = locals.find((x) => x.key === key); if (l?.playerId) send({ t: "leaveLocal", playerId: l.playerId }); saveLocals((cur) => cur.filter((x) => x.key !== key)); }} onStart={() => send({ t: "start" })} onLeave={quit} />}
+      {state.phase === "playing" && <Playing send={send} slot={slot} barSlot={barSlot} answerSlotRefs={answerSlotRefs.slice(0, Math.max(1, locals.length))} setFieldSlot={setFieldSlot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
+      {state.phase === "reveal" && <Reveal state={state} send={send} slot={slot} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
-      {me && <Play embedded slot={answerSlot} hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
+      {locals.map((l, i) => (
+        <Play key={l.key} embedded keys={i === 0} named={!solo} hotkey={locals.length > 1 ? i + 1 : undefined} slot={answerSlots[i] ?? null} fieldSlot={fieldSlot} localIds={localIds} hostToken={saved.token}
+          saved={{ code: saved.code, name: l.name, playerId: l.playerId }}
+          onLeave={() => saveLocals((cur) => cur.filter((x) => x.key !== l.key))}
+          onId={(playerId) => saveLocals((cur) => cur.map((x) => (x.key === l.key ? { ...x, playerId } : x)))} />
+      ))}
       {notice && <p className="notice toast" role="status">{notice}</p>}
       {(error || ytError) && <p className="error toast">{error || ytError}</p>}
       {yt.element}
@@ -551,65 +565,82 @@ function PadMenuHint({ inGame }: { inGame: boolean }) {
   return connected ? <div className="padmenu-hint"><Glyph button={inGame ? "lb" : "select"} /></div> : null;
 }
 
-/** Top-right button: choose which Spotify device plays the music, also during a game. */
-function DevicePicker({ onPick }: { onPick: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
+/** Settings panel section: choose which Spotify device plays the music, also during a game. Loads the list when the panel opens. */
+function DeviceSection({ onPick }: { onPick: (id: string) => void }) {
   const [devices, setDevices] = useState<Device[] | null>(null);
-  const load = () => fetch("/api/devices").then((r) => r.json()).then((d) => setDevices(Array.isArray(d) ? d : [])).catch(() => setDevices([]));
+  const load = () => { setDevices(null); fetch("/api/devices").then((r) => r.json()).then((d) => setDevices(Array.isArray(d) ? d : [])).catch(() => setDevices([])); };
+  useEffect(load, []);
+  const icon = <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg>;
   return (
-    <>
-      <button className="devbtn" onClick={() => { const o = !open; setOpen(o); if (o) { setDevices(null); void load(); } }} aria-label={t("Play on device")} aria-expanded={open} title={t("Play on device")}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#1DB954" /><g fill="none" stroke="#000" strokeLinecap="round"><path d="M5.6 9.2c4.2-1.2 8.8-.8 12.8 1.4" strokeWidth="2.2" /><path d="M6.4 12.6c3.5-1 7.3-.7 10.6 1.1" strokeWidth="1.8" /><path d="M7.2 15.6c2.8-.8 5.7-.5 8.4.9" strokeWidth="1.5" /></g></svg></button>
-      {open && (
-        <div className="settings card devices" role="dialog" aria-label={t("Play on")}>
-          <h2>{t("Play on")}</h2>
-          {devices === null ? <p className="muted">{t("Looking for devices…")}</p> : devices.length === 0 ? <p className="muted">{t("No device found. Open Spotify somewhere.")}</p> : (
-            <ul>
-              {devices.map((d) => (
-                <li key={d.id}><button className={"btn ghost" + (d.active ? " voted" : "")} onClick={() => { onPick(d.id); setTimeout(load, 1500); }}>{d.active ? "● " : ""}{d.name} <small className="muted">({d.type})</small></button></li>
-              ))}
-            </ul>
-          )}
-          <button className="btn ghost" onClick={load}>{t("Refresh")}</button>
-          <button className="btn ghost" onClick={() => setOpen(false)}>{t("Close")}</button>
-        </div>
+    <div className="devices">
+      <SettingRow icon={icon} label={t("Play on")}>
+        <button className="seg-btn" onClick={load} aria-label={t("Refresh")} title={t("Refresh")}>🔄</button>
+      </SettingRow>
+      {devices === null ? <p className="muted">{t("Looking for devices…")}</p> : devices.length === 0 ? <p className="muted">{t("No device found. Open Spotify somewhere.")}</p> : (
+        <ul>
+          {devices.map((d) => (
+            <li key={d.id}><button className={"btn ghost" + (d.active ? " voted" : "")} onClick={() => { onPick(d.id); setTimeout(load, 1500); }}>{deviceIcon(d.type)} {d.name} <small className="muted">({d.type})</small></button></li>
+          ))}
+        </ul>
       )}
-    </>
+    </div>
   );
 }
+const deviceIcon = (type: string) => ({ computer: "💻", smartphone: "📱", tablet: "📱", speaker: "🔈", tv: "📺", castvideo: "📺", castaudio: "🔈", automobile: "🚗", gameconsole: "🎮" } as Record<string, string>)[type.toLowerCase()] ?? "🎵";
 
-function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomState; joinUrl: string; me: { name: string } | null; onPlay: (name: string) => void; onStart: () => void; onLeave: () => void }) {
+function Lobby({ state, joinUrl, locals, onPlay, onLeaveLocal, onStart, onLeave }: { state: RoomState; joinUrl: string; locals: LocalPlayer[]; onPlay: (name: string) => void; onLeaveLocal: (key: string) => void; onStart: () => void; onLeave: () => void }) {
   const [qr, setQr] = useState("");
   const [name, setName] = useState("");
+  const full = locals.length >= MAX_LOCAL_PLAYERS || state.players.length >= MAX_PLAYERS;
+  // Join with an empty name: "Player 1", "Player 2"… (the first number nobody in the room uses yet)
+  const defaultName = () => {
+    const taken = new Set(state.players.map((p) => p.name.toLowerCase()));
+    for (let n = 1; ; n++) { const nm = t("Player {n}", { n }); if (!taken.has(nm.toLowerCase())) return nm; }
+  };
   useEffect(() => { QRCode.toDataURL(joinUrl, { margin: 1, width: 280, color: { dark: "#0b0b1a", light: "#ffffff" } }).then(setQr); }, [joinUrl]);
   return (
     <div className="lobby">
       <div className="card center">
         <Logo small />
         <p className="muted">{t("Join at")} <b>{location.host}</b> {t("with code")}</p>
-        <div className="code">{state.code.split("").map((c, i) => <span key={i} style={{ animationDelay: `${i * 80}ms` }}>{c}</span>)}</div>
-        {qr && <img className="qr" src={qr} alt={t("Scan to join")} />}
+        {/* code and QR side by side (wide screens), then the game rules: the two cards end up about the same height */}
+        <div className="lobby-join">
+          <div className="code">{state.code.split("").map((c, i) => <span key={i} style={{ animationDelay: `${i * 80}ms` }}>{c}</span>)}</div>
+          {qr ? <img className="qr" src={qr} alt={t("Scan to join")} /> : <div className="qr" aria-hidden="true" />}
+        </div>
+        <div className="lobby-rules-wide"><GameSummary state={state} /></div>
       </div>
       <div className="card">
-        <h2>{t("Players")} {state.players.length}/4</h2>
-        <ul className="players">
-          {state.players.map((p, i) => <li key={p.id} className={"pop c" + (i % 4)} style={{ opacity: p.connected ? 1 : 0.4 }}>{p.name}</li>)}
+        <h2>{t("Players")} {state.players.length}/{MAX_PLAYERS}</h2>
+        <ul className="players lobby-players">
+          {state.players.map((p, i) => {
+            const local = locals.find((l) => l.playerId === p.id);
+            return (
+              <li key={p.id} className={"pop c" + (i % 4)} style={{ opacity: p.connected ? 1 : 0.4 }}>
+                <span className="lp-name">{p.name}</span>
+                {/* players on this screen can leave the lobby again */}
+                {local && <button className="lp-x" onClick={() => onLeaveLocal(local.key)} aria-label={t("Leave the lobby: {name}", { name: p.name })} title={t("Leave the lobby: {name}", { name: p.name })}>✕</button>}
+              </li>
+            );
+          })}
           {state.players.length === 0 && <li className="muted">{t("Waiting for players…")}</li>}
         </ul>
-        <GameSummary state={state} />
-        {me ? <p className="muted">{t("You're playing as")} <b>{me.name}</b> {t("on this screen.")}</p> : (
-          <form className="hostplay" onSubmit={(e) => { e.preventDefault(); if (name.trim()) { sfx.join(); onPlay(name.trim()); } }}>
-            <input placeholder={t("Play on this screen too? Your name")} maxLength={16} value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn" disabled={!name.trim() || state.players.length >= 4}>{t("Join")}</button>
-          </form>
-        )}
+        {/* always in place (hidden / disabled when not needed), so the Start button never moves */}
+        <p className="muted" style={locals.length ? undefined : { visibility: "hidden" }}>{t("Playing on this screen:")} <b>{locals.map((l) => l.name).join(", ") || "-"}</b></p>
+        <form className="hostplay" onSubmit={(e) => { e.preventDefault(); if (!full) { sfx.join(); onPlay(name.trim() || defaultName()); setName(""); } }}>
+          <input disabled={full} placeholder={locals.length ? t("Another player on this screen? Name") : t("Play on this screen too? Your name")} maxLength={16} value={name} onChange={(e) => setName(e.target.value)} />
+          <button className="btn" disabled={full}>{t("Join")}</button>
+        </form>
         <button className="btn big" data-pad-first disabled={state.players.length === 0} onClick={onStart}>{t("Start game")}<PadHint button="a" focusOnly /></button>
         <button className="btn ghost" onClick={onLeave}>{t("Cancel")}</button>
       </div>
+      {/* phones (one column): the rules come after the join / start card instead of between the QR and the players */}
+      <div className="card lobby-rules-narrow"><GameSummary state={state} /></div>
     </div>
   );
 }
 
-function Playing({ send, slot, barSlot, setAnswerSlot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; barSlot: HTMLElement | null; setAnswerSlot: (el: HTMLElement | null) => void; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void; send: (m: ClientMessage) => unknown }) {
+function Playing({ send, slot, barSlot, answerSlotRefs, setFieldSlot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; barSlot: HTMLElement | null; answerSlotRefs: Array<(el: HTMLElement | null) => void>; setFieldSlot: (el: HTMLElement | null) => void; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void; send: (m: ClientMessage) => unknown }) {
   const guessing = !!state.guesser;
   const left = useCountdown(endsAt, guessing || state.paused ? state.remainingMs : undefined);
   const unlimited = state.roundMs === null;
@@ -633,13 +664,20 @@ function Playing({ send, slot, barSlot, setAnswerSlot, follow, state, endsAt, gu
     return () => follow(null);
   }, [follow, artProgress]);
   const R = 90, C = 2 * Math.PI * R;
+  // "paused" / "X is guessing…": floats on top of the video / artwork (or the hint card without artwork), so nothing moves
+  const over = (
+    <div className="over-msg" aria-live="polite">
+      {state.paused && <p className="paused-banner">{t("⏸ PAUSED")}</p>}
+      {guessing && <p className="guessing-line">🎤 {t("{name} is guessing…", { name: state.guesser!.name })}</p>}
+    </div>
+  );
   return (
     <div className={"p2" + (state.art ? " with-art" : "")}>
       {slot && createPortal(<>
-          {!guessing && (
+          {(
             <div className="ctl">
               <span className="icon-wrap">
-                <button className="icon-btn" onClick={onPause} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>
+                <button className="icon-btn" disabled={guessing} onClick={onPause} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>
                 <PadHint button="start" />
               </span>
               <small />
@@ -652,6 +690,7 @@ function Playing({ send, slot, barSlot, setAnswerSlot, follow, state, endsAt, gu
             </span>
             <small>{state.skip && state.skip.voters > 1 && state.skip.votes > 0 ? `(${state.skip.votes}/${state.skip.voters})` : ""}</small>
           </div>
+          <VoteButtons round={state.round} send={send} />
         <span className="rl">{roundLabel(state)}<b className="rl-secs">{unlimited ? "∞" : `${Math.ceil(left)}s`}</b><GameTimer state={state} /></span>
         <ScoreLine state={state} />
       </>, slot)}
@@ -663,16 +702,18 @@ function Playing({ send, slot, barSlot, setAnswerSlot, follow, state, endsAt, gu
         <b>{unlimited ? "∞" : Math.ceil(left)}</b>
       </div>
       <div className="p2-hint">
-        {state.paused && <p className="paused-banner">{t("⏸ PAUSED")}</p>}
-        {guessing && <p className="guessing-line">🎤 {t("{name} is guessing…", { name: state.guesser!.name })}</p>}
-        {state.config.order === "roundRobin" && state.activePlayerId && !guessing && <p className="turn">🎯 {t("{name}'s song", { name: state.players.find((p) => p.id === state.activePlayerId)?.name ?? "" })}</p>}
+        {!state.art && over}
+        {state.config.order === "roundRobin" && state.activePlayerId && <p className="turn">🎯 {t("{name}'s song", { name: state.players.find((p) => p.id === state.activePlayerId)?.name ?? "" })}</p>}
         <FoundChips found={state.found} guess={state.config.guess} hint={state.hint} />
         <Hints state={state} />
-        <ScoreBanner state={state} />
+        <div className="float-banner"><ScoreBanner state={state} /></div>
       </div>
-      {state.art && <div className="p2-art">{follow ? <div className="yt-slot" ref={videoSlot} /> : <PixelArt url={state.art.url} progress={state.art.progress} />}<VoteButtons round={state.round} send={send} /></div>}
-      <div className="p2-answer" ref={setAnswerSlot} />
-      {guessing && <div className="p2-bar"><GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} /></div>}
+      {state.art && <div className="p2-art">{follow ? <div className="yt-slot" ref={videoSlot} /> : <PixelArt url={state.art.url} progress={state.art.progress} />}{over}</div>}
+      {/* one slot per player on this screen: each shows its own ANSWER button with the player's name */}
+      <div className="p2-answer" style={{ "--n": answerSlotRefs.length } as React.CSSProperties}>{answerSlotRefs.map((ref, i) => <div key={i} className="p2-local" ref={ref} />)}</div>
+      {/* the answer field: a long line under the hints */}
+      <div className="p2-field" ref={setFieldSlot} />
+      <div className="p2-bar">{guessing && <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />}</div>
     </div>
   );
 }
@@ -680,10 +721,10 @@ function Playing({ send, slot, barSlot, setAnswerSlot, follow, state, endsAt, gu
 function roundLabel(state: RoomState) {
   return state.config.playTo.kind === "score"
     ? t("Round {n} · first to {target}", { n: state.round, target: state.config.playTo.target })
-    : t("Round {n} / {total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds });
+    : t("{n} of {total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds });
 }
 
-function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void; send: (m: ClientMessage) => unknown }) {
+function Reveal({ state, onNext, send, slot }: { state: RoomState; onNext: () => void; send: (m: ClientMessage) => unknown; slot: HTMLElement | null }) {
   const r = state.reveal!;
   return (
     <div className="reveal rv-grid">
@@ -692,7 +733,7 @@ function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void;
           {r.albumArt && <img className="art spin-in" src={r.albumArt} alt="" />}
           <h1 className="rv-title">{r.title}</h1>
           <h2 className="rv-artist">{r.artists.join(", ")}{r.year ? ` · ${r.year}` : ""}</h2>
-          <VoteButtons round={state.round} send={send} />
+          {slot && createPortal(<VoteButtons round={state.round} send={send} />, slot)}
         </div>
         <div className="top-side">
           <GameTimer state={state} />
@@ -700,7 +741,7 @@ function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void;
           <Scoreboard state={state} reveal={r} />
         </div>
       </div>
-      {state.awaitingNext && <p className="waiting rv-wait">{t("The song keeps playing. The next round starts when it ends, or when you continue.")}</p>}
+      {<p className="waiting rv-wait" style={state.awaitingNext ? undefined : { visibility: "hidden" }}>{t("The song keeps playing. The next round starts when it ends, or when you continue.")}</p>}
       <button className="btn next-btn rv-next" onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? t("Final results") : t("Next song")}<PadHint button="a" /></button>
     </div>
   );

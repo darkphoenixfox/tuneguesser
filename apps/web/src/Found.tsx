@@ -13,8 +13,9 @@ export function FoundChips({ found, guess = "both", hint }: { found?: Found; gue
     const got = found?.[key];
     if (!wanted && !hint) return null;
     return (
-      <div className={"chip" + (got ? " got" : "") + (!wanted ? " ctx" : "") + (hint && !got && wanted ? " hinted" : "")}>
-        <small>{label}</small>
+      // no "Song" / "Artist" labels: the title on its own line, then "by" + the artist, as large as the panel allows
+      <div className={"chip " + key + (got ? " got" : "") + (!wanted ? " ctx" : "") + (hint && !got && wanted ? " hinted" : "")} aria-label={label}>
+        {key === "artist" && <small className="by">{t("by")}</small>}
         <b>{got ? got.text : hint ? hint[key] : "? ? ? ? ?"}</b>
         {got && <em>{got.by}</em>}
       </div>

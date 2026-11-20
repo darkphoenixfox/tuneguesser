@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
-import { SettingsMenu, ThemeButton } from "./Settings";
+import { OnOff, SettingRow, SettingsMenu } from "./Settings";
 import { PadHint } from "./input/Glyph";
-import { MicButton, MicToggle } from "./input/Mic";
+import { MicButton } from "./input/Mic";
 import { PadKeyboard } from "./input/PadKeyboard";
+import { useKbOff } from "./input/Keyboard";
 import { Logo } from "./Logo";
 import { ErrorPage } from "./ErrorPage";
 import { Confirm } from "./input/Confirm";
@@ -57,8 +58,19 @@ function Join({ onJoin, onBack }: { onJoin: (s: Saved) => void; onBack?: () => v
   );
 }
 
-/** `embedded`: shown inside the host screen (only while a round is running), so the host device can play too. */
-export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean; hostToken?: string; slot?: HTMLElement | null }) {
+/**
+ * `embedded`: one of the (up to 4) players on the host screen, shown only while a round is running. Its ANSWER button
+ * (with the player's name) goes in `slot`; while it answers, the text field (or gamepad keyboard / choices) is a long line
+ * in `fieldSlot` under the hints, and the mic / send / cancel buttons stay in `slot`.
+ * `localIds`: all of the host screen's players (the others hide their buttons while one of them answers).
+ * `keys`: this player answers with Enter / gamepad A (only the first player on the host screen).
+ * `hotkey`: several players on the host screen: this player's own ANSWER key (1-4).
+ * `named`: the ANSWER button shows the player's name (hosted games; solo play keeps "ANSWER").
+ */
+/** the gamepad face button of each player on the host screen */
+const FACE = ["a", "b", "x", "y"] as const;
+
+export function Play({ saved, onLeave, onId, embedded, hostToken, slot, fieldSlot, localIds, keys = true, named = true, hotkey }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean; hostToken?: string; slot?: HTMLElement | null; fieldSlot?: HTMLElement | null; localIds?: string[]; keys?: boolean; named?: boolean; hotkey?: number }) {
   const first = useMemo(() => ({ t: "join" as const, code: saved.code, name: saved.name, playerId: saved.playerId, hostToken }), [saved.code, saved.name, hostToken]);
   const [me, setMe] = useState(saved.playerId);
   const [text, setText] = useState("");
@@ -83,6 +95,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
   const guessing = !!state?.guesser;
   const left = useCountdown(endsAt, guessing || state?.paused ? state?.remainingMs : undefined);
   const pad = usePad();
+  const [kbOff] = useKbOff();
+  const padKb = pad.connected && !kbOff; // the gamepad on-screen keyboard
   const mine = state?.players.find((p) => p.id === me);
   useScrollTop(embedded ? "" : (state?.phase ?? "") + (mine ? "m" : ""));
   const iAmGuesser = !!mine && state?.guesser?.id === mine.id;
@@ -90,12 +104,12 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
 
   // a fresh form every time I get to answer
   useEffect(() => {
-    if (iAmGuesser) { setText(""); setSent(false); sfx.buzz(); navigator.vibrate?.(30); setTimeout(() => titleRef.current?.focus(), 50); }
+    if (iAmGuesser) { setText(""); setSent(false); sfx.buzz(); navigator.vibrate?.(30); setTimeout(() => titleRef.current?.focus({ preventScroll: true }), 50); }
   }, [iAmGuesser]);
 
   // keyboard and gamepad shortcuts (the host screen handles pause/skip/next itself when this is embedded in it)
-  const live = useRef({ state, mine, iAmGuesser, sent, text });
-  live.current = { state, mine, iAmGuesser, sent, text };
+  const live = useRef({ state, mine, iAmGuesser, sent, text, padKb, keys, hotkey });
+  live.current = { state, mine, iAmGuesser, sent, text, padKb, keys, hotkey };
   const autoSend = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(autoSend.current), []);
   useEffect(() => { if (!iAmGuesser) clearTimeout(autoSend.current); }, [iAmGuesser]);
@@ -114,12 +128,18 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
     setSent(true);
     send({ t: "choose", optionId: o.id });
   };
+  /** ANSWER, when this player may answer now; true when it was sent */
+  const buzz = () => {
+    const { state: st, mine: m } = live.current;
+    if (!st || !m || st.phase !== "playing" || st.guesser || st.paused || m.attemptsLeft <= 0 || (st.config.order === "roundRobin" && st.activePlayerId !== m.id)) return false;
+    send({ t: "buzz" });
+    return true;
+  };
   /** the accept key/button: ANSWER when a song is playing, next song at the reveal */
   const accept = () => {
-    const { state: st, mine: m, iAmGuesser: g } = live.current;
-    if (!st || !m || g) return;
-    if (st.phase === "playing" && !st.guesser && !st.paused && m.attemptsLeft > 0 && (st.config.order !== "roundRobin" || st.activePlayerId === m.id)) send({ t: "buzz" });
-    else if (st.phase === "reveal" && !embedded) send({ t: "next" });
+    const { state: st, mine: m, iAmGuesser: g, keys: k } = live.current;
+    if (!st || !m || g || !k) return;
+    if (!buzz()) if (st.phase === "reveal" && !embedded) send({ t: "next" });
   };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -133,7 +153,12 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
       if (e.key === "Escape" && live.current.iAmGuesser) { e.preventDefault(); send({ t: "cancel" }); return; }
       if (typing || e.ctrlKey || e.metaKey) return;
       if (e.key === "Enter" && t?.tagName !== "BUTTON") accept();
-      else if (/^[1-4]$/.test(e.key)) doChoose(+e.key - 1);
+      else if (/^[1-4]$/.test(e.key)) {
+        // several players on the host screen: 1-4 is each player's ANSWER key (and picks an option while answering)
+        if (live.current.iAmGuesser) doChoose(+e.key - 1);
+        else if (live.current.hotkey === +e.key) buzz();
+        else if (!live.current.hotkey) doChoose(+e.key - 1);
+      }
     };
     window.addEventListener("keydown", onKey);
     const off = onPadButton((b) => {
@@ -141,7 +166,11 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
       const choice = ({ a: 0, b: 1, x: 2, y: 3 } as Record<string, number>)[b];
       if (l.iAmGuesser && b === "start") return void send({ t: "cancel" }); // give up this turn
       if (l.iAmGuesser && l.state?.options) { if (choice !== undefined) doChoose(choice); return; }
+      if (l.iAmGuesser && !l.padKb) { if (b === "y") doSubmit(); else if (b === "b") send({ t: "cancel" }); return; } // keyboard off: Y sends, B cancels
       if (l.iAmGuesser) return; // the on-screen keyboard has the buttons
+      // several players on the host screen: the face buttons are their ANSWER buttons (A = player 1, B = 2, X = 3, Y = 4)
+      const face = ({ a: 1, b: 2, x: 3, y: 4 } as Record<string, number>)[b];
+      if (l.hotkey && face) { if (face === l.hotkey) buzz(); return; }
       if (b === "a") accept();
       else if (!embedded && b === "start") send({ t: "pause" });
       else if (!embedded && b === "select") send({ t: "skip" });
@@ -151,7 +180,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
   }, [embedded, send]);
 
   // tell the server when this device types with the on-screen keyboard (it gets more time to answer)
-  useEffect(() => { if (mine) send({ t: "padkb", on: pad.connected }); }, [pad.connected, !!mine]);
+  useEffect(() => { if (mine) send({ t: "padkb", on: padKb }); }, [padKb, !!mine]);
 
   if (embedded && (!state || !mine || state.phase !== "playing")) return null;
   if (error && !state) return <ErrorPage error={error} onBack={onLeave} />;
@@ -169,17 +198,36 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
   const skipText = state.players.length > 1 && sk.votes > 0 ? `${sk.votes}/${sk.voters}` : "";
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!sent && !text.trim()) { clearTimeout(autoSend.current); send({ t: "cancel" }); return; } // Enter on an empty answer: give up this turn
     if (sent || !text.trim()) return;
     setSent(true);
     send({ t: "answer", text });
   };
+  // host screen: the answer field is a long line under the hints (fieldSlot); the buttons stay in the ANSWER column
+  const useField = !!embedded && !!fieldSlot;
+  const inField = (node: React.ReactNode) => (useField ? createPortal(node, fieldSlot!) : node);
+  const otherLocalGuessing = !!state.guesser && !iAmGuesser && !!localIds?.includes(state.guesser.id);
+  const question = state.config.guess === "title" ? t("What's the song?") : state.config.guess === "artist" ? t("Who is the artist?") : found?.title ? t("Who is the artist?") : found?.artist ? t("What's the song?") : t("Song, artist, or both");
+  const field = (
+    <label className="answer-field">
+      <input ref={titleRef} aria-label={question} value={text} onChange={(e) => { clearTimeout(autoSend.current); setText(e.target.value); }}
+        // outside the form when it sits under the hints: Enter sends it from here
+        // (an empty answer cancels, like the form's own Enter)
+        onKeyDown={useField ? (e) => { if (e.key === "Enter") { e.preventDefault(); if (!live.current.sent && !live.current.text.trim()) { clearTimeout(autoSend.current); send({ t: "cancel" }); } else doSubmit(); } } : undefined}
+        // on-screen keyboard off: the phone does not open its own keyboard (physical keyboard or microphone only)
+        inputMode={kbOff ? "none" : undefined}
+        autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={question} />
+    </label>
+  );
 
   const out = (
     <Wrap className={embedded ? "embedded" : "screen phone"} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       {!embedded && (
         <header className="statusbar phone-head">
           <button className="exit" onClick={exit} aria-label={t("Exit to main screen")}>✕</button>
-          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? t("Round {n}", { n: state.round }) : t("Round {n}/{total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds })}</small>}</b><ThemeButton /><MicToggle className="skip-top mic-top" />{state.youtube && <button className={"skip-top" + (listening ? " on" : "")} onClick={toggleListen} aria-pressed={listening} aria-label={t("Play the music on this device too")} title={listening ? t("Music plays on this device too") : t("Also play the music on this device")}><span style={{ opacity: listening ? 1 : .45 }}>🎧</span></button>}{canPause && <button className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>}{canSkip && <button className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label={t("Skip song")} title={t("Skip song")}>⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
+          <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? t("Round {n}", { n: state.round }) : t("{n} of {total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds })}</small>}</b>{<button style={canPause ? undefined : { visibility: "hidden" }} disabled={!canPause} className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>}{<button style={canSkip ? undefined : { visibility: "hidden" }} disabled={!canSkip} className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label={t("Skip song")} title={t("Skip song")}>⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
+          {/* one ⚙ button for every option (theme, language, sound, voice, keyboard, music on this phone) */}
+          <SettingsMenu>{state.youtube && <SettingRow icon="🎧" label={t("Also play the music on this device")}><OnOff on={listening} set={(on) => { if (on !== listening) toggleListen(); }} /></SettingRow>}</SettingsMenu>
         </header>
       )}
       {yt.element}
@@ -192,42 +240,57 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { save
           {!embedded && <div className="vbar" aria-hidden="true"><i style={{ height: `${state.roundMs === null ? 100 : Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
           <div className="pl-main">
           {!embedded && (<>
-          {state.paused && <p className="paused-banner">{t("⏸ PAUSED")}</p>}
+          {state.paused && <div className="over-msg phone-over"><p className="paused-banner">{t("⏸ PAUSED")}</p></div>}
           {state.art && <div className="phone-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
           <Hints state={state} />
           <FoundChips found={found} guess={state.config.guess} hint={state.hint} />
-          <ScoreBanner state={state} />
+          <div className="float-banner"><ScoreBanner state={state} /></div>
           </>)}
           {iAmGuesser && state.options ? (
             <div className="guess-form">
               <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />
               <button type="button" className="btn ghost" onClick={() => send({ t: "cancel" })}>{t("Cancel")}<PadHint button="start" /></button>
-              <div className="choices">
-                {state.options.map((o, i) => <button key={o.id} className="choice" disabled={sent} onClick={() => doChoose(i)}><span className="num">{i + 1}</span>{o.label}{(["a", "b", "x", "y"] as const)[i] && <PadHint button={(["a", "b", "x", "y"] as const)[i]!} />}</button>)}
-              </div>
+              {inField(
+                <div className="choices">
+                  {state.options.map((o, i) => <button key={o.id} className="choice" disabled={sent} onClick={() => doChoose(i)}><span className="num">{i + 1}</span>{o.label}{(["a", "b", "x", "y"] as const)[i] && <PadHint button={(["a", "b", "x", "y"] as const)[i]!} />}</button>)}
+                </div>,
+              )}
             </div>
           ) : iAmGuesser ? (
-            <form className={"guess-form" + (pad.connected ? " with-kb" : "")} onSubmit={submit}>
+            <form className={"guess-form" + (padKb ? " with-kb" : "")} onSubmit={submit}>
               {!embedded && <GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} />}
-              {pad.connected ? (
-                <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} onCancel={() => send({ t: "cancel" })}>
-                  <label>{state.config.guess === "title" ? t("What's the song?") : state.config.guess === "artist" ? t("Who is the artist?") : found?.title ? t("Who is the artist?") : found?.artist ? t("What's the song?") : t("Song, artist, or both")}
-                <input ref={titleRef} value={text} onChange={(e) => setText(e.target.value)} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? t("Song title") : state.config.guess === "artist" ? t("Artist") : found?.title ? t("Artist") : found?.artist ? t("Song title") : t("e.g. Billie Jean – Michael Jackson")} />
-              </label>
-                </PadKeyboard>
+              {padKb ? inField(
+                <PadKeyboard disabled={sent} text={text} words={words} onText={setText} onSend={doSubmit} onCancel={() => send({ t: "cancel" })}>{field}</PadKeyboard>,
+              ) : useField ? (
+                <>
+                  {inField(field)}
+                  <div className="gf-main gf-buttons">
+                    <MicButton disabled={sent} onText={(t) => { clearTimeout(autoSend.current); setText(t); }} onFinal={heard} />
+                    <button className="btn big" disabled={sent || !text.trim()}>{sent ? t("Sent…") : t("Send answer")}</button>
+                    <button type="button" className="btn ghost" onClick={() => { clearTimeout(autoSend.current); send({ t: "cancel" }); }}>{t("Cancel")}</button>
+                  </div>
+                </>
               ) : (
                 <div className="gf-main">
                   <div className="answer-row">
-                  <label>{state.config.guess === "title" ? t("What's the song?") : state.config.guess === "artist" ? t("Who is the artist?") : found?.title ? t("Who is the artist?") : found?.artist ? t("What's the song?") : t("Song, artist, or both")}
-                <input ref={titleRef} value={text} onChange={(e) => { clearTimeout(autoSend.current); setText(e.target.value); }} autoComplete="off" autoCorrect="off" enterKeyHint="send" placeholder={state.config.guess === "title" ? t("Song title") : state.config.guess === "artist" ? t("Artist") : found?.title ? t("Artist") : found?.artist ? t("Song title") : t("e.g. Billie Jean – Michael Jackson")} />
-              </label>
-                  <MicButton disabled={sent} onText={(t) => { clearTimeout(autoSend.current); setText(t); }} onFinal={heard} />
+                    {field}
+                    <MicButton disabled={sent} onText={(t) => { clearTimeout(autoSend.current); setText(t); }} onFinal={heard} />
                   </div>
                   <button className="btn big" disabled={sent || !text.trim()}>{sent ? t("Sent…") : t("Send answer")}</button>
                   <button type="button" className="btn ghost" onClick={() => { clearTimeout(autoSend.current); send({ t: "cancel" }); }}>{t("Cancel")}</button>
                 </div>
               )}
             </form>
+          ) : embedded ? (
+            // host screen: one button per player, with their name; hidden while another player on this screen answers
+            otherLocalGuessing ? null : (
+              <button className="answer-btn named" data-pad-first={keys ? "" : undefined} disabled={guessing || mine.attemptsLeft === 0 || (state.config.order === "roundRobin" && state.activePlayerId !== mine.id)} onClick={() => send({ t: "buzz" })}>
+                <span className="ab-name">{named ? mine.name : t("ANSWER")}</span>
+                {mine.attemptsLeft === 0 ? <small>{t("Out of tries")}</small> : state.config.order === "roundRobin" && state.activePlayerId === mine.id ? <small>{t("YOUR SONG: ANSWER")}</small> : null}
+                {(keys || hotkey) && mine.attemptsLeft > 0 && !guessing && <PadHint button={hotkey ? FACE[hotkey - 1]! : "a"} />}
+                {hotkey && <kbd className="ab-key" aria-hidden="true">{hotkey}</kbd>}
+              </button>
+            )
           ) : guessing ? (
             <p className="guessing-msg">🎤 {t("{name} is guessing…", { name: state.guesser!.name })}</p>
           ) : state.config.order === "roundRobin" && state.activePlayerId !== mine.id ? (

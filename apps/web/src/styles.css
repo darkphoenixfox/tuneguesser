@@ -712,3 +712,337 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
   .reveal.rv-grid .rv-next { grid-area: btn; width: 100%; min-width: 0; min-height: clamp(110px, 24vh, 220px); font-size: clamp(1.1rem, 2.6vw, 2.4rem); padding: 0 8px; letter-spacing: 0; align-self: center; }
   .reveal.rv-grid .rv-wait { grid-area: wait; justify-self: center; }
 }
+
+/* ---- wide screens: the round and reveal screens fill the window height and scale with it ----
+   The play area takes all the height left under the status bar; artwork, hints/trivia and the ANSWER / NEXT button
+   sit vertically centred in it, and their sizes follow the window height as well as its width. */
+@media (min-width: 900px) {
+  .screen.game { min-height: 100vh; min-height: 100dvh; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+  html[data-pad] .screen.game { padding-bottom: 70px; } /* room for the gamepad hint bar */
+  .screen.game > .p2, .screen.game > .reveal { flex: 1 1 auto; min-height: 0; }
+
+  /* round: one row that fills the height (the old header row is now in the status bar), guess bar underneath */
+  /* the ANSWER column is 15% narrower than before (2fr → 1.7fr); the artwork / video column gets the space */
+  .p2, .p2.with-art { grid-template-columns: minmax(0, 3.3fr) minmax(0, 5fr) minmax(0, 1.7fr); grid-template-areas: "eq hint ans" "bar bar bar"; grid-template-rows: minmax(0, 1fr) auto; align-items: center; align-content: stretch; }
+  .p2.with-art { grid-template-areas: "art hint ans" "bar bar bar"; }
+  .p2-eq, .p2-hint, .p2-answer, .p2-art { align-self: center; }
+  /* the artwork never grows taller than the window allows */
+  .p2-art { width: min(100%, calc(100dvh - 240px)); justify-self: center; }
+  .p2-art .yt-slot { width: 100%; }
+  .p2-hint { padding: clamp(14px, 2.4vh, 32px) clamp(16px, 2vw, 32px); gap: clamp(10px, 1.8vh, 24px); }
+  .p2-hint .chip { grid-template-columns: clamp(5rem, 7vw, 8rem) minmax(0, 1fr) auto; padding: clamp(4px, 1vh, 12px) 0; }
+  .p2-hint .chip small { font-size: clamp(.9rem, min(1.2vw, 2vh), 1.4rem); }
+  .p2-hint .chip b { font-size: clamp(1.3rem, min(3.2vw, 6vh), 4rem); }
+  .p2-hint .chip em { font-size: clamp(.8rem, min(1vw, 1.8vh), 1.2rem); }
+  .p2-hint .trivia { height: clamp(6em, 28vh, 22em); font-size: clamp(.95rem, min(1.3vw, 2.2vh), 1.6rem); }
+  .p2-hint .guessing-line, .p2-hint .turn { font-size: clamp(1.1rem, min(1.8vw, 3vh), 2rem); }
+  .p2-answer .answer-btn { min-height: clamp(110px, 32vh, 420px); font-size: clamp(1.1rem, min(3.3vw, 6vh), 3.6rem); }
+  .p2-answer .answer-btn:disabled { min-height: clamp(70px, 14vh, 180px); }
+
+  /* reveal: art | scores | next, centred vertically in the full height */
+  .reveal.rv-grid { padding-top: 0; grid-template-columns: minmax(0, 3.3fr) minmax(0, 5fr) minmax(0, 1.7fr); grid-template-rows: minmax(0, 1fr) auto; align-content: stretch; align-items: center; }
+  .reveal.rv-grid .top-main { gap: clamp(10px, 2vh, 24px); }
+  .reveal.rv-grid .top-main .art { width: min(80%, 42vh); max-width: none; }
+  .reveal.rv-grid .rv-title { font-size: clamp(1.1rem, min(2.2vw, 4.5vh), 2.8rem); }
+  .reveal.rv-grid .rv-artist { font-size: clamp(.95rem, min(1.6vw, 3vh), 1.9rem); }
+  .reveal.rv-grid .top-side { gap: clamp(10px, 2vh, 24px); }
+  .reveal.rv-grid .board li { font-size: clamp(1rem, min(1.4vw, 2.6vh), 1.7rem); padding: clamp(8px, 1.4vh, 18px) clamp(12px, 1.2vw, 22px); }
+  .reveal.rv-grid .rv-next { min-height: clamp(110px, 32vh, 420px); font-size: clamp(1.1rem, min(2.6vw, 5vh), 3.2rem); }
+}
+
+/* ---- several players on the host screen, answer field under the hints, downvote in the status bar ---- */
+/* layouts: the answer field ("field") is a long line under the hints; it only takes room while someone answers */
+.p2-field { grid-area: field; min-width: 0; }
+.p2-field:empty { display: none; }
+.p2-local:empty { display: none; }
+.p2-answer { container-type: inline-size; display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 900px) {
+  .p2, .p2.with-art { grid-template-areas: "eq hint ans" "field field field" "bar bar bar"; grid-template-rows: minmax(0, 1fr) auto auto; }
+  .p2.with-art { grid-template-areas: "art hint ans" "field field field" "bar bar bar"; }
+}
+@media (min-width: 701px) and (max-width: 899px) {
+  .p2, .p2.with-art { grid-template-columns: minmax(0, 1fr); grid-template-areas: "art" "hint" "field" "ans" "bar" "eq"; }
+}
+@media (max-width: 700px) {
+  .p2, .p2.with-art { grid-template-areas: "vbar art" "vbar hint" "vbar field" "vbar ans" "bar bar"; }
+}
+/* the field: one long line, big text */
+.p2-field .answer-field { display: flex; flex-direction: row; align-items: center; gap: 14px; font-size: clamp(.9rem, 1.2vw, 1.2rem); white-space: nowrap; }
+.p2-field .answer-field input { flex: 1; min-width: 0; font-size: clamp(1.2rem, min(2vw, 3.6vh), 2.2rem); padding: clamp(10px, 1.6vh, 18px) 18px; }
+.p2-field .padkb .answer-field { margin-bottom: 4px; }
+.p2-field .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .p2-field .answer-field { flex-direction: column; align-items: stretch; white-space: normal; } .p2-field .choices { grid-template-columns: minmax(0, 1fr); } }
+/* the buttons that replace the ANSWER button while answering: mic, send, cancel */
+.gf-buttons { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.gf-buttons .mic-wrap { align-items: stretch; }
+.gf-buttons .mic { width: 100%; height: clamp(48px, 9vh, 96px); border-radius: 14px; }
+.gf-buttons .btn { width: 100%; padding: clamp(10px, 2vh, 22px) 8px; font-size: clamp(.95rem, min(1.4vw, 2.6vh), 1.5rem); }
+
+/* one ANSWER button per player, with their name; never taller than wide, and together they fit the screen height */
+.answer-btn.named { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; overflow: hidden; }
+.answer-btn.named .ab-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.answer-btn.named small { font-size: .45em; font-weight: 800; letter-spacing: .04em; opacity: .9; }
+.p2-answer .answer-btn, .p2-answer .answer-btn:disabled {
+  min-height: 0; height: min(100cqw, max(64px, calc((100vh - 260px) / var(--n, 1) - 12px)));
+  height: min(100cqw, max(64px, calc((100dvh - 260px) / var(--n, 1) - 12px)));
+  font-size: clamp(1rem, min(14cqw, calc(9vh / var(--n, 1))), 3.2rem);
+}
+/* reveal: the Next button is never taller than wide either (its column is 17% of the grid) */
+@media (min-width: 900px) {
+  .reveal.rv-grid { container-type: inline-size; }
+  .reveal.rv-grid .rv-next { min-height: 0; height: min(calc((100cqw - 48px) * .17), clamp(110px, 32vh, 420px)); }
+}
+
+/* downvote: a status-bar button next to skip */
+.statusbar .vote { margin: 0; gap: 0; }
+.statusbar .vote button { width: var(--sb); height: var(--sb); border-radius: 50%; font-size: calc(var(--sb) * .42); opacity: 1; background: var(--card); }
+
+/* on-screen keyboard toggle: crossed out when off */
+.kb-slash { position: absolute; left: -10%; right: -10%; top: 50%; height: 2px; background: currentColor; transform: rotate(-35deg); }
+
+/* ---- every button one colour: flat pink (status-bar icons and keyboard letter keys stay neutral) ---- */
+:root { --btn-edge: #7d1049; }
+:root[data-theme="light"] { --btn-edge: #8a0d4c; }
+.btn, .btn.big, .btn.ghost, .next-btn, .answer-btn, .answer-btn:disabled, .choice, .pk-key.send, .pk-key.act, .mic, .backlink, .menu-buttons .btn {
+  background: var(--pink); color: #fff; border: 0; box-shadow: 0 5px 0 var(--btn-edge); font-weight: 800;
+}
+.btn:active:not(:disabled), .next-btn:active:not(:disabled), .answer-btn:active:not(:disabled), .choice:active:not(:disabled), .pk-key.send:active, .pk-key.act:active, .mic:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--btn-edge); }
+.btn:hover:not(:disabled) { transform: none; filter: brightness(1.08); }
+.btn:disabled, .answer-btn:disabled, .choice:disabled, .mic:disabled { opacity: .4; box-shadow: none; cursor: not-allowed; }
+.mic.live { background: var(--pink); filter: brightness(1.15); }
+.seg button.on, .tabs button.on { background: var(--pink); color: #fff; box-shadow: none; }
+.choice .num { color: rgba(255,255,255,.75); }
+.btn.voted, .controls .btn.voted { background: var(--pink); color: #fff; outline: 3px solid var(--lime); outline-offset: 2px; }
+
+/* ---- stable layout: sections are sized by the window, never by what appears or disappears inside them ---- */
+/* the timer bar keeps its line between rounds and on the reveal */
+@media (min-width: 701px) { .screen.game .timebar:empty { display: block; height: 5px; } }
+/* "paused" / "X is guessing…": floats on top of the video / artwork (or the hint card's top edge without artwork) */
+.p2-art, .p2-hint { position: relative; }
+.over-msg { position: absolute; left: 0; right: 0; top: 10px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.over-msg:empty { display: none; }
+.p2-hint > .over-msg { top: 0; transform: translateY(-50%); }
+.over-msg .guessing-line, .over-msg .paused-banner { margin: 0; padding: 6px 16px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 88%, transparent); border: 1px solid var(--amber); box-shadow: 0 6px 20px rgba(0,0,0,.45); max-width: calc(100% - 16px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.over-msg .guessing-line { font-size: clamp(1rem, min(1.6vw, 3vh), 1.6rem); animation: pop .3s both; }
+/* the score banner floats on the lower edge of the hint card instead of growing it */
+.float-banner { position: absolute; left: 0; right: 0; bottom: 0; transform: translateY(50%); z-index: 4; display: flex; justify-content: center; pointer-events: none; }
+.float-banner:empty { display: none; }
+.float-banner .score-banner { background: var(--bg); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.4); max-width: calc(100% - 16px); }
+/* the hint card fills its row: its size follows the window, not the facts and chips inside it */
+@media (min-width: 900px) { .p2-hint { align-self: stretch; } }
+/* the answer-field line and the guess bar keep their space all round, used or not */
+.p2-field, .p2-field:empty { display: block; position: relative; height: clamp(52px, 8vh, 92px); }
+.p2-field .answer-field { height: 100%; }
+.p2-field .answer-field input { height: 100%; padding-top: 0; padding-bottom: 0; }
+.p2-bar { min-height: 8px; }
+/* the gamepad keyboard and the multiple-choice options are taller than the line: they open upwards over the hints */
+.p2-field > .padkb, .p2-field > .choices { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; padding: 14px; border-radius: 18px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 -10px 40px rgba(0,0,0,.5); }
+/* the pause button stays in the status bar while someone answers (disabled), so nothing shifts */
+.statusbar .icon-btn:disabled { opacity: .35; cursor: not-allowed; }
+/* the seconds counter does not change width as it counts down */
+.statusbar .rl-secs { display: inline-block; min-width: 3.2ch; text-align: right; }
+/* a microphone error floats under the mic button instead of pushing the buttons below it */
+.mic-wrap { position: relative; }
+.mic-wrap > .error { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); z-index: 6; width: max-content; max-width: 70vw; font-size: .85rem; background: var(--bg); }
+/* phone: "paused" floats over the top of the play area */
+.pl-main { position: relative; }
+.phone-over { top: 0; }
+.pl-main > .float-banner { position: relative; transform: none; min-height: 2.6em; align-items: center; }
+.pl-main > .float-banner:empty { display: flex; }
+/* lobby: room for all 8 players from the start (two columns), so the buttons under the list never move as people join */
+.lobby-players { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 2.9em; gap: 8px; min-height: calc(4 * 2.9em + 3 * 8px); align-content: start; }
+.lobby-players li { display: flex; align-items: center; padding: 0 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby-players li.muted { grid-column: 1 / -1; }
+.hostplay input:disabled { color: var(--muted); font-weight: 400; background: var(--field); }
+
+/* ---- letter reveal: no SONG / ARTIST labels; the title, then "by" + the artist, as large as the hint panel allows ---- */
+.found .chip { display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 4px 12px; text-align: center; padding: 4px 6px; }
+.found .chip b { min-width: 0; }
+.found .chip .by { font-size: .9rem; text-transform: none; letter-spacing: 0; font-style: italic; color: var(--muted); }
+.found .chip em { flex-basis: 100%; }
+.p2-hint { container-type: inline-size; }
+.p2-hint .found { gap: clamp(4px, 1.4vh, 16px); }
+.p2-hint .chip { padding: 0; }
+.p2-hint .chip b { font-size: clamp(1.3rem, min(7.5cqw, 8.5vh), 5.6rem); line-height: 1.12; letter-spacing: .1em; }
+.p2-hint .chip.artist b { font-size: clamp(1.15rem, min(6cqw, 6.8vh), 4.4rem); }
+.p2-hint .chip .by { font-size: clamp(.9rem, min(2.6cqw, 3vh), 1.8rem); }
+.p2-hint .chip em { font-size: clamp(.8rem, min(1.8cqw, 2vh), 1.2rem); }
+@media (max-width: 700px) { .p2-hint .chip b { font-size: clamp(1.1rem, 7cqw, 2rem); } .p2-hint .chip.artist b { font-size: clamp(1rem, 6cqw, 1.7rem); } }
+
+/* round and reveal screens (wide): exactly the window height, so the grid rows come from the window alone and content
+   that changes inside a cell (ANSWER button -> mic / send / cancel) can never resize a row and move its neighbours */
+@media (min-width: 900px) {
+  .screen.game[data-pad-game] { height: 100vh; height: 100dvh; min-height: 0; }
+  .screen.game[data-pad-game] > .p2, .screen.game[data-pad-game] > .reveal { flex: 1 1 0; min-height: 0; }
+  .p2 > *, .reveal.rv-grid > * { min-height: 0; }
+}
+/* the guess bar row is 8px all round (a later "min-height: 0" on the grid cells had collapsed it to 0 until someone answered) */
+.p2 > .p2-bar { height: 8px; min-height: 8px; }
+
+/* ---- narrow / portrait round screen: exactly the window height, rows sized by the window ----
+   art (sized by the height), hints take what is left, then the answer-field line and one short row of ANSWER buttons
+   (side by side, one per local player) which becomes mic / send / cancel at the same height while answering.
+   Portrait windows wider than 900px (a TV on its side) use it too. */
+@media (max-width: 899px), (orientation: portrait) {
+  .screen.game[data-pad-game]:has(> .p2) { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+  .screen.game[data-pad-game] > .p2 { flex: 1 1 0; min-height: 0; align-content: stretch; }
+  .p2 > * { min-height: 0; }
+  .p2, .p2.with-art { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hint" "field" "ans" "bar"; grid-template-rows: minmax(0, 1fr) auto auto 8px; }
+  .p2.with-art { grid-template-areas: "art" "hint" "field" "ans" "bar"; grid-template-rows: auto minmax(0, 1fr) auto auto 8px; }
+  .p2 .p2-eq { display: none; }
+  .p2-art { width: min(100%, 30dvh); justify-self: center; align-self: center; }
+  .p2-hint { align-self: stretch; overflow: hidden; }
+  .p2-answer { --abh: clamp(56px, 10dvh, 110px); flex-direction: row; gap: 10px; height: var(--abh); align-self: stretch; }
+  .p2-local { flex: 1 1 0; min-width: 0; }
+  .p2-local .embedded, .p2-local .card.answer, .p2-local .pl-row, .p2-local .pl-main, .p2-local .guess-form { height: 100%; margin: 0; }
+  .p2-answer .answer-btn, .p2-answer .answer-btn:disabled { height: var(--abh); min-height: 0; font-size: clamp(1rem, min(5cqw, 4dvh), 2rem); }
+  .p2-answer .gf-buttons { flex-direction: row; height: var(--abh); }
+  .p2-answer .gf-buttons > * { flex: 1 1 0; min-width: 0; }
+  .p2-answer .gf-buttons .mic, .p2-answer .gf-buttons .btn { height: var(--abh); padding: 0 6px; }
+  .p2-field, .p2-field:empty { height: clamp(48px, 7dvh, 80px); }
+}
+@media (max-width: 700px) {
+  .screen.game[data-pad-game]:has(> .p2) { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  html[data-pad] .screen.game[data-pad-game]:has(> .p2) { padding-bottom: 70px; }
+  .p2, .p2.with-art { grid-template-columns: 10px minmax(0, 1fr); grid-template-areas: "vbar hint" "vbar field" "vbar ans" "bar bar"; }
+  .p2.with-art { grid-template-areas: "vbar art" "vbar hint" "vbar field" "vbar ans" "bar bar"; }
+  .p2-art { width: min(100%, 26dvh); }
+  .p2-field .answer-field { flex-direction: row; align-items: center; white-space: nowrap; }
+}
+
+/* lobby: players on this screen have a ✕ to leave again */
+.lobby-players li { gap: 8px; }
+.lobby-players .lp-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lobby-players .lp-x { flex: 0 0 auto; width: 1.9em; height: 1.9em; padding: 0; border-radius: 50%; border: 1px solid currentColor; background: transparent; color: inherit; font-weight: 900; line-height: 1; cursor: pointer; opacity: .8; }
+.lobby-players .lp-x:hover { opacity: 1; }
+/* the settings panel (now with sound / voice / keyboard) scrolls inside the window instead of running off it */
+.settings { max-height: calc(100dvh - 90px); overflow-y: auto; }
+
+/* lobby (wide): code + QR in one row, the game rules under them in the same card, players / join / start in the other */
+.lobby { align-items: start; }
+.lobby-join { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 2vw, 28px); flex-wrap: wrap; }
+.lobby-join .qr { width: clamp(140px, 22vh, 200px); aspect-ratio: 1; height: auto; }
+@media (min-width: 761px) {
+  .lobby { margin-top: 2vh; }
+  .lobby .code span { font-size: clamp(2.6rem, 5.5vw, 5.2rem); }
+  .lobby .summary { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .lobby .summary div { padding: 6px 10px; }
+}
+
+/* ---- one ⚙ button per screen; its panel lists every option as an icon row ---- */
+.settings { gap: 12px; }
+.settings h2 { margin: 0; }
+.setting.row { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.setting.row .set-label { flex: 1 1 140px; min-width: 0; display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; font-size: .95rem; line-height: 1.25; }
+.set-icon { flex: 0 0 auto; width: 1.6em; height: 1.6em; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 1.15rem; border-radius: 50%; background: var(--soft); }
+.set-icon svg { width: 1.2em; height: 1.2em; }
+.setting.row .seg { flex: 0 0 auto; }
+.settings .seg-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; font-size: 1.1rem; }
+.settings .devices { display: flex; flex-direction: column; gap: 8px; }
+.settings .devices p { margin: 0; }
+.settings > .btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.statusbar .gear.on, .gear.on { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(255,61,154,.35); }
+.settings { width: min(420px, calc(100vw - 28px)); }
+.setting.row .seg button { white-space: nowrap; padding: 8px 12px; }
+.setting.row .set-label > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.setting.row .set-label small { font-weight: 400; font-size: .78rem; color: var(--muted); }
+
+/* players on the host screen: each ANSWER button (and its mic / send / cancel while answering) in its own colour,
+   the same order as the lobby list (pink, cyan, lime, amber); the light colours get dark text */
+.p2-local:nth-child(1) { --pc: var(--pink); --pc-text: #fff; }
+.p2-local:nth-child(2) { --pc: var(--cyan); --pc-text: #06121a; }
+.p2-local:nth-child(3) { --pc: var(--lime); --pc-text: #0d1600; }
+.p2-local:nth-child(4) { --pc: var(--amber); --pc-text: #1a1000; }
+:root[data-theme="light"] .p2-local:nth-child(n+2) { --pc-text: #fff; }
+.p2-local :is(.answer-btn, .answer-btn:disabled, .btn, .btn.big, .btn.ghost, .mic) {
+  background: var(--pc); color: var(--pc-text); box-shadow: 0 5px 0 color-mix(in srgb, var(--pc) 55%, #000);
+}
+.p2-local :is(.answer-btn, .btn, .mic):active:not(:disabled) { box-shadow: 0 1px 0 color-mix(in srgb, var(--pc) 55%, #000); }
+.p2-local .answer-btn:disabled, .p2-local .btn:disabled { box-shadow: none; }
+
+/* ---- status bar: always one line. The scores take the space left and slide sideways when they do not fit ---- */
+.statusbar .sb-left { flex-wrap: nowrap; }
+.statusbar .scoreline { display: block; flex: 1 1 0; min-width: 0; overflow: hidden; white-space: nowrap; }
+.scoreline .sl-track { display: inline-flex; gap: 4px 16px; }
+.scoreline.scrolls .sl-track { animation: marquee var(--dur, 6s) ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .scoreline.scrolls .sl-track { animation: none; } }
+@media (max-width: 700px) {
+  .statusbar .scoreline { flex: 1 1 0; order: 0; }
+  .statusbar .sb-left { gap: 6px; }
+  .statusbar { border-radius: 999px; }
+}
+/* the answer field: the question is its placeholder, nothing next to it */
+.answer-field input::placeholder { color: var(--muted); opacity: 1; }
+@media (max-width: 700px) {
+  .statusbar { gap: 4px; padding: 5px 6px; }
+  .statusbar .sb-left, .statusbar .sb-right { gap: 4px; }
+  .statusbar .rl-secs { margin-left: 4px; }
+  .statusbar .rl { font-size: .8rem; }
+}
+
+/* several players on the host screen: each ANSWER button shows its keyboard key (1-4) */
+.answer-btn.named { position: relative; }
+.answer-btn .ab-key { position: absolute; top: 6px; left: 8px; min-width: 1.6em; height: 1.6em; padding: 0 .3em; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; border: 2px solid currentColor; font-family: inherit; font-weight: 900; font-size: clamp(.75rem, 1.4vw, 1.1rem); line-height: 1; opacity: .85; }
+/* the answer field inside the gamepad keyboard (which opens upwards from the answer line) keeps its own height:
+   only the plain answer line under the hints fills the line, otherwise it covered the suggestions row */
+.p2-field .padkb .answer-field { height: auto; flex: 0 0 auto; }
+.p2-field .padkb .answer-field input { height: auto; padding-top: clamp(8px, 1.4vh, 14px); padding-bottom: clamp(8px, 1.4vh, 14px); }
+.p2-field .padkb .pk-left { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.p2-field .padkb .pk-sugg { flex: 0 0 auto; min-height: 44px; overflow: hidden; }
+
+/* ---- portrait / narrow round screen, take 2: the video gets the flexible space ----
+   art row = whatever is left (the video is as big as fits: full width, or full height of its row), the hint card is compact
+   (song / "by" artist / one trivia line that scrolls), then the answer line and a short ANSWER row. Every row but the art has
+   a fixed height, so nothing moves when content changes, and the grid can never be pushed under the status bar. */
+@media (max-width: 899px), (orientation: portrait) {
+  .p2.with-art { grid-template-rows: minmax(0, 1fr) auto auto auto 8px; align-content: stretch; }
+  .p2.with-art .p2-art { width: 100%; height: 100%; align-self: stretch; justify-self: stretch; container-type: size; display: flex; align-items: center; justify-content: center; margin: 0; }
+  .p2.with-art .p2-art .yt-slot { width: min(100cqw, 100cqh * 16 / 9); height: auto; aspect-ratio: 16 / 9; flex: 0 0 auto; }
+  .p2.with-art .p2-art .pixelart { width: min(100cqw, 100cqh); flex: 0 0 auto; }
+  .p2.with-art .p2-hint { height: auto; align-self: start; justify-content: flex-start; padding: 10px 14px; gap: 6px; }
+  .p2 .p2-hint .found { gap: 2px; }
+  .p2 .p2-hint .chip { flex-wrap: nowrap; min-width: 0; }
+  .p2 .p2-hint .chip b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(1.1rem, 6.5cqw, 2.4rem); }
+  .p2 .p2-hint .chip.artist b { font-size: clamp(1rem, 5.5cqw, 2rem); }
+  .p2 .p2-hint .chip em { display: none; } /* who found it: the score line shows it */
+  .p2 .trivia { height: 2.2em; overflow-y: auto; gap: 0; flex-shrink: 0; scroll-snap-type: y mandatory; scroll-behavior: smooth; max-width: none; }
+  .p2 .trivia li { height: 2.2em; padding: 0 12px; line-height: 2.2em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; scroll-snap-align: end; border-radius: 10px; font-size: .9rem; flex-shrink: 0; }
+  .p2-answer { --abh: clamp(48px, 8dvh, 84px); }
+  .p2-field, .p2-field:empty { height: clamp(44px, 6.5dvh, 72px); }
+}
+
+/* the video always covers its frame (center crop), so the frame can be taller than 16:9 on phones */
+.yt-player { container-type: size; }
+.yt-player iframe { position: absolute; left: 50%; top: 50%; width: max(100cqw, 100cqh * 16 / 9); height: max(100cqh, 100cqw * 9 / 16); translate: -50% -50%; }
+@media (max-width: 899px), (orientation: portrait) {
+  /* phone: the video frame takes the whole width and grows up to a square, cropping the sides of the clip */
+  .p2.with-art .p2-art .yt-slot { width: 100cqw; height: min(100cqh, 100cqw); aspect-ratio: auto; }
+  .p2 .trivia { scrollbar-width: none; }
+  .p2 .trivia::-webkit-scrollbar { display: none; }
+}
+
+/* which mode the setup screen is in */
+.mode-badge { align-self: center; margin: -6px 0 0; padding: 6px 16px; border-radius: 999px; border: 2px solid var(--cyan); color: var(--cyan); font-weight: 800; letter-spacing: .04em; text-transform: uppercase; font-size: .9rem; }
+.mode-badge.solo { border-color: var(--pink); color: var(--pink); }
+
+/* the exact-height round screen clips instead of scrolling: focusing the answer field (or the gamepad focus) can no longer
+   scroll the page under the sticky status bar, which used to slide the video up behind it */
+@media (max-width: 899px), (orientation: portrait) {
+  .screen.game[data-pad-game]:has(> .p2) { overflow: clip; }
+}
+/* the mode sits beside the Quickstart button (same row, no extra height) */
+.quick:has(> .mode-badge) { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.quick > .mode-badge { margin: 0; align-self: center; }
+/* the mode pill matches the Quickstart button: same height, same width (equal columns sized by the wider one) */
+.quick:has(> .mode-badge) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; align-items: stretch; width: fit-content; max-width: 100%; margin-inline: auto; }
+.quick > .mode-badge { display: flex; align-items: center; justify-content: center; padding: 0 22px; font-size: 1.05rem; border-radius: 14px; white-space: nowrap; }
+.quick > .mode-badge + .btn { white-space: nowrap; }
+@media (max-width: 420px) { .quick > .mode-badge, .quick > .mode-badge + .btn { padding-inline: 12px; font-size: .95rem; } }
+.quick > .mode-badge { align-self: stretch; min-width: 0; }
+
+/* lobby rules: under the QR on wide screens, after the players / Join / Start card on phones */
+.lobby-rules-narrow { display: none; }
+@media (max-width: 760px) {
+  .lobby-rules-wide { display: none; }
+  .lobby-rules-narrow { display: block; }
+}

@@ -1,16 +1,20 @@
 import { useSyncExternalStore } from "react";
 import { ES } from "./es";
+import { IT } from "./it";
 
-export type Lang = "en" | "es";
-export const LANGS: Array<[Lang, string]> = [["en", "English"], ["es", "Español"]];
+export type Lang = "en" | "es" | "it";
+export const LANGS: Array<[Lang, string]> = [["en", "English"], ["es", "Español"], ["it", "Italiano"]];
+const DICTS: Partial<Record<Lang, Record<string, string>>> = { es: ES, it: IT };
+const isLang = (v: unknown): v is Lang => LANGS.some(([c]) => c === v);
 const KEY = "tg_lang";
 
 const detect = (): Lang => {
   try {
     const saved = localStorage.getItem(KEY);
-    if (saved === "en" || saved === "es") return saved;
+    if (isLang(saved)) return saved;
   } catch { /* storage blocked */ }
-  return typeof navigator !== "undefined" && /^es\b/i.test(navigator.language) ? "es" : "en";
+  const nav = typeof navigator !== "undefined" ? navigator.language.slice(0, 2).toLowerCase() : "";
+  return isLang(nav) ? nav : "en";
 };
 
 let lang: Lang = detect();
@@ -30,7 +34,7 @@ if (typeof document !== "undefined") document.documentElement.lang = lang;
  * `{name}` placeholders are filled from `vars`.
  */
 export function t(text: string, vars?: Record<string, string | number>): string {
-  const s = lang === "es" ? ES[text] ?? text : text;
+  const s = DICTS[lang]?.[text] ?? text;
   return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : s;
 }
 

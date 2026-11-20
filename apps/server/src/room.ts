@@ -3,6 +3,8 @@ import {
   hintText,
   letterPositions,
   maskText,
+  MAX_LOCAL_PLAYERS,
+  MAX_PLAYERS,
   matchFreeText,
   multipliersFor,
   pointsFor,
@@ -74,6 +76,8 @@ const UNLIMITED_HINT_WINDOW_MS = 60_000;
 /** No letters are revealed before this much of the round has passed. */
 const HINT_DELAY_MS = 10_000;
 const HINT_GRACE_MS = 5_000;
+/** the pixelated artwork / video gets sharp this much faster than the hint window */
+const ART_SPEED = 1.2;
 /** Extra time after the computed end of a song before moving on (latency, gaps). */
 const SONG_END_BUFFER_MS = 800;
 
@@ -126,7 +130,8 @@ export class Room {
   hostConnected = false;
   private hostSkipVote = false;
   /** set when the host also plays: the host then has one vote, as that player */
-  private hostPlayerId?: string;
+  /** players on the host's own screen */
+  private hostPlayerIds = new Set<string>();
   private awaitingNext = false;
   /** song position (ms) and wall-clock time when the reveal began (to know when the song ends) */
   private revealAt = 0;
@@ -182,12 +187,15 @@ export class Room {
 
   // ---------------------------------------------------------------- players
 
-  addPlayer(name: string, existingId?: string): string | null {
+  /** `local`: the player plays on the host's own screen (at most MAX_LOCAL_PLAYERS of them). */
+  addPlayer(name: string, existingId?: string, local = false): string | null {
     const prior = existingId ? this.players.get(existingId) : undefined;
-    if (prior) { prior.connected = true; this.onChange(); return prior.id; }
-    if (this.phase !== "lobby" || this.players.size >= 4) return null;
+    if (prior) { prior.connected = true; if (local) this.hostPlayerIds.add(prior.id); this.onChange(); return prior.id; }
+    if (this.phase !== "lobby" || this.players.size >= MAX_PLAYERS) return null;
+    if (local && this.hostPlayerIds.size >= MAX_LOCAL_PLAYERS) return null;
     const id = Math.random().toString(36).slice(2, 10);
     this.players.set(id, { id, name: name.trim().slice(0, 16) || "Player", score: 0, connected: true, attemptsUsed: 0, skipVote: false, streak: 0, gain: { title: 0, artist: 0 } });
+    if (local) this.hostPlayerIds.add(id);
     this.onChange();
     return id;
   }
@@ -206,16 +214,27 @@ export class Room {
     if (!connected) this.checkSkip();
   }
 
-  /** The host also plays as this player: they get one skip vote, not two. */
+  /** The host also plays as this player: the host screen's skip button votes for its players, not on its own. */
   markHostPlayer(id: string) {
-    if (this.players.has(id)) this.hostPlayerId = id;
+    if (this.players.has(id)) this.hostPlayerIds.add(id);
+  }
+
+  /** the host screen's players that are still in the room */
+  private hostPlayers(): Player[] {
+    return [...this.hostPlayerIds].map((id) => this.players.get(id)).filter((p): p is Player => !!p);
   }
 
   /** A player exits on purpose: frees their slot in the lobby; mid-game they just drop out (and a pending guess ends). */
+  /** A player on the host screen leaves (the ✕ next to their name in the lobby); remote players can only leave themselves. */
+  leaveHostPlayer(id: string) {
+    if (this.hostPlayerIds.has(id)) this.leave(id);
+  }
+
   leave(id: string) {
     if (!this.players.has(id)) return;
     if (this.phase === "lobby") {
       this.players.delete(id);
+      this.hostPlayerIds.delete(id);
       this.onChange();
       return;
     }
@@ -239,8 +258,18 @@ export class Room {
 
   /** The host's own skip vote (or, if the host plays, that player's vote). */
   voteSkipHost() {
-    if (this.hostPlayerId && this.players.has(this.hostPlayerId)) return this.voteSkip(this.hostPlayerId);
     if (this.phase !== "playing") return;
+    const locals = this.hostPlayers();
+    if (locals.length) {
+      // one press votes for every player on the host screen (round robin: only the one whose song it is can vote)
+      const voters = this.config.order === "roundRobin" ? locals.filter((p) => p.id === this.activeId) : locals;
+      if (!voters.length) return;
+      const on = !voters[0]!.skipVote;
+      for (const p of voters) p.skipVote = on;
+      this.onChange();
+      this.checkSkip();
+      return;
+    }
     this.hostSkipVote = !this.hostSkipVote;
     this.onChange();
     this.checkSkip();
@@ -260,18 +289,19 @@ export class Room {
     if (this.phase !== "playing") return;
     const voters = this.voters();
     if (this.config.order === "roundRobin" && voters.length === 0) return void this.endRound(); // the player whose turn it was is gone
-    const hostIsVoter = !this.hostPlayerId && this.hostConnected;
+    const hostIsVoter = this.hostPlayers().length === 0 && this.hostConnected;
     if (voters.length > 0 && voters.every((p) => p.skipVote) && (!hostIsVoter || this.hostSkipVote)) void this.endRound();
   }
 
   private skipInfo() {
     const voters = this.voters();
-    const hostIsVoter = !this.hostPlayerId && this.hostConnected;
-    const hostPlayer = this.hostPlayerId ? this.players.get(this.hostPlayerId) : undefined;
+    const locals = this.hostPlayers();
+    const hostIsVoter = locals.length === 0 && this.hostConnected;
+    const localVoters = locals.filter((p) => voters.includes(p));
     return {
       votes: voters.filter((p) => p.skipVote).length + (hostIsVoter && this.hostSkipVote ? 1 : 0),
       voters: voters.length + (hostIsVoter ? 1 : 0),
-      host: hostPlayer ? hostPlayer.skipVote : this.hostSkipVote,
+      host: locals.length ? localVoters.length > 0 && localVoters.every((p) => p.skipVote) : this.hostSkipVote,
     };
   }
 
@@ -702,7 +732,7 @@ export class Room {
       const facts = this.trivia.peek(this.current);
       triviaShown = facts.slice(0, Math.min(facts.length, Math.floor(Math.min(1, progress) * (facts.length + 1))));
     }
-    const art = playing && this.config.hints.art && this.current?.albumArt ? { url: this.current.albumArt, progress: Math.min(0.999, elapsed / (this.hintWindowMs + HINT_GRACE_MS)) } : undefined;
+    const art = playing && this.config.hints.art && this.current?.albumArt ? { url: this.current.albumArt, progress: Math.min(0.999, (elapsed * ART_SPEED) / (this.hintWindowMs + HINT_GRACE_MS)) } : undefined;
     let options: ChoiceOption[] | undefined;
     if (playing && g && forPlayerId === g.id && this.choices.length > 0) {
       const out = this.eliminated.get(g.id);

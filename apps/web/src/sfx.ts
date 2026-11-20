@@ -1,7 +1,21 @@
+import { useEffect, useState } from "react";
+
 /** Tiny synthesized sound effects (no audio files). Browsers need a user gesture before the first sound. */
 let ctx: AudioContext | undefined;
-let muted = false;
-export const setMuted = (m: boolean) => (muted = m);
+/** Sound effects on/off: saved per device and shared by the status-bar button and the settings panel. */
+const MUTE_KEY = "tg_mute";
+const muteListeners = new Set<() => void>();
+let muted = (() => { try { return localStorage.getItem(MUTE_KEY) === "1"; } catch { return false; } })();
+export const setMuted = (m: boolean) => {
+  muted = m;
+  try { localStorage.setItem(MUTE_KEY, m ? "1" : "0"); } catch { /* private mode */ }
+  muteListeners.forEach((f) => f());
+};
+export function useMute(): [boolean, (m: boolean) => void] {
+  const [v, setV] = useState(muted);
+  useEffect(() => { const f = () => setV(muted); muteListeners.add(f); return () => { muteListeners.delete(f); }; }, []);
+  return [v, setMuted];
+}
 
 function tone(freq: number, start: number, dur: number, type: OscillatorType = "sine", vol = 0.15) {
   ctx ??= new AudioContext();
@@ -23,6 +37,8 @@ const seq = (notes: number[], step = 0.09, type: OscillatorType = "triangle", du
   notes.forEach((n, i) => tone(n, i * step, dur, type));
 
 export const sfx = {
+  /** silent: opens the audio output during a click, so later sounds (not started by a click) are allowed */
+  unlock: () => { try { ctx ??= new AudioContext(); if (ctx.state === "suspended") void ctx.resume(); } catch { /* no audio */ } },
   join: () => !muted && seq([523, 784], 0.08),
   start: () => !muted && seq([392, 523, 659, 784], 0.1, "square"),
   buzz: () => !muted && seq([440, 330], 0.06, "square", 0.12),

@@ -77,7 +77,7 @@ export function MicButton({ onText, onFinal, disabled }: { onText: (t: string) =
     if (on) { rec.current?.stop(); return; }
     setErr("");
     const r = new (getCtor())();
-    r.lang = getLang() === "es" ? "es-ES" : navigator.language || "en-US";
+    r.lang = ({ es: "es-ES", it: "it-IT" } as Record<string, string>)[getLang()] ?? (navigator.language || "en-US");
     r.interimResults = true;
     r.continuous = false;
     r.maxAlternatives = 1;
