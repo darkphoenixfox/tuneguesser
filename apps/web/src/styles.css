@@ -682,7 +682,7 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .p2-answer:empty { display: none; }
 .p2-answer .embedded { width: 100%; }
 @media (min-width: 900px) {
-  .p2, .p2.with-art { grid-template-columns: clamp(140px, 15vw, 220px) minmax(0, 1fr) clamp(200px, 22vw, 320px); grid-template-areas: "ctrl head head" "eq hint ans" "bar bar bar"; grid-template-rows: auto auto auto; }
+  .p2, .p2.with-art { grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 2fr); grid-template-areas: "ctrl head head" "eq hint ans" "bar bar bar"; grid-template-rows: auto auto auto; }
   .p2.with-art { grid-template-areas: "ctrl head head" "art hint ans" "bar bar bar"; }
   .p2-art { align-self: start; width: 100%; }
 }
