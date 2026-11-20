@@ -692,3 +692,8 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 @media (max-width: 700px) {
   .p2, .p2.with-art { grid-template-areas: "ctrl ctrl" "head head" "vbar art" "vbar hint" "vbar ans" "bar bar"; }
 }
+/* the ANSWER panel fills its (20%) column: no extra box, the label scales with the screen so it stays inside the button */
+.p2-answer .card.answer { padding: 0; background: none; border: 0; box-shadow: none; }
+.p2-answer .embedded { width: 100%; max-width: none; }
+.p2-answer .answer-btn { width: 100%; max-width: none; min-height: clamp(110px, 24vh, 220px); font-size: clamp(1.1rem, 3.3vw, 3rem); letter-spacing: 0; padding: 0 6px; }
+.p2-answer .answer-btn:disabled { min-height: 70px; font-size: clamp(.9rem, 1.6vw, 1.3rem); }
