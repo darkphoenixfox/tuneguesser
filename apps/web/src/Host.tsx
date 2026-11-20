@@ -686,7 +686,7 @@ function roundLabel(state: RoomState) {
 function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void; send: (m: ClientMessage) => unknown }) {
   const r = state.reveal!;
   return (
-    <div className="reveal">
+    <div className="reveal rv-grid">
       <div className="top">
         <div className="top-main">
           {r.albumArt && <img className="art spin-in" src={r.albumArt} alt="" />}
@@ -700,8 +700,8 @@ function Reveal({ state, onNext, send }: { state: RoomState; onNext: () => void;
           <Scoreboard state={state} reveal={r} />
         </div>
       </div>
-      {state.awaitingNext && <p className="waiting">{t("The song keeps playing. The next round starts when it ends, or when you continue.")}</p>}
-      <button className="btn next-btn" onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? t("Final results") : t("Next song")}<PadHint button="a" /></button>
+      {state.awaitingNext && <p className="waiting rv-wait">{t("The song keeps playing. The next round starts when it ends, or when you continue.")}</p>}
+      <button className="btn next-btn rv-next" onClick={onNext}>{state.totalRounds !== undefined && state.round >= state.totalRounds ? t("Final results") : t("Next song")}<PadHint button="a" /></button>
     </div>
   );
 }

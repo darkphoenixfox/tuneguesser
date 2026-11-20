@@ -275,3 +275,6 @@ Two fixes for "next song silent after pressing Enter quickly": (1) client: after
 
 ### DEC-078 · Full artist list for Topic videos · 2026-11-19 · Active
 "Artist - Topic" videos were parsed with only the channel's artist (The Kid LAROI for STAY, Lady Gaga for Die With A Smile). Their description lists all credited artists (`Title · A · B`), now used (`topicArtists`). Checked on 3 default playlists: 17 of 48 Topic videos have several artists. Videos from normal channels were already split on `,`, `&`, `x`, `feat.`; those where the title names only one artist cannot be improved. A guess still needs only one credited artist.
+
+## DEC-079: Reveal screen uses the same 30/50/20 split on wide screens
+Art/title/artist/👎 | scoreboard | Next-song button, as on the playing screen. CSS grid with `display: contents` on `.top`; every grid item's area is named in the template (avoids the implicit-column bug). Narrow screens keep the stacked layout.

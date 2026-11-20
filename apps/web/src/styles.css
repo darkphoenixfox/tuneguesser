@@ -699,3 +699,14 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .p2-answer .answer-btn:disabled { min-height: 70px; font-size: clamp(.9rem, 1.6vw, 1.3rem); }
 /* an item whose grid-area is not in the template makes an extra column: the equaliser has no place when the artwork is shown */
 @media (min-width: 900px) { .p2.with-art .p2-eq { display: none; } }
+
+/* reveal on wide screens: art | scores | next button = 30% / 50% / 20% */
+@media (min-width: 900px) {
+  .reveal.rv-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 2fr); grid-template-areas: "art side btn" "wait wait wait"; align-items: start; justify-items: stretch; gap: 18px 24px; width: 100%; }
+  .reveal.rv-grid .top { display: contents; }
+  .reveal.rv-grid .top-main { grid-area: art; width: 100%; max-width: none; }
+  .reveal.rv-grid .top-main .art { width: 100%; max-width: 420px; }
+  .reveal.rv-grid .top-side { grid-area: side; width: 100%; max-width: none; }
+  .reveal.rv-grid .rv-next { grid-area: btn; width: 100%; min-width: 0; min-height: clamp(110px, 24vh, 220px); font-size: clamp(1.1rem, 2.6vw, 2.4rem); padding: 0 8px; letter-spacing: 0; align-self: start; }
+  .reveal.rv-grid .rv-wait { grid-area: wait; justify-self: center; }
+}
