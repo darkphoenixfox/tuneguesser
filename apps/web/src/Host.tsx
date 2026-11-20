@@ -438,6 +438,7 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
   ytRun.current = yt.run;
   const [mute, setMute] = useState(false);
   const [askQuit, setAskQuit] = useState(false);
+  const [answerSlot, setAnswerSlot] = useState<HTMLElement | null>(null); // wide screens: the host's own ANSWER panel goes in the right column
   const [barSlot, setBarSlot] = useState<HTMLElement | null>(null); // wide screens: the thin timer bar under the status bar
   const [slot, setSlot] = useState<HTMLElement | null>(null); // the left part of the status bar, filled by the round screen
   useScrollTop(state?.phase ?? "");
@@ -532,10 +533,10 @@ function Game({ saved, onLeave, solo }: { saved: Saved; onLeave: () => void; sol
       <PadMenuHint inGame={state.phase === "playing" || state.phase === "reveal"} />
       {state.phase === "lobby" && solo && <main className="center"><p className="muted">{t("Starting…")}</p></main>}
       {state.phase === "lobby" && !solo && <Lobby state={state} joinUrl={joinUrl} me={me} onPlay={(name) => saveMe({ name })} onStart={() => send({ t: "start" })} onLeave={quit} />}
-      {state.phase === "playing" && <Playing send={send} slot={slot} barSlot={barSlot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
+      {state.phase === "playing" && <Playing send={send} slot={slot} barSlot={barSlot} setAnswerSlot={setAnswerSlot} follow={saved.youtube ? yt.follow : undefined} state={state} endsAt={endsAt} guessEndsAt={guessEndsAt} onSkip={() => send({ t: "skip" })} onPause={() => send({ t: "pause" })} />}
       {state.phase === "reveal" && <Reveal state={state} send={send} onNext={() => send({ t: "next" })} />}
       {state.phase === "finished" && <Finished state={state} onLeave={quit} />}
-      {me && <Play embedded hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
+      {me && <Play embedded slot={answerSlot} hostToken={saved.token} saved={{ code: saved.code, name: me.name, playerId: me.playerId }} onLeave={() => saveMe(null)} onId={(playerId) => saveMe({ ...me, playerId })} />}
       {notice && <p className="notice toast" role="status">{notice}</p>}
       {(error || ytError) && <p className="error toast">{error || ytError}</p>}
       {yt.element}
@@ -608,7 +609,7 @@ function Lobby({ state, joinUrl, me, onPlay, onStart, onLeave }: { state: RoomSt
   );
 }
 
-function Playing({ send, slot, barSlot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; barSlot: HTMLElement | null; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void; send: (m: ClientMessage) => unknown }) {
+function Playing({ send, slot, barSlot, setAnswerSlot, follow, state, endsAt, guessEndsAt, onSkip, onPause }: { slot: HTMLElement | null; barSlot: HTMLElement | null; setAnswerSlot: (el: HTMLElement | null) => void; follow?: (el: HTMLElement | null, progress?: number) => void; state: RoomState; endsAt: number; guessEndsAt: number; onSkip: () => void; onPause: () => void; send: (m: ClientMessage) => unknown }) {
   const guessing = !!state.guesser;
   const left = useCountdown(endsAt, guessing || state.paused ? state.remainingMs : undefined);
   const unlimited = state.roundMs === null;
@@ -670,6 +671,7 @@ function Playing({ send, slot, barSlot, follow, state, endsAt, guessEndsAt, onSk
         <ScoreBanner state={state} />
       </div>
       {state.art && <div className="p2-art">{follow ? <div className="yt-slot" ref={videoSlot} /> : <PixelArt url={state.art.url} progress={state.art.progress} />}<VoteButtons round={state.round} send={send} /></div>}
+      <div className="p2-answer" ref={setAnswerSlot} />
       {guessing && <div className="p2-bar"><GuessBar endsAt={guessEndsAt} totalMs={state.guessMs} /></div>}
     </div>
   );

@@ -676,3 +676,19 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
   .statusbar .rl-secs { display: inline; font-weight: 900; color: var(--cyan); font-variant-numeric: tabular-nums; }
 }
 @media (max-width: 700px) { .timebar { display: none; } }
+
+/* wide screens: video / artwork on the left (where the timer was), hints in the middle, the host's own ANSWER panel on the right */
+.p2-answer { grid-area: ans; align-self: start; min-width: 0; }
+.p2-answer:empty { display: none; }
+.p2-answer .embedded { width: 100%; }
+@media (min-width: 900px) {
+  .p2, .p2.with-art { grid-template-columns: clamp(140px, 15vw, 220px) minmax(0, 1fr) clamp(200px, 22vw, 320px); grid-template-areas: "ctrl head head" "eq hint ans" "bar bar bar"; grid-template-rows: auto auto auto; }
+  .p2.with-art { grid-template-areas: "ctrl head head" "art hint ans" "bar bar bar"; }
+  .p2-art { align-self: start; width: 100%; }
+}
+@media (min-width: 701px) and (max-width: 899px) {
+  .p2, .p2.with-art { grid-template-columns: minmax(0, 1fr); grid-template-areas: "ctrl" "head" "art" "hint" "ans" "bar" "eq"; }
+}
+@media (max-width: 700px) {
+  .p2, .p2.with-art { grid-template-areas: "ctrl ctrl" "head head" "vbar art" "vbar hint" "vbar ans" "bar bar"; }
+}

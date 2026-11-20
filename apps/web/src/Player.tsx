@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { SettingsMenu, ThemeButton } from "./Settings";
 import { PadHint } from "./input/Glyph";
@@ -57,7 +58,7 @@ function Join({ onJoin, onBack }: { onJoin: (s: Saved) => void; onBack?: () => v
 }
 
 /** `embedded`: shown inside the host screen (only while a round is running), so the host device can play too. */
-export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean; hostToken?: string }) {
+export function Play({ saved, onLeave, onId, embedded, hostToken, slot }: { saved: Saved; onLeave: () => void; onId: (id: string) => void; embedded?: boolean; hostToken?: string; slot?: HTMLElement | null }) {
   const first = useMemo(() => ({ t: "join" as const, code: saved.code, name: saved.name, playerId: saved.playerId, hostToken }), [saved.code, saved.name, hostToken]);
   const [me, setMe] = useState(saved.playerId);
   const [text, setText] = useState("");
@@ -173,7 +174,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
     send({ t: "answer", text });
   };
 
-  return (
+  const out = (
     <Wrap className={embedded ? "embedded" : "screen phone"} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       {!embedded && (
         <header className="statusbar phone-head">
@@ -264,4 +265,5 @@ export function Play({ saved, onLeave, onId, embedded, hostToken }: { saved: Sav
       {askLeave && <Confirm message={t("Leave the game?")} confirmLabel={t("Leave")} onCancel={() => setAskLeave(false)} onConfirm={leaveNow} />}
     </Wrap>
   );
+  return embedded && slot ? createPortal(out, slot) : out; // on the host screen the answer panel sits in the right column
 }
