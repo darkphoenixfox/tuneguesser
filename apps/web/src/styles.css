@@ -663,3 +663,16 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 /* "Music from": one line per button when there is room; on a narrow screen the buttons wrap instead of squeezing the text */
 .source-pick .seg { flex-wrap: wrap; max-width: 100%; }
 .source-pick .seg button { flex: 1 1 auto; white-space: nowrap; }
+
+/* wide screens: the round timer is a thin horizontal bar under the status bar (narrow screens keep the vertical bar) */
+.timebar:empty { display: none; }
+@media (min-width: 701px) {
+  .timebar { position: sticky; top: calc(max(6px, env(safe-area-inset-top)) + 64px); z-index: 5; width: 100%; padding: 0 18px; box-sizing: border-box; margin-top: -4px; }
+  .htimer { height: 5px; border-radius: 3px; background: var(--soft2); overflow: hidden; }
+  .htimer i { display: block; height: 100%; background: linear-gradient(90deg, var(--pink), var(--purple) 45%, var(--cyan)); transition: width .1s linear; }
+  .htimer.hot i { background: var(--pink); box-shadow: 0 0 10px var(--pink); }
+  .htimer.frozen i { background: var(--amber); }
+  .p2-timer { display: none; }
+  .statusbar .rl-secs { display: inline; font-weight: 900; color: var(--cyan); font-variant-numeric: tabular-nums; }
+}
+@media (max-width: 700px) { .timebar { display: none; } }
