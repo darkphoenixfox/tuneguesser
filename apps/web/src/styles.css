@@ -697,3 +697,5 @@ button:has(> .pad-hint) { display: inline-flex; align-items: center; justify-con
 .p2-answer .embedded { width: 100%; max-width: none; }
 .p2-answer .answer-btn { width: 100%; max-width: none; min-height: clamp(110px, 24vh, 220px); font-size: clamp(1.1rem, 3.3vw, 3rem); letter-spacing: 0; padding: 0 6px; }
 .p2-answer .answer-btn:disabled { min-height: 70px; font-size: clamp(.9rem, 1.6vw, 1.3rem); }
+/* an item whose grid-area is not in the template makes an extra column: the equaliser has no place when the artwork is shown */
+@media (min-width: 900px) { .p2.with-art .p2-eq { display: none; } }
