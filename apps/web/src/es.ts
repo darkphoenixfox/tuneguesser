@@ -190,6 +190,8 @@ export const ES: Record<string, string> = {
   "On": "Sí",
   "Off": "No",
   "Sound": "Sonido",
+  "Big answer button": "Botón de respuesta grande",
+  "Only one huge ANSWER button fills the screen": "Un único botón RESPONDER gigante ocupa toda la pantalla",
   "Voice answers": "Respuestas por voz",
   "The microphone opens when you press ANSWER": "El micrófono se abre al pulsar RESPONDER",
   "Off: physical keyboard or microphone only": "Desactivado: solo teclado físico o micrófono",

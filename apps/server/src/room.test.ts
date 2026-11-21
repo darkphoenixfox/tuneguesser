@@ -208,29 +208,20 @@ describe("Room (buzzer game)", () => {
     expect(room.state().players.every((p) => !p.skipVote)).toBe(true); // reset
   });
 
-  it("the host counts as one voter: skip waits for the host's vote too", async () => {
+  it("a host who is not playing is not a voter: the players alone decide", async () => {
     const { room } = make(2);
-    const a = room.addPlayer("Ana")!;
+    const a = room.addPlayer("Ana")!; const b = room.addPlayer("Bo")!;
     room.setHostConnected(true);
     await room.start();
+    room.voteSkipHost();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(room.state().phase).toBe("playing"); // the host cannot skip alone
     room.voteSkip(a);
     await vi.advanceTimersByTimeAsync(0);
-    expect(room.state().phase).toBe("playing"); // the host has not voted
     expect(room.state().skip).toEqual({ votes: 1, voters: 2, host: false });
-    room.voteSkipHost();
+    room.voteSkip(b);
     await vi.advanceTimersByTimeAsync(0);
-    expect(room.state().phase).toBe("reveal");
-  });
-
-  it("the host alone cannot skip the song", async () => {
-    const { room } = make(2);
-    room.addPlayer("Ana"); room.addPlayer("Bo");
-    room.setHostConnected(true);
-    await room.start();
-    room.voteSkipHost();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(room.state().phase).toBe("playing");
-    expect(room.state().skip).toEqual({ votes: 1, voters: 3, host: true });
+    expect(room.state().phase).toBe("reveal"); // both players voted: no host vote needed
   });
 
   it("a host who also plays has one vote, not two", async () => {

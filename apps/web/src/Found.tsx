@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Found, RoomState } from "@tuneguesser/shared";
 import { useCountdown } from "./net";
 import { t } from "./i18n";
@@ -16,7 +16,7 @@ export function FoundChips({ found, guess = "both", hint }: { found?: Found; gue
       // no "Song" / "Artist" labels: the title on its own line, then "by" + the artist, as large as the panel allows
       <div className={"chip " + key + (got ? " got" : "") + (!wanted ? " ctx" : "") + (hint && !got && wanted ? " hinted" : "")} aria-label={label}>
         {key === "artist" && <small className="by">{t("by")}</small>}
-        <b>{got ? got.text : hint ? hint[key] : "? ? ? ? ?"}</b>
+        {(() => { const text = got ? got.text : hint ? hint[key] : "? ? ? ? ?"; return <b style={{ "--len": Math.max(8, [...text].length) } as CSSProperties}>{text}</b>; })()}
         {got && <em>{got.by}</em>}
       </div>
     );

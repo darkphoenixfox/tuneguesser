@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FoundChips, GameSummary, GuessBar, Hints, PixelArt, ScoreBanner } from "./Found";
 import { OnOff, SettingRow, SettingsMenu } from "./Settings";
+import { useBigBtn } from "./input/BigButton";
 import { PadHint } from "./input/Glyph";
 import { MicButton } from "./input/Mic";
 import { PadKeyboard } from "./input/PadKeyboard";
@@ -96,6 +97,8 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot, fieldSlo
   const left = useCountdown(endsAt, guessing || state?.paused ? state?.remainingMs : undefined);
   const pad = usePad();
   const [kbOff] = useKbOff();
+  const [bigPref, setBigPref] = useBigBtn();
+  const big = bigPref && !embedded; // only a big ANSWER button on this phone
   const padKb = pad.connected && !kbOff; // the gamepad on-screen keyboard
   const mine = state?.players.find((p) => p.id === me);
   useScrollTop(embedded ? "" : (state?.phase ?? "") + (mine ? "m" : ""));
@@ -221,13 +224,13 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot, fieldSlo
   );
 
   const out = (
-    <Wrap className={embedded ? "embedded" : "screen phone"} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
+    <Wrap className={embedded ? "embedded" : "screen phone" + (big && state.phase === "playing" && !iAmGuesser ? " big-btn" : "")} data-pad-game={state.phase === "playing" || state.phase === "reveal" ? "" : undefined}>
       {!embedded && (
         <header className="statusbar phone-head">
           <button className="exit" onClick={exit} aria-label={t("Exit to main screen")}>✕</button>
           <b>{mine.name}{(state.phase === "playing" || state.phase === "reveal") && <small className="phone-round">{state.config.playTo.kind === "score" ? t("Round {n}", { n: state.round }) : t("{n} of {total}", { n: state.round, total: state.totalRounds ?? state.config.playTo.rounds })}</small>}</b>{<button style={canPause ? undefined : { visibility: "hidden" }} disabled={!canPause} className={"skip-top" + (state.paused ? " voted" : "")} onClick={() => send({ t: "pause" })} aria-label={state.paused ? t("Continue") : t("Pause")} title={state.paused ? t("Continue") : t("Pause")}>{state.paused ? "▶" : "⏸"}</button>}{<button style={canSkip ? undefined : { visibility: "hidden" }} disabled={!canSkip} className={"skip-top" + (mine.skipVote ? " voted" : "")} onClick={() => send({ t: "skip" })} aria-label={t("Skip song")} title={t("Skip song")}>⏭{skipText && <small>{skipText}</small>}</button>}<span className="score">{mine.score}</span>
           {/* one ⚙ button for every option (theme, language, sound, voice, keyboard, music on this phone) */}
-          <SettingsMenu>{state.youtube && <SettingRow icon="🎧" label={t("Also play the music on this device")}><OnOff on={listening} set={(on) => { if (on !== listening) toggleListen(); }} /></SettingRow>}</SettingsMenu>
+          <SettingsMenu><SettingRow icon="🔘" label={t("Big answer button")} hint={t("Only one huge ANSWER button fills the screen")}><OnOff on={bigPref} set={setBigPref} /></SettingRow>{state.youtube && <SettingRow icon="🎧" label={t("Also play the music on this device")}><OnOff on={listening} set={(on) => { if (on !== listening) toggleListen(); }} /></SettingRow>}</SettingsMenu>
         </header>
       )}
       {yt.element}
@@ -239,7 +242,7 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot, fieldSlo
           <div className="pl-row">
           {!embedded && <div className="vbar" aria-hidden="true"><i style={{ height: `${state.roundMs === null ? 100 : Math.min(100, (left / (state.roundMs / 1000)) * 100)}%` }} /></div>}
           <div className="pl-main">
-          {!embedded && (<>
+          {!embedded && !(big && !iAmGuesser) && (<>
           {state.paused && <div className="over-msg phone-over"><p className="paused-banner">{t("⏸ PAUSED")}</p></div>}
           {state.art && <div className="phone-art"><PixelArt url={state.art.url} progress={state.art.progress} /></div>}
           <Hints state={state} />
@@ -288,9 +291,13 @@ export function Play({ saved, onLeave, onId, embedded, hostToken, slot, fieldSlo
                 <span className="ab-name">{named ? mine.name : t("ANSWER")}</span>
                 {mine.attemptsLeft === 0 ? <small>{t("Out of tries")}</small> : state.config.order === "roundRobin" && state.activePlayerId === mine.id ? <small>{t("YOUR SONG: ANSWER")}</small> : null}
                 {(keys || hotkey) && mine.attemptsLeft > 0 && !guessing && <PadHint button={hotkey ? FACE[hotkey - 1]! : "a"} />}
-                {hotkey && <kbd className="ab-key" aria-hidden="true">{hotkey}</kbd>}
               </button>
             )
+          ) : big ? (
+            <button className="answer-btn" data-pad-first disabled={guessing || state.paused || mine.attemptsLeft === 0 || (state.config.order === "roundRobin" && state.activePlayerId !== mine.id)} onClick={() => send({ t: "buzz" })}>
+              {mine.attemptsLeft === 0 ? t("Out of tries") : guessing ? t("{name} is guessing…", { name: state.guesser!.name }) : state.config.order === "roundRobin" && state.activePlayerId !== mine.id ? t("{name}'s song", { name: state.players.find((p) => p.id === state.activePlayerId)?.name ?? t("Someone") }) : state.config.order === "roundRobin" ? t("YOUR SONG: ANSWER") : t("ANSWER")}
+              {mine.attemptsLeft > 0 && !guessing && <PadHint button="a" />}
+            </button>
           ) : guessing ? (
             <p className="guessing-msg">🎤 {t("{name} is guessing…", { name: state.guesser!.name })}</p>
           ) : state.config.order === "roundRobin" && state.activePlayerId !== mine.id ? (

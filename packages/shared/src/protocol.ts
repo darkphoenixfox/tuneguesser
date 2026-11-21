@@ -102,7 +102,7 @@ export interface RoomState {
   lastScore?: LastScore;
   /** the reveal is held until the host presses Next or the song ends (auto-advance is off) */
   awaitingNext?: boolean;
-  /** skip votes this round. Voters = connected players, plus the host if the host is not also playing. */
+  /** skip votes this round. Voters = connected players (the host is not a voter unless it plays). */
   skip?: { votes: number; voters: number; host: boolean };
   /** playing to a target score: the game clock (excludes pauses). `running`: add the time since the state was sent. */
   clock?: { ms: number; running: boolean };

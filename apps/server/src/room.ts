@@ -128,7 +128,6 @@ export class Room {
   /** paused by a player or the host (not by a buzz) */
   private paused = false;
   hostConnected = false;
-  private hostSkipVote = false;
   /** set when the host also plays: the host then has one vote, as that player */
   /** players on the host's own screen */
   private hostPlayerIds = new Set<string>();
@@ -270,9 +269,7 @@ export class Room {
       this.checkSkip();
       return;
     }
-    this.hostSkipVote = !this.hostSkipVote;
-    this.onChange();
-    this.checkSkip();
+    // a host who is not playing is not a voter: only the players' votes count, so there is nothing to vote
   }
 
   /** A player toggles their vote to skip this song. When every voter wants to, the round ends. */
@@ -289,19 +286,17 @@ export class Room {
     if (this.phase !== "playing") return;
     const voters = this.voters();
     if (this.config.order === "roundRobin" && voters.length === 0) return void this.endRound(); // the player whose turn it was is gone
-    const hostIsVoter = this.hostPlayers().length === 0 && this.hostConnected;
-    if (voters.length > 0 && voters.every((p) => p.skipVote) && (!hostIsVoter || this.hostSkipVote)) void this.endRound();
+    if (voters.length > 0 && voters.every((p) => p.skipVote)) void this.endRound();
   }
 
   private skipInfo() {
     const voters = this.voters();
     const locals = this.hostPlayers();
-    const hostIsVoter = locals.length === 0 && this.hostConnected;
     const localVoters = locals.filter((p) => voters.includes(p));
     return {
-      votes: voters.filter((p) => p.skipVote).length + (hostIsVoter && this.hostSkipVote ? 1 : 0),
-      voters: voters.length + (hostIsVoter ? 1 : 0),
-      host: locals.length ? localVoters.length > 0 && localVoters.every((p) => p.skipVote) : this.hostSkipVote,
+      votes: voters.filter((p) => p.skipVote).length,
+      voters: voters.length,
+      host: localVoters.length > 0 && localVoters.every((p) => p.skipVote),
     };
   }
 
@@ -369,7 +364,6 @@ export class Room {
     this.endPause();
     this.musicPaused = false;
     for (const p of this.players.values()) { p.attemptsUsed = 0; p.skipVote = false; p.gain = { title: 0, artist: 0 }; }
-    this.hostSkipVote = false;
     this.awaitingNext = false;
     this.eliminated.clear();
     this.pickActivePlayer();
